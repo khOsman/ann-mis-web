@@ -1,6 +1,8 @@
 import { signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
 import annLogo from "../assets/ann-logo.png";
+import { BRAND } from "../constants/brand";
+
 
 export default function Login() {
   const handleLogin = async () => {

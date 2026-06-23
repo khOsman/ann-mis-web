@@ -4,25 +4,61 @@ import { auth } from "../firebase";
 import AdminLayout from "../layouts/AdminLayout";
 import PageContainer from "../layouts/PageContainer";
 import StatCard from "../components/dashboard/StatCard";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    try {
       if (!user || !user.email.endsWith("@brac.net")) {
         await signOut(auth);
         window.location.href = "/";
         return;
       }
 
+      const userRef = doc(db, "users", user.email);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await signOut(auth);
+        alert("Your account does not have access to ANN MIS.");
+        window.location.href = "/";
+        return;
+      }
+
+      const userData = userSnap.data();
+
+      if (userData.status !== "active") {
+        await signOut(auth);
+        alert("Your account is inactive.");
+        window.location.href = "/";
+        return;
+      }
+
+      if (!["super_admin", "admin"].includes(userData.role)) {
+        await signOut(auth);
+        alert("You do not have permission to access the admin portal.");
+        window.location.href = "/";
+        return;
+      }
+
       setAllowed(true);
       setLoading(false);
-    });
+    } catch (error) {
+      console.error("Access check failed:", error);
+      alert(error.message);
+      setLoading(false);
+      await signOut(auth);
+      window.location.href = "/";
+    }
+  });
 
-    return () => unsubscribe();
-  }, []);
+  return () => unsubscribe();
+}, []);
 
   if (loading) {
     return (
