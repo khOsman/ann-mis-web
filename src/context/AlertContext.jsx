@@ -19,6 +19,7 @@ export function AlertProvider({ children }) {
   };
 
   return (
+    //Adding .
     <AlertContext.Provider value={{ showAlert, hideAlert }}>
       {children}
       {alert && (

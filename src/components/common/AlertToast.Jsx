@@ -1,6 +1,7 @@
 import { CheckCircle, AlertTriangle, XCircle, Info, X } from "lucide-react";
 
 export default function AlertToast({ type = "info", title, message, onClose }) {
+  //Adding .
   const styles = {
     success: {
       icon: CheckCircle,
