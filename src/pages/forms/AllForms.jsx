@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
+  doc,
   getDocs,
   orderBy,
   query,
+  serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { db } from "../../firebase";
+import { auth, db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { ROUTES } from "../../constants/routes";
@@ -89,6 +92,34 @@ export default function AllForms() {
         return "bg-pink-50 text-[var(--ann-pink)] border-pink-100";
     }
   };
+
+  const handleDeleteForm = async (formId) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this form? It will be removed from active lists but kept for audit history."
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    const user = auth.currentUser;
+
+    await updateDoc(doc(db, "forms", formId), {
+      is_deleted: true,
+      deleted_at: serverTimestamp(),
+      deleted_by_email: user?.email || "",
+      deleted_by_name: user?.displayName || "",
+      updated_at: serverTimestamp(),
+      updated_by_email: user?.email || "",
+      updated_by_name: user?.displayName || "",
+    });
+
+    showAlert("success", "Form deleted successfully.");
+    fetchForms();
+  } catch (error) {
+    console.error("Failed to delete form:", error);
+    showAlert("error", error.message || "Failed to delete form.");
+  }
+};
 
   return (
     <AdminLayout title="All Forms" subtitle="View and manage registration forms">
@@ -225,7 +256,7 @@ export default function AllForms() {
                       </td>
 
                       <td className="p-4">
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2">
                           <button
                             onClick={() =>
                               navigate(`/admin/forms/${form.id}/builder`)
@@ -242,6 +273,13 @@ export default function AllForms() {
                             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                           >
                             Preview
+                          </button>
+
+                          <button
+                                onClick={() => handleDeleteForm(form.id)}
+                                className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
+                                >
+                                Delete
                           </button>
                         </div>
                       </td>

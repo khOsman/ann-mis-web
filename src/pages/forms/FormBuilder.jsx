@@ -18,6 +18,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -35,6 +36,7 @@ import { FIELD_TYPES } from "../../constants/fieldTypes";
 function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: field.id });
+    
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,7 +86,7 @@ function SortableField({ field, index, selectedFieldId, setSelectedFieldId, rend
 export default function FormBuilder() {
   const { id } = useParams();
   const { showAlert } = useAlert();
-
+  const [formMeta, setFormMeta] = useState(null);
   const [fields, setFields] = useState([]);
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -95,6 +97,18 @@ export default function FormBuilder() {
     () => fields.find((field) => field.id === selectedFieldId),
     [fields, selectedFieldId]
   );
+
+  const fetchFormMeta = async () => {
+  const formRef = doc(db, "forms", id);
+  const formSnap = await getDoc(formRef);
+
+    if (formSnap.exists()) {
+        setFormMeta({
+        id: formSnap.id,
+        ...formSnap.data(),
+        });
+    }
+    };
 
   const fetchFields = async () => {
     const q = query(collection(db, "form_fields"), where("form_id", "==", id));
@@ -111,8 +125,9 @@ export default function FormBuilder() {
   };
 
   useEffect(() => {
+    fetchFormMeta();
     fetchFields();
-  }, [id]);
+    }, [id]);
 
   const handleAddField = async (fieldType) => {
     setSaving(true);
@@ -248,9 +263,78 @@ export default function FormBuilder() {
     );
   };
 
+    const handleUpdateFormStatus = async (nextStatus) => {
+    if (nextStatus === "Published") {
+        if (!formMeta?.public_slug) {
+        showAlert("warning", "Public slug is required before publishing.");
+        return;
+        }
+
+        if (fields.length === 0) {
+        showAlert("warning", "Please add at least one field before publishing.");
+        return;
+        }
+    }
+
+    try {
+        await updateDoc(doc(db, "forms", id), {
+        status: nextStatus,
+        updated_at: serverTimestamp(),
+        });
+
+        setFormMeta((prev) => ({
+        ...prev,
+        status: nextStatus,
+        }));
+
+        showAlert("success", `Form status updated to ${nextStatus}.`);
+    } catch (error) {
+        showAlert("error", error.message || "Failed to update form status.");
+    }
+    };
+
   return (
     <AdminLayout title="Form Builder" subtitle="Build registration form fields">
       <PageContainer className="py-6 lg:py-8">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+            {formMeta?.form_title || "Untitled Form"}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+            Status:{" "}
+            <span className="font-semibold text-[var(--ann-pink)]">
+                {formMeta?.status || "Draft"}
+            </span>
+            </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+            <button
+            type="button"
+            onClick={() => handleUpdateFormStatus("Published")}
+            className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+            >
+            Publish
+            </button>
+
+            <button
+            type="button"
+            onClick={() => handleUpdateFormStatus("Closed")}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            >
+            Close
+            </button>
+
+            <button
+            type="button"
+            onClick={() => handleUpdateFormStatus("Draft")}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            >
+            Move to Draft
+            </button>
+        </div>
+        </div>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <aside className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Field Toolbox</h3>
