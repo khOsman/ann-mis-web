@@ -2,9 +2,17 @@
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  --ann-purple: #2B2368;
+  --ann-pink: #FF008C;
+  --ann-bg: #F5F7FA;
+  --ann-card: #FFFFFF;
+  --ann-text-dark: #1F2937;
+  --ann-text-muted: #6B7280;
+  --ann-border: #E5E7EB;
 }
 
 body {
   margin: 0;
-  background: #f5f7fa;
+  background: var(--ann-bg);
 }
