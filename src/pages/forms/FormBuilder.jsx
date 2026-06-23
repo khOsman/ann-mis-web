@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   addDoc,
   collection,
   deleteDoc,
@@ -11,12 +25,61 @@ import {
   where,
 } from "firebase/firestore";
 import { useParams } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
 import { FIELD_TYPES } from "../../constants/fieldTypes";
+
+function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: field.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={() => setSelectedFieldId(field.id)}
+      className={`border rounded-2xl p-4 cursor-pointer transition bg-white ${
+        selectedFieldId === field.id
+          ? "border-[var(--ann-pink)] bg-pink-50/30"
+          : "border-gray-200 hover:border-[var(--ann-pink)]"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-0.5 text-gray-400 hover:text-[var(--ann-pink)] cursor-grab"
+          >
+            <GripVertical size={18} />
+          </button>
+
+          <label className="font-semibold text-gray-800">
+            {index + 1}. {field.label_en || field.label}
+            {field.label_bn && <span className="text-gray-500"> / {field.label_bn}</span>}
+            {field.required && <span className="text-[var(--ann-pink)]"> *</span>}
+          </label>
+        </div>
+
+        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
+          {field.field_type}
+        </span>
+      </div>
+
+      {renderFieldPreview(field)}
+    </div>
+  );
+}
 
 export default function FormBuilder() {
   const { id } = useParams();
@@ -25,6 +88,8 @@ export default function FormBuilder() {
   const [fields, setFields] = useState([]);
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const sensors = useSensors(useSensor(PointerSensor));
 
   const selectedField = useMemo(
     () => fields.find((field) => field.id === selectedFieldId),
@@ -55,22 +120,16 @@ export default function FormBuilder() {
     try {
       const docRef = await addDoc(collection(db, "form_fields"), {
         form_id: id,
-
         label: fieldType.defaultLabel,
         label_en: fieldType.defaultLabel,
         label_bn: "",
-
         field_type: fieldType.type,
-
         placeholder: fieldType.placeholder || "",
         placeholder_en: fieldType.placeholder || "",
         placeholder_bn: "",
-
         required: true,
         options: fieldType.defaultOptions || [],
-
         order: fields.length + 1,
-
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
@@ -79,7 +138,6 @@ export default function FormBuilder() {
       await fetchFields();
       setSelectedFieldId(docRef.id);
     } catch (error) {
-      console.error("Failed to add field:", error);
       showAlert("error", error.message || "Failed to add field.");
     } finally {
       setSaving(false);
@@ -106,8 +164,41 @@ export default function FormBuilder() {
       setSelectedFieldId(null);
       fetchFields();
     } catch (error) {
-      console.error("Failed to delete field:", error);
       showAlert("error", error.message || "Failed to delete field.");
+    }
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = fields.findIndex((field) => field.id === active.id);
+    const newIndex = fields.findIndex((field) => field.id === over.id);
+
+    const reorderedFields = arrayMove(fields, oldIndex, newIndex).map(
+      (field, index) => ({
+        ...field,
+        order: index + 1,
+      })
+    );
+
+    setFields(reorderedFields);
+
+    try {
+      await Promise.all(
+        reorderedFields.map((field) =>
+          updateDoc(doc(db, "form_fields", field.id), {
+            order: field.order,
+            updated_at: serverTimestamp(),
+          })
+        )
+      );
+
+      showAlert("success", "Field order updated.");
+    } catch (error) {
+      showAlert("error", error.message || "Failed to update field order.");
+      fetchFields();
     }
   };
 
@@ -115,28 +206,18 @@ export default function FormBuilder() {
     const baseClass =
       "w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-sm";
 
-    const previewLabel = field.label_bn
-      ? `${field.label_en || field.label} / ${field.label_bn}`
-      : field.label_en || field.label;
-
     const previewPlaceholder = field.placeholder_bn
       ? `${field.placeholder_en || field.placeholder || ""} / ${field.placeholder_bn}`
       : field.placeholder_en || field.placeholder || "";
 
     if (field.field_type === "textarea") {
-      return (
-        <textarea
-          disabled
-          placeholder={previewPlaceholder}
-          className={`${baseClass} min-h-24`}
-        />
-      );
+      return <textarea disabled placeholder={previewPlaceholder} className={`${baseClass} min-h-24`} />;
     }
 
     if (field.field_type === "dropdown") {
       return (
         <select disabled className={baseClass}>
-          <option>{previewLabel}</option>
+          <option>{field.label_bn ? `${field.label_en || field.label} / ${field.label_bn}` : field.label_en || field.label}</option>
           {(field.options || []).map((option) => (
             <option key={option}>{option}</option>
           ))}
@@ -144,25 +225,12 @@ export default function FormBuilder() {
       );
     }
 
-    if (field.field_type === "radio") {
+    if (field.field_type === "radio" || field.field_type === "checkbox") {
       return (
         <div className="space-y-2">
           {(field.options || []).map((option) => (
             <label key={option} className="flex items-center gap-2 text-sm">
-              <input type="radio" disabled />
-              {option}
-            </label>
-          ))}
-        </div>
-      );
-    }
-
-    if (field.field_type === "checkbox") {
-      return (
-        <div className="space-y-2">
-          {(field.options || []).map((option) => (
-            <label key={option} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" disabled />
+              <input type={field.field_type} disabled />
               {option}
             </label>
           ))}
@@ -185,12 +253,8 @@ export default function FormBuilder() {
       <PageContainer className="py-6 lg:py-8">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <aside className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-              Field Toolbox
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Click a field type to add it.
-            </p>
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Field Toolbox</h3>
+            <p className="text-sm text-gray-500 mt-1">Click a field type to add it.</p>
 
             <div className="grid grid-cols-1 gap-3 mt-5">
               {FIELD_TYPES.map((fieldType) => {
@@ -205,9 +269,7 @@ export default function FormBuilder() {
                     className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 text-left hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] transition disabled:opacity-50"
                   >
                     <Icon size={18} />
-                    <span className="font-semibold text-sm">
-                      {fieldType.label}
-                    </span>
+                    <span className="font-semibold text-sm">{fieldType.label}</span>
                   </button>
                 );
               })}
@@ -215,11 +277,9 @@ export default function FormBuilder() {
           </aside>
 
           <section className="xl:col-span-6 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-              Form Canvas
-            </h3>
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Form Canvas</h3>
             <p className="text-sm text-gray-500 mt-1">
-              Live preview of your registration form.
+              Drag fields to reorder. Click a field to edit settings.
             </p>
 
             <div className="mt-6 space-y-4">
@@ -228,46 +288,35 @@ export default function FormBuilder() {
                   No fields added yet. Start from the toolbox.
                 </div>
               ) : (
-                fields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    onClick={() => setSelectedFieldId(field.id)}
-                    className={`border rounded-2xl p-4 cursor-pointer transition ${
-                      selectedFieldId === field.id
-                        ? "border-[var(--ann-pink)] bg-pink-50/30"
-                        : "border-gray-200 hover:border-[var(--ann-pink)]"
-                    }`}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={fields.map((field) => field.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <label className="font-semibold text-gray-800">
-                        {index + 1}. {field.label_en || field.label}
-                        {field.label_bn && (
-                          <span className="text-gray-500">
-                            {" "}
-                            / {field.label_bn}
-                          </span>
-                        )}
-                        {field.required && (
-                          <span className="text-[var(--ann-pink)]"> *</span>
-                        )}
-                      </label>
-
-                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
-                        {field.field_type}
-                      </span>
+                    <div className="space-y-4">
+                      {fields.map((field, index) => (
+                        <SortableField
+                          key={field.id}
+                          field={field}
+                          index={index}
+                          selectedFieldId={selectedFieldId}
+                          setSelectedFieldId={setSelectedFieldId}
+                          renderFieldPreview={renderFieldPreview}
+                        />
+                      ))}
                     </div>
-
-                    {renderFieldPreview(field)}
-                  </div>
-                ))
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           </section>
 
           <aside className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-              Field Settings
-            </h3>
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Field Settings</h3>
 
             {!selectedField ? (
               <p className="text-sm text-gray-500 mt-4">
@@ -312,11 +361,7 @@ export default function FormBuilder() {
                     Placeholder English
                   </label>
                   <input
-                    value={
-                      selectedField.placeholder_en ||
-                      selectedField.placeholder ||
-                      ""
-                    }
+                    value={selectedField.placeholder_en || selectedField.placeholder || ""}
                     onChange={(e) =>
                       handleUpdateField(selectedField.id, {
                         placeholder: e.target.value,
@@ -356,9 +401,7 @@ export default function FormBuilder() {
                   Required field
                 </label>
 
-                {["dropdown", "radio", "checkbox"].includes(
-                  selectedField.field_type
-                ) && (
+                {["dropdown", "radio", "checkbox"].includes(selectedField.field_type) && (
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Options
@@ -376,7 +419,7 @@ export default function FormBuilder() {
                       className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-28 focus:outline-none focus:border-[var(--ann-pink)]"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Add one option per line. Bangla option support will be added next.
+                      Add one option per line.
                     </p>
                   </div>
                 )}
