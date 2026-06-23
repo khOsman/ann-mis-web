@@ -71,10 +71,12 @@ export default function Admin() {
   if (!allowed) return null;
 
   const stats = [
+    ["Total Cohorts", "0", "Till Date"],
     ["Total Registrations", "0", "Across all cohorts"],
-    ["Selected", "0", "FGD selected participants"],
-    ["Enrolled", "0", "Payment completed"],
-    ["Graduated", "0", "Successfully completed"],
+    ["Total Selected", "0", "FGD selected participants"],
+    ["Total Enrolled", "0", "Payment completed"],
+    ["Total Graduated", "0", "Successfully completed"],
+    ["Total Projects", "0", "Successfully pitched"],
   ];
 
   return (
@@ -83,7 +85,7 @@ export default function Admin() {
       subtitle="ANN operational overview and quick actions"
     >
       <PageContainer className="py-6 lg:py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
           {stats.map(([title, value, subtitle]) => (
             <StatCard
               key={title}
