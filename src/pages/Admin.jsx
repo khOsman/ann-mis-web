@@ -1,69 +1,135 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "../firebase";
 import AdminLayout from "../layouts/AdminLayout";
 import PageContainer from "../layouts/PageContainer";
 import StatCard from "../components/dashboard/StatCard";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { ROUTES } from "../constants/routes";
 
 export default function Admin() {
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [activeCohorts, setActiveCohorts] = useState([]);
 
-  useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    try {
-      if (!user || !user.email.endsWith("@brac.net")) {
-        await signOut(auth);
-        window.location.href = "/";
-        return;
-      }
-
-      const userRef = doc(db, "users", user.email);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        await signOut(auth);
-        alert("Your account does not have access to ANN MIS.");
-        window.location.href = "/";
-        return;
-      }
-
-      const userData = userSnap.data();
-
-      if (userData.status !== "active") {
-        await signOut(auth);
-        alert("Your account is inactive.");
-        window.location.href = "/";
-        return;
-      }
-
-      if (!["super_admin", "admin"].includes(userData.role)) {
-        await signOut(auth);
-        alert("You do not have permission to access the admin portal.");
-        window.location.href = "/";
-        return;
-      }
-
-      setAllowed(true);
-      setLoading(false);
-    } catch (error) {
-      console.error("Access check failed:", error);
-      alert(error.message);
-      setLoading(false);
-      await signOut(auth);
-      window.location.href = "/";
-    }
+  const [dashboardStats, setDashboardStats] = useState({
+    totalCohorts: 0,
+    totalRegistrations: 0,
+    totalSelected: 0,
+    totalEnrolled: 0,
+    totalGraduated: 0,
+    totalProjects: 0,
   });
 
-  return () => unsubscribe();
-}, []);
+  const fetchDashboardData = async () => {
+    const snapshot = await getDocs(collection(db, "cohorts"));
+
+    const cohorts = snapshot.docs
+      .map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }))
+      .filter((item) => item.is_deleted !== true);
+
+    const stats = {
+      totalCohorts: cohorts.length,
+      totalRegistrations: 0,
+      totalSelected: 0,
+      totalEnrolled: 0,
+      totalGraduated: 0,
+      totalProjects: 0,
+    };
+
+    cohorts.forEach((cohort) => {
+      stats.totalRegistrations += Number(cohort.total_registrations || 0);
+      stats.totalSelected += Number(cohort.total_selected || 0);
+      stats.totalEnrolled += Number(cohort.total_enrolled || 0);
+      stats.totalGraduated += Number(cohort.total_graduated || 0);
+      stats.totalProjects += Number(cohort.total_projects || 0);
+    });
+
+    setDashboardStats(stats);
+
+    const recentCohorts = cohorts
+      .filter((cohort) => cohort.status === "Active")
+      .sort((a, b) => {
+        const aTime = a.created_at?.toDate?.()?.getTime?.() || 0;
+        const bTime = b.created_at?.toDate?.()?.getTime?.() || 0;
+        return bTime - aTime;
+      })
+      .slice(0, 3);
+
+    setActiveCohorts(recentCohorts);
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      try {
+        if (!user || !user.email.endsWith("@brac.net")) {
+          await signOut(auth);
+          window.location.href = "/";
+          return;
+        }
+
+        const userRef = doc(db, "users", user.email);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          await signOut(auth);
+          alert("Your account does not have access to ANN MIS.");
+          window.location.href = "/";
+          return;
+        }
+
+        const userData = userSnap.data();
+
+        if (userData.status !== "active") {
+          await signOut(auth);
+          alert("Your account is inactive.");
+          window.location.href = "/";
+          return;
+        }
+
+        if (!["super_admin", "admin"].includes(userData.role)) {
+          await signOut(auth);
+          alert("You do not have permission to access the admin portal.");
+          window.location.href = "/";
+          return;
+        }
+
+        await fetchDashboardData();
+
+        setAllowed(true);
+        setLoading(false);
+      } catch (error) {
+        console.error("Access check failed:", error);
+        alert(error.message);
+        setLoading(false);
+        await signOut(auth);
+        window.location.href = "/";
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--ann-bg)]">
-        <p className="text-[var(--ann-purple)] font-medium">Checking access...</p>
+        <p className="text-[var(--ann-purple)] font-medium">
+          Checking access...
+        </p>
       </div>
     );
   }
@@ -71,12 +137,43 @@ export default function Admin() {
   if (!allowed) return null;
 
   const stats = [
-    ["Total Cohorts", "0", "All ANN cohorts"],
-    ["Total Registrations", "0", "Across all cohorts"],
-    ["Total Selected", "0", "FGD selected participants"],
-    ["Total Enrolled", "0", "Payment completed"],
-    ["Total Graduated", "0", "Successfully completed"],
-    ["Total Projects", "0", "Community projects"],
+    ["Total Cohorts", dashboardStats.totalCohorts, "All ANN cohorts"],
+    [
+      "Total Registrations",
+      dashboardStats.totalRegistrations,
+      "Across all cohorts",
+    ],
+    [
+      "Total Selected",
+      dashboardStats.totalSelected,
+      "FGD selected participants",
+    ],
+    ["Total Enrolled", dashboardStats.totalEnrolled, "Payment completed"],
+    [
+      "Total Graduated",
+      dashboardStats.totalGraduated,
+      "Successfully completed",
+    ],
+    ["Total Projects", dashboardStats.totalProjects, "Community projects"],
+  ];
+
+  const quickActions = [
+    {
+      label: "Create New Cohort",
+      path: ROUTES.createCohort,
+    },
+    {
+      label: "Design Registration Form",
+      path: ROUTES.forms,
+    },
+    {
+      label: "View Participants",
+      path: ROUTES.participants,
+    },
+    {
+      label: "Generate Report",
+      path: ROUTES.reports,
+    },
   ];
 
   return (
@@ -107,7 +204,10 @@ export default function Admin() {
                   Recent cohort progress summary
                 </p>
               </div>
-              <button className="text-sm font-semibold text-[var(--ann-pink)] text-left">
+              <button
+                onClick={() => navigate(ROUTES.cohorts)}
+                className="text-sm font-semibold text-[var(--ann-pink)] text-left"
+              >
                 View all
               </button>
             </div>
@@ -122,21 +222,45 @@ export default function Admin() {
                     <th className="text-left p-4">Status</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {["Jessore-25", "Bogura-26", "Rajshahi-26"].map((cohort) => (
-                    <tr key={cohort} className="border-t border-gray-100">
-                      <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
-                        {cohort}
-                      </td>
-                      <td className="p-4 text-gray-600">0</td>
-                      <td className="p-4 text-gray-600">0</td>
-                      <td className="p-4">
-                        <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold">
-                          Draft
-                        </span>
+                  {activeCohorts.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="p-6 text-center text-gray-500">
+                        No active cohort found.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    activeCohorts.map((cohort) => (
+                      <tr
+                        key={cohort.id}
+                        className="border-t border-gray-100 cursor-pointer hover:bg-gray-50"
+                        onClick={() => navigate(`/admin/cohorts/${cohort.id}`)}
+                      >
+                        <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
+                          <div>{cohort.cohort_name || "-"}</div>
+                          <div className="text-xs text-gray-400">
+                            {cohort.cohort_code || "-"} •{" "}
+                            {cohort.district || "-"}
+                          </div>
+                        </td>
+
+                        <td className="p-4 text-gray-600">
+                          {cohort.total_registrations || 0}
+                        </td>
+
+                        <td className="p-4 text-gray-600">
+                          {cohort.total_selected || 0}
+                        </td>
+
+                        <td className="p-4">
+                          <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold">
+                            {cohort.status || "Draft"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -151,17 +275,13 @@ export default function Admin() {
             </p>
 
             <div className="mt-5 space-y-3">
-              {[
-                "Create New Cohort",
-                "Design Registration Form",
-                "View Participants",
-                "Generate Report",
-              ].map((item) => (
+              {quickActions.map((item) => (
                 <button
-                  key={item}
+                  key={item.label}
+                  onClick={() => navigate(item.path)}
                   className="w-full text-left px-4 py-3 rounded-2xl border border-gray-200 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] font-medium transition"
                 >
-                  {item}
+                  {item.label}
                 </button>
               ))}
             </div>

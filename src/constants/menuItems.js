@@ -24,7 +24,15 @@ export const ADMIN_MENU_ITEMS = [
     ],
   },
 
-  { label: "Forms", path: ROUTES.forms, icon: FileText },
+  {
+  label: "Forms",
+  path: ROUTES.forms,
+  icon: FileText,
+  children: [
+    { label: "Create Form", path: ROUTES.createForm, icon: PlusCircle },
+    { label: "All Forms", path: ROUTES.forms, icon: List },
+  ],
+  },
   { label: "Participants", path: ROUTES.participants, icon: GraduationCap },
   { label: "Projects", path: ROUTES.projects, icon: Rocket },
   { label: "Reports", path: ROUTES.reports, icon: BarChart3 },
