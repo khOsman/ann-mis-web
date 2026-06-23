@@ -35,19 +35,19 @@ export default function Admin() {
   const menuItems = ["Dashboard", "Cohorts", "Forms", "Participants", "Projects", "Reports", "Settings"];
 
   const stats = [
-    ["Total Registrations", "0"],
-    ["Selected Participants", "0"],
-    ["Enrolled Participants", "0"],
-    ["Graduated Participants", "0"]
+    ["Total Registrations", "0", "Across all cohorts"],
+    ["Selected", "0", "FGD selected participants"],
+    ["Enrolled", "0", "Payment completed"],
+    ["Graduated", "0", "Successfully completed"]
   ];
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex">
-      <aside className="w-72 bg-[#2B2368] text-white px-6 py-6">
+      <aside className="w-72 bg-[#2B2368] text-white px-6 py-6 hidden lg:block">
         <div className="flex items-center gap-3 mb-10">
-          <img src={annLogo} alt="ANN Logo" className="w-16 h-16 object-contain" />
+          <img src={annLogo} alt="ANN Logo" className="w-16 h-16 object-contain bg-white rounded-2xl p-1" />
           <div>
-            <h1 className="text-xl text-[#FF008C] font-bold leading-tight">ANN MIS</h1>
+            <h1 className="text-xl font-extrabold leading-tight">ANN MIS</h1>
             <p className="text-xs text-pink-200">A Changemakers’ Network</p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default function Admin() {
               key={item}
               className={`px-4 py-3 rounded-xl cursor-pointer text-sm font-medium transition ${
                 index === 0
-                  ? "bg-[#FF008C] text-white shadow"
+                  ? "bg-[#FF008C] text-white shadow-lg"
                   : "text-purple-100 hover:bg-white/10"
               }`}
             >
@@ -66,39 +66,97 @@ export default function Admin() {
             </div>
           ))}
         </nav>
+
+        <div className="mt-10 rounded-2xl bg-white/10 p-4">
+          <p className="text-sm font-semibold">System Status</p>
+          <p className="text-xs text-purple-100 mt-1">All services running</p>
+        </div>
       </aside>
 
       <main className="flex-1">
         <header className="h-20 bg-white border-b border-gray-200 px-8 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-[#1F2937]">Admin Dashboard</h2>
-            <p className="text-sm text-gray-500">Manage ANN cohorts, forms, participants and reports.</p>
+            <h2 className="text-2xl font-extrabold text-[#1F2937]">Dashboard</h2>
+            <p className="text-sm text-gray-500">ANN operational overview and quick actions</p>
           </div>
 
-          <button
-            onClick={() => signOut(auth)}
-            className="border border-[#FF008C] text-[#FF008C] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#FF008C] hover:text-white transition"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <button className="bg-[#FF008C] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90">
+              + Create Form
+            </button>
+            <button
+              onClick={() => signOut(auth)}
+              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[#FF008C] hover:text-[#FF008C]"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         <section className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-            {stats.map(([title, value]) => (
-              <div key={title} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            {stats.map(([title, value, subtitle]) => (
+              <div key={title} className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
                 <p className="text-sm text-gray-500">{title}</p>
-                <h3 className="text-3xl font-bold text-[#2B2368] mt-2">{value}</h3>
+                <h3 className="text-4xl font-extrabold text-[#2B2368] mt-2">{value}</h3>
+                <p className="text-xs text-gray-400 mt-2">{subtitle}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-[#1F2937] mb-2">Welcome to ANN MIS</h3>
-            <p className="text-gray-600 text-sm">
-              This system will manage registration forms, participant tracking, project monitoring,
-              cohort performance, and customized reporting for Amra Notun Network.
-            </p>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
+            <div className="xl:col-span-2 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-bold text-[#1F2937]">Active Cohorts</h3>
+                  <p className="text-sm text-gray-500">Recent cohort progress summary</p>
+                </div>
+                <button className="text-sm font-semibold text-[#FF008C]">View all</button>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-gray-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#F9FAFB] text-gray-500">
+                    <tr>
+                      <th className="text-left p-4">Cohort</th>
+                      <th className="text-left p-4">Registrations</th>
+                      <th className="text-left p-4">Selected</th>
+                      <th className="text-left p-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {["Jessore-25", "Bogura-26", "Rajshahi-26"].map((cohort) => (
+                      <tr key={cohort} className="border-t border-gray-100">
+                        <td className="p-4 font-semibold text-[#1F2937]">{cohort}</td>
+                        <td className="p-4 text-gray-600">0</td>
+                        <td className="p-4 text-gray-600">0</td>
+                        <td className="p-4">
+                          <span className="px-3 py-1 rounded-full bg-pink-50 text-[#FF008C] text-xs font-semibold">
+                            Draft
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-[#1F2937]">Quick Actions</h3>
+              <p className="text-sm text-gray-500 mt-1">Start common operational tasks</p>
+
+              <div className="mt-5 space-y-3">
+                {["Create New Cohort", "Design Registration Form", "View Participants", "Generate Report"].map((item) => (
+                  <button
+                    key={item}
+                    className="w-full text-left px-4 py-3 rounded-2xl border border-gray-200 hover:border-[#FF008C] hover:text-[#FF008C] font-medium transition"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       </main>
