@@ -6,6 +6,8 @@ import AllCohorts from "./pages/cohorts/AllCohorts";
 import EditCohort from "./pages/cohorts/EditCohort";
 import CohortDetails from "./pages/cohorts/CohortDetails";
 import AllForms from "./pages/forms/AllForms";
+import CreateForm from "./pages/forms/CreateForm";
+import FormBuilder from "./pages/forms/FormBuilder";
 import { AlertProvider } from "./context/AlertContext";
 import { ROUTES } from "./constants/routes";
 
@@ -21,6 +23,8 @@ export default function App() {
           <Route path={ROUTES.editCohort} element={<EditCohort />} />
           <Route path="/admin/cohorts/:id" element={<CohortDetails />} />
           <Route path={ROUTES.forms} element={<AllForms />} />
+          <Route path={ROUTES.createForm} element={<CreateForm />} />
+          <Route path="/admin/forms/:id/builder" element={<FormBuilder />} />
         </Routes>
       </BrowserRouter>
     </AlertProvider>

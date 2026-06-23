@@ -9,7 +9,8 @@ export const ROUTES = {
   forms: "/admin/forms",
   createForm: "/admin/forms/create",
   editForm: "/admin/forms/:id/edit",
-  
+  formBuilder: "/admin/forms/:id/builder",
+
   participants: "/admin/participants",
   projects: "/admin/projects",
   reports: "/admin/reports",
