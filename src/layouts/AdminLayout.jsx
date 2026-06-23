@@ -98,12 +98,12 @@ export default function AdminLayout({ children, title, subtitle }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            {/* <button
               onClick={() => navigate("/admin/cohorts/create")}
               className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
             >
               + Create Cohort
-            </button>
+            </button> */}
 
             <button
               onClick={handleLogout}

@@ -71,12 +71,12 @@ export default function Admin() {
   if (!allowed) return null;
 
   const stats = [
-    ["Total Cohorts", "0", "Till Date"],
+    ["Total Cohorts", "0", "All ANN cohorts"],
     ["Total Registrations", "0", "Across all cohorts"],
     ["Total Selected", "0", "FGD selected participants"],
     ["Total Enrolled", "0", "Payment completed"],
     ["Total Graduated", "0", "Successfully completed"],
-    ["Total Projects", "0", "Successfully pitched"],
+    ["Total Projects", "0", "Community projects"],
   ];
 
   return (
