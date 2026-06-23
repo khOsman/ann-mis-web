@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import annLogo from "../assets/ann-logo.png";
@@ -5,16 +6,28 @@ import { ADMIN_MENU_ITEMS } from "../constants/menuItems";
 import { BRAND } from "../constants/brand";
 
 export default function AdminLayout({ children, title, subtitle }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (item) => {
+    if (item.path === "/admin") return location.pathname === "/admin";
+    return location.pathname.startsWith(item.path);
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-[var(--ann-bg)] flex">
-      <aside className="hidden lg:flex lg:w-64 xl:w-72 bg-[var(--ann-purple)] text-white px-5 py-6 flex-col">
+      <aside className="hidden lg:flex lg:w-56 xl:w-60 bg-[var(--ann-purple)] text-white px-5 py-6 flex-col">
         <div className="flex items-center gap-3 mb-8">
           <img
             src={annLogo}
             alt={BRAND.fullName}
             className="w-14 h-14 object-contain bg-white rounded-2xl p-1"
           />
-
           <div>
             <h1 className="text-lg xl:text-xl font-extrabold leading-tight">
               {BRAND.appName}
@@ -24,23 +37,54 @@ export default function AdminLayout({ children, title, subtitle }) {
         </div>
 
         <nav className="space-y-2">
-          {ADMIN_MENU_ITEMS.map((item, index) => (
-            <div
-              key={item.label}
-              className={`px-4 py-3 rounded-xl cursor-pointer text-sm font-medium transition ${
-                index === 0
-                  ? "bg-[var(--ann-pink)] text-white shadow-lg"
-                  : "text-purple-100 hover:bg-white/10"
-              }`}
-            >
-              {item.label}
-            </div>
-          ))}
+         {ADMIN_MENU_ITEMS.map((item) => {
+            const active = isActive(item);
+            const Icon = item.icon;
+
+            return (
+              <div key={item.label}>
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center gap-3 text-left px-4 py-3 rounded-xl cursor-pointer text-sm font-medium transition ${
+                    active
+                      ? "bg-[var(--ann-pink)] text-white shadow-lg"
+                      : "text-purple-100 hover:bg-white/10"
+                  }`}
+                >
+                  {Icon && <Icon size={18} />}
+                  <span>{item.label}</span>
+                </button>
+
+                {item.children && active && (
+                  <div className="ml-4 mt-2 space-y-1 border-l border-white/20 pl-3">
+                    {item.children.map((child) => {
+                      const ChildIcon = child.icon;
+
+                      return (
+                        <button
+                          key={child.label}
+                          onClick={() => navigate(child.path)}
+                          className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-xs font-medium transition ${
+                            location.pathname === child.path
+                              ? "bg-white text-[var(--ann-purple)]"
+                              : "text-purple-100 hover:bg-white/10"
+                          }`}
+                        >
+                          {ChildIcon && <ChildIcon size={14} />}
+                          <span>{child.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="mt-auto rounded-2xl bg-white/10 p-4">
           <p className="text-sm font-semibold">System Status</p>
-          <p className="text-xs text-purple-100 mt-1">All services running</p>
+          <p className="text-xs text-purple-100 mt-1">All services are under-development</p>
         </div>
       </aside>
 
@@ -54,12 +98,15 @@ export default function AdminLayout({ children, title, subtitle }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90">
-              + Create Form
+            <button
+              onClick={() => navigate("/admin/cohorts/create")}
+              className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+            >
+              + Create Cohort
             </button>
 
             <button
-              onClick={() => signOut(auth)}
+              onClick={handleLogout}
               className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
             >
               Logout

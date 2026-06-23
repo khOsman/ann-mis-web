@@ -94,8 +94,8 @@ export default function Admin() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 2xl:grid-cols-3 gap-5 lg:gap-6 mt-6 lg:mt-8">
-          <div className="2xl:col-span-2 bg-white border border-gray-200 rounded-2xl p-5 lg:p-6 shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-5 lg:mt-6">
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-2 lg:p-4 shadow-sm overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <div>
                 <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
@@ -140,7 +140,7 @@ export default function Admin() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 lg:p-6 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl p-2 lg:p-4 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
               Quick Actions
             </h3>
