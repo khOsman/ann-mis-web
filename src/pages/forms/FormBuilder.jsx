@@ -90,6 +90,7 @@ export default function FormBuilder() {
   const [fields, setFields] = useState([]);
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -293,6 +294,66 @@ export default function FormBuilder() {
     }
     };
 
+    const handleUseDefaultBanner = async () => {
+  try {
+    await updateDoc(doc(db, "forms", id), {
+      banner_type: "default",
+      banner_url: "/default-form-banner.png",
+      banner_file_name: "",
+      updated_at: serverTimestamp(),
+    });
+
+    setFormMeta((prev) => ({
+      ...prev,
+      banner_type: "default",
+      banner_url: "/default-form-banner.png",
+      banner_file_name: "",
+    }));
+
+    showAlert("success", "Default banner applied.");
+  } catch (error) {
+    showAlert("error", error.message || "Failed to update banner.");
+  }
+};
+
+const handleBannerUrlChange = async (url) => {
+  try {
+    await updateDoc(doc(db, "forms", id), {
+      banner_type: "custom",
+      banner_url: url,
+      banner_file_name: "",
+      updated_at: serverTimestamp(),
+    });
+
+    setFormMeta((prev) => ({
+      ...prev,
+      banner_type: "custom",
+      banner_url: url,
+      banner_file_name: "",
+    }));
+
+    showAlert("success", "Custom banner URL saved.");
+  } catch (error) {
+    showAlert("error", error.message || "Failed to save banner URL.");
+  }
+};
+
+const handleCopyLink = async () => {
+  try {
+    await navigator.clipboard.writeText(
+      `${window.location.origin}/form/${formMeta.public_slug}`
+    );
+
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  } catch (error) {
+    showAlert("error", "Failed to copy link.");
+  }
+};
+
   return (
     <AdminLayout title="Form Builder" subtitle="Build registration form fields">
       <PageContainer className="py-6 lg:py-8">
@@ -308,6 +369,44 @@ export default function FormBuilder() {
             </span>
             </p>
         </div>
+
+        {formMeta?.status === "Published" && (
+  <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
+    <p className="text-sm font-semibold text-green-700">
+      Public form is live
+    </p>
+
+    <div className="flex flex-col sm:flex-row gap-3 mt-3">
+      <input
+        readOnly
+        value={`${window.location.origin}/form/${formMeta.public_slug}`}
+        className="flex-1 border border-green-200 rounded-xl px-4 py-2 text-sm bg-white"
+      />
+
+      <button
+        type="button"
+        onClick={handleCopyLink}
+        className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+            copied
+            ? "bg-green-500 text-white"
+            : "border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+        }`}
+        >
+        {copied ? "✓ Copied" : "Copy Link"}
+    </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          window.open(`/form/${formMeta.public_slug}`, "_blank")
+        }
+        className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold"
+      >
+        Open
+      </button>
+    </div>
+  </div>
+)}
 
         <div className="flex flex-wrap gap-3">
             <button
@@ -335,6 +434,58 @@ export default function FormBuilder() {
             </button>
         </div>
         </div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-5">
+        {/* Banner */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+            <div className="flex-1">
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                Form Banner
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+                This banner will appear on the public registration form.
+            </p>
+
+            <div className="mt-4 rounded-2xl overflow-hidden border border-gray-200 bg-gray-50">
+                <img
+                src={formMeta?.banner_url || "/default-form-banner.png"}
+                alt="Form banner"
+                className="w-full h-44 object-cover"
+                />
+            </div>
+            </div>
+
+            <div className="w-full lg:w-80">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Custom Banner URL
+            </label>
+
+            <input
+                defaultValue={
+                formMeta?.banner_type === "custom" ? formMeta?.banner_url : ""
+                }
+                placeholder="Paste image URL here"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                onBlur={(e) => {
+                if (e.target.value.trim()) {
+                    handleBannerUrlChange(e.target.value.trim());
+                }
+                }}
+            />
+
+            <button
+                type="button"
+                onClick={handleUseDefaultBanner}
+                className="mt-3 w-full border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            >
+                Use Default Banner
+            </button>
+
+            <p className="text-xs text-gray-500 mt-2">
+                Upload support will be added later with Firebase Storage.
+            </p>
+            </div>
+        </div>
+        </div>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <aside className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Field Toolbox</h3>
@@ -360,11 +511,15 @@ export default function FormBuilder() {
             </div>
           </aside>
 
+          
+
           <section className="xl:col-span-6 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Form Canvas</h3>
             <p className="text-sm text-gray-500 mt-1">
               Drag fields to reorder. Click a field to edit settings.
             </p>
+
+            
 
             <div className="mt-6 space-y-4">
               {fields.length === 0 ? (
