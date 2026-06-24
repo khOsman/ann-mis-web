@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { db } from "../../firebase";
+import { getParticipants } from "../../services/participantService";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -23,18 +17,7 @@ export default function AllParticipants() {
     setLoading(true);
 
     try {
-      const q = query(
-        collection(db, "participants"),
-        orderBy("submitted_at", "desc")
-      );
-
-      const snapshot = await getDocs(q);
-
-      const data = snapshot.docs.map((item) => ({
-        id: item.id,
-        ...item.data(),
-      }));
-
+      const data = await getParticipants();
       setParticipants(data);
     } catch (error) {
       console.error("Failed to fetch participants:", error);

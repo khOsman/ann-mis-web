@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
-import { db } from "../../firebase";
+import { getParticipantById } from "../../services/participantService";
+import { getFormResponseById } from "../../services/registrationService";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -18,31 +18,21 @@ export default function ParticipantProfile() {
   useEffect(() => {
     const fetchParticipant = async () => {
       try {
-        const participantSnap = await getDoc(doc(db, "participants", id));
+       const participantData = await getParticipantById(id);
 
-        if (!participantSnap.exists()) {
+        if (!participantData) {
           showAlert("error", "Participant not found.");
           navigate("/admin/participants");
           return;
         }
 
-        const participantData = {
-          id: participantSnap.id,
-          ...participantSnap.data(),
-        };
-
         setParticipant(participantData);
 
         if (participantData.response_id) {
-          const responseSnap = await getDoc(
-            doc(db, "form_responses", participantData.response_id)
-          );
+          const responseData = await getFormResponseById(participantData.response_id);
 
-          if (responseSnap.exists()) {
-            setResponse({
-              id: responseSnap.id,
-              ...responseSnap.data(),
-            });
+          if (responseData) {
+            setResponse(responseData);
           }
         }
       } catch (error) {
