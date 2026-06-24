@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  increment,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useParams } from "react-router-dom";
 import { db } from "../../firebase";
+import { submitPublicRegistration } from "../../services/publicRegistrationService";
 
 export default function PublicForm() {
   const { slug } = useParams();
@@ -234,37 +225,10 @@ export default function PublicForm() {
     setSubmitting(true);
 
     try {
-      const responseAnswers = fields
-        .filter((field) => field.field_type !== "section")
-        .map((field) => ({
-          field_id: field.id,
-          field_label_en: field.label_en || field.label || "",
-          field_label_bn: field.label_bn || "",
-          field_type: field.field_type,
-          value: answers[field.id] || "",
-        }));
-
-      await addDoc(collection(db, "form_responses"), {
-        form_id: formMeta.id,
-        form_title: formMeta.form_title,
-        public_slug: formMeta.public_slug,
-
-        cohort_id: formMeta.cohort_id,
-        cohort_name: formMeta.cohort_name,
-        cohort_code: formMeta.cohort_code,
-
-        answers: responseAnswers,
-
-        submitted_at: serverTimestamp(),
-      });
-
-      await updateDoc(doc(db, "forms", formMeta.id), {
-        total_responses: increment(1),
-        updated_at: serverTimestamp(),
-      });
-      await updateDoc(doc(db, "cohorts", formMeta.cohort_id), {
-        total_registrations: increment(1),
-        updated_at: serverTimestamp(),
+      await submitPublicRegistration({
+        formMeta,
+        fields,
+        answers,
       });
 
       setSubmitted(true);
