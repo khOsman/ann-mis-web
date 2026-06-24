@@ -15,6 +15,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import PageContainer from "../layouts/PageContainer";
 import StatCard from "../components/dashboard/StatCard";
 import { ROUTES } from "../constants/routes";
+import { getPermissionsByRole } from "../constants/roles";
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -89,16 +90,18 @@ export default function Admin() {
           return;
         }
 
-        const userRef = doc(db, "users", user.email);
+        const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
           await setDoc(userRef, {
+            uid: user.uid,
             name: user.displayName || "",
             email: user.email,
             photo_url: user.photoURL || "",
             role: "pending",
             status: "pending",
+            permissions: getPermissionsByRole("pending"),
             created_at: serverTimestamp(),
             updated_at: serverTimestamp(),
           });

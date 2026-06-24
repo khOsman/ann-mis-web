@@ -11,6 +11,7 @@ import FormBuilder from "./pages/forms/FormBuilder";
 import PublicForm from "./pages/public/PublicForm";
 import AllParticipants from "./pages/participants/AllParticipants";
 import ParticipantProfile from "./pages/participants/ParticipantProfile";
+import AllUsers from "./pages/users/AllUsers";
 
 
 import { AlertProvider } from "./context/AlertContext";
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/form/:slug" element={<PublicForm />} />
           <Route path="/admin/participants" element={<AllParticipants />} />
           <Route path="/admin/participants/:id" element={<ParticipantProfile />} />
+          <Route path="/admin/users" element={<AllUsers />} />
         </Routes>
       </BrowserRouter>
     </AlertProvider>
