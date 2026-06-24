@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { db } from "../../firebase";
+import { getUsers } from "../../services/userService";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -18,14 +17,7 @@ export default function AllUsers() {
     setLoading(true);
 
     try {
-      const q = query(collection(db, "users"), orderBy("created_at", "desc"));
-      const snapshot = await getDocs(q);
-
-      const data = snapshot.docs.map((item) => ({
-        id: item.id,
-        ...item.data(),
-      }));
-
+      const data = await getUsers();
       setUsers(data);
     } catch (error) {
       console.error("Failed to fetch users:", error);
@@ -172,7 +164,7 @@ export default function AllUsers() {
                       <td className="p-4">
                         <button
                           onClick={() =>
-                            navigate(`/admin/users/${encodeURIComponent(user.email)}`)
+                            navigate(`/admin/users/${user.uid}`)
                           }
                           className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                         >

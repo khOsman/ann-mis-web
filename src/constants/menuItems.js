@@ -8,33 +8,92 @@ import {
   Settings,
   PlusCircle,
   List,
+  Users,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
 export const ADMIN_MENU_ITEMS = [
-  { label: "Dashboard", path: ROUTES.admin, icon: LayoutDashboard },
+  {
+    label: "Dashboard",
+    path: ROUTES.admin,
+    icon: LayoutDashboard,
+    permission: "dashboard",
+  },
 
   {
     label: "Cohorts",
     path: ROUTES.cohorts,
     icon: UsersRound,
+    permission: "cohorts",
     children: [
-      { label: "Create Cohort", path: ROUTES.createCohort, icon: PlusCircle },
-      { label: "All Cohorts", path: ROUTES.cohorts, icon: List },
+      {
+        label: "Create Cohort",
+        path: ROUTES.createCohort,
+        icon: PlusCircle,
+        permission: "cohorts",
+      },
+      {
+        label: "All Cohorts",
+        path: ROUTES.cohorts,
+        icon: List,
+        permission: "cohorts",
+      },
     ],
   },
 
   {
-  label: "Forms",
-  path: ROUTES.forms,
-  icon: FileText,
-  children: [
-    { label: "Create Form", path: ROUTES.createForm, icon: PlusCircle },
-    { label: "All Forms", path: ROUTES.forms, icon: List },
-  ],
+    label: "Forms",
+    path: ROUTES.forms,
+    icon: FileText,
+    permission: "forms",
+    children: [
+      {
+        label: "Create Form",
+        path: ROUTES.createForm,
+        icon: PlusCircle,
+        permission: "forms",
+      },
+      {
+        label: "All Forms",
+        path: ROUTES.forms,
+        icon: List,
+        permission: "forms",
+      },
+    ],
   },
-  { label: "Participants", path: ROUTES.participants, icon: GraduationCap },
-  { label: "Projects", path: ROUTES.projects, icon: Rocket },
-  { label: "Reports", path: ROUTES.reports, icon: BarChart3 },
-  { label: "Settings", path: ROUTES.settings, icon: Settings },
+
+  {
+    label: "Participants",
+    path: ROUTES.participants,
+    icon: GraduationCap,
+    permission: "participants",
+  },
+
+  {
+    label: "Projects",
+    path: ROUTES.projects,
+    icon: Rocket,
+    permission: "projects",
+  },
+
+  {
+    label: "Reports",
+    path: ROUTES.reports,
+    icon: BarChart3,
+    permission: "reports",
+  },
+
+  {
+    label: "Users",
+    path: "/admin/users",
+    icon: Users,
+    permission: "users",
+  },
+
+  {
+    label: "Settings",
+    path: ROUTES.settings,
+    icon: Settings,
+    permission: "settings",
+  },
 ];

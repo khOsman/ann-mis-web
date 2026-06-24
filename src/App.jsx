@@ -12,7 +12,7 @@ import PublicForm from "./pages/public/PublicForm";
 import AllParticipants from "./pages/participants/AllParticipants";
 import ParticipantProfile from "./pages/participants/ParticipantProfile";
 import AllUsers from "./pages/users/AllUsers";
-
+import UserProfile from "./pages/users/UserProfile";
 
 import { AlertProvider } from "./context/AlertContext";
 import { ROUTES } from "./constants/routes";
@@ -35,6 +35,7 @@ export default function App() {
           <Route path="/admin/participants" element={<AllParticipants />} />
           <Route path="/admin/participants/:id" element={<ParticipantProfile />} />
           <Route path="/admin/users" element={<AllUsers />} />
+          <Route path="/admin/users/:userId" element={<UserProfile />} />
         </Routes>
       </BrowserRouter>
     </AlertProvider>
