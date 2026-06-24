@@ -115,20 +115,30 @@ export default function Admin() {
         const userData = userSnap.data();
 
         if (userData.status !== "active") {
-          await signOut(auth);
+          
           showAlert(
             "warning",
             "Your account is currently inactive. Please contact the administrator."
           );
+          setTimeout(async () => {
+            await signOut(auth);
+            window.location.href = "/";
+          }, 2500);
+
           return;
         }
 
         if (!["super_admin", "admin"].includes(userData.role)) {
-          await signOut(auth);
           showAlert(
-            "error",
-            "You do not have permission to access ANN MIS."
+            "Error",
+            "You do not have permission to access ANN MIS. Please contact the administrator."
           );
+
+          setTimeout(async () => {
+            await signOut(auth);
+            window.location.href = "/";
+          }, 2500);
+
           return;
         }
 
