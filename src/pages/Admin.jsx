@@ -8,7 +8,10 @@ import {
   limit,
   orderBy,
   query,
+  setDoc,
+  serverTimestamp
 } from "firebase/firestore";
+import { useAlert } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import AdminLayout from "../layouts/AdminLayout";
@@ -18,7 +21,7 @@ import { ROUTES } from "../constants/routes";
 
 export default function Admin() {
   const navigate = useNavigate();
-
+  const { showAlert } = useAlert();
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [activeCohorts, setActiveCohorts] = useState([]);
@@ -86,25 +89,46 @@ export default function Admin() {
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          await signOut(auth);
-          alert("Your account does not have access to ANN MIS.");
-          window.location.href = "/";
-          return;
-        }
+            await setDoc(userRef, {
+              name: user.displayName || "",
+              email: user.email,
+              photo_url: user.photoURL || "",
+              role: "pending",
+              status: "pending",
+              created_at: serverTimestamp(),
+              updated_at: serverTimestamp(),
+            });
+
+            showAlert(
+              "info",
+              "Your BRAC account has been registered and is awaiting administrator approval."
+            );
+
+            setTimeout(async () => {
+              await signOut(auth);
+              window.location.href = "/";
+            }, 2500);
+
+            return;
+          }
 
         const userData = userSnap.data();
 
         if (userData.status !== "active") {
           await signOut(auth);
-          alert("Your account is inactive.");
-          window.location.href = "/";
+          showAlert(
+            "warning",
+            "Your account is currently inactive. Please contact the administrator."
+          );
           return;
         }
 
         if (!["super_admin", "admin"].includes(userData.role)) {
           await signOut(auth);
-          alert("You do not have permission to access the admin portal.");
-          window.location.href = "/";
+          showAlert(
+            "error",
+            "You do not have permission to access ANN MIS."
+          );
           return;
         }
 

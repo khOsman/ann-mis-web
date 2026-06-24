@@ -262,6 +262,10 @@ export default function PublicForm() {
         total_responses: increment(1),
         updated_at: serverTimestamp(),
       });
+      await updateDoc(doc(db, "cohorts", formMeta.cohort_id), {
+        total_registrations: increment(1),
+        updated_at: serverTimestamp(),
+      });
 
       setSubmitted(true);
     } catch (error) {
