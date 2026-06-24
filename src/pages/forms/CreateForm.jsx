@@ -41,7 +41,7 @@ export default function CreateForm() {
           id: item.id,
           ...item.data(),
         }))
-        .filter((item) => item.is_deleted !== true);
+        .filter((item) => item.is_deleted !== true && item.status === "Active" );
 
       setCohorts(data);
     };

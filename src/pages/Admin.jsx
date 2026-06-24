@@ -5,15 +5,12 @@ import {
   doc,
   getDoc,
   getDocs,
-  limit,
-  orderBy,
-  query,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
 } from "firebase/firestore";
-import { useAlert } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
+import { useAlert } from "../context/AlertContext";
 import AdminLayout from "../layouts/AdminLayout";
 import PageContainer from "../layouts/PageContainer";
 import StatCard from "../components/dashboard/StatCard";
@@ -22,12 +19,13 @@ import { ROUTES } from "../constants/routes";
 export default function Admin() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [activeCohorts, setActiveCohorts] = useState([]);
 
   const [dashboardStats, setDashboardStats] = useState({
-    totalCohorts: 0,
+    activeCohorts: 0,
     totalRegistrations: 0,
     totalSelected: 0,
     totalEnrolled: 0,
@@ -36,36 +34,42 @@ export default function Admin() {
   });
 
   const fetchDashboardData = async () => {
-    const snapshot = await getDocs(collection(db, "cohorts"));
+    const cohortSnapshot = await getDocs(collection(db, "cohorts"));
 
-    const cohorts = snapshot.docs
+    const cohorts = cohortSnapshot.docs
       .map((item) => ({
         id: item.id,
         ...item.data(),
       }))
       .filter((item) => item.is_deleted !== true);
 
-    const stats = {
-      totalCohorts: cohorts.length,
-      totalRegistrations: 0,
-      totalSelected: 0,
-      totalEnrolled: 0,
-      totalGraduated: 0,
-      totalProjects: 0,
-    };
+    const activeOnly = cohorts.filter((item) => item.status === "Active");
 
-    cohorts.forEach((cohort) => {
-      stats.totalRegistrations += Number(cohort.total_registrations || 0);
-      stats.totalSelected += Number(cohort.total_selected || 0);
-      stats.totalEnrolled += Number(cohort.total_enrolled || 0);
-      stats.totalGraduated += Number(cohort.total_graduated || 0);
-      stats.totalProjects += Number(cohort.total_projects || 0);
+    setDashboardStats({
+      activeCohorts: activeOnly.length,
+      totalRegistrations: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_registrations || 0),
+        0
+      ),
+      totalSelected: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_selected || 0),
+        0
+      ),
+      totalEnrolled: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_enrolled || 0),
+        0
+      ),
+      totalGraduated: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_graduated || 0),
+        0
+      ),
+      totalProjects: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_projects || 0),
+        0
+      ),
     });
 
-    setDashboardStats(stats);
-
-    const recentCohorts = cohorts
-      .filter((cohort) => cohort.status === "Active")
+    const recentCohorts = activeOnly
       .sort((a, b) => {
         const aTime = a.created_at?.toDate?.()?.getTime?.() || 0;
         const bTime = b.created_at?.toDate?.()?.getTime?.() || 0;
@@ -89,37 +93,37 @@ export default function Admin() {
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              name: user.displayName || "",
-              email: user.email,
-              photo_url: user.photoURL || "",
-              role: "pending",
-              status: "pending",
-              created_at: serverTimestamp(),
-              updated_at: serverTimestamp(),
-            });
+          await setDoc(userRef, {
+            name: user.displayName || "",
+            email: user.email,
+            photo_url: user.photoURL || "",
+            role: "pending",
+            status: "pending",
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+          });
 
-            showAlert(
-              "info",
-              "Your BRAC account has been registered and is awaiting administrator approval."
-            );
+          showAlert(
+            "info",
+            "Your BRAC account has been registered and is awaiting administrator approval."
+          );
 
-            setTimeout(async () => {
-              await signOut(auth);
-              window.location.href = "/";
-            }, 2500);
+          setTimeout(async () => {
+            await signOut(auth);
+            window.location.href = "/";
+          }, 2500);
 
-            return;
-          }
+          return;
+        }
 
         const userData = userSnap.data();
 
         if (userData.status !== "active") {
-          
           showAlert(
             "warning",
             "Your account is currently inactive. Please contact the administrator."
           );
+
           setTimeout(async () => {
             await signOut(auth);
             window.location.href = "/";
@@ -130,7 +134,7 @@ export default function Admin() {
 
         if (!["super_admin", "admin"].includes(userData.role)) {
           showAlert(
-            "Error",
+            "error",
             "You do not have permission to access ANN MIS. Please contact the administrator."
           );
 
@@ -148,10 +152,13 @@ export default function Admin() {
         setLoading(false);
       } catch (error) {
         console.error("Access check failed:", error);
-        alert(error.message);
-        setLoading(false);
-        await signOut(auth);
-        window.location.href = "/";
+        showAlert("error", error.message || "Access check failed.");
+
+        setTimeout(async () => {
+          setLoading(false);
+          await signOut(auth);
+          window.location.href = "/";
+        }, 2500);
       }
     });
 
@@ -170,24 +177,19 @@ export default function Admin() {
 
   if (!allowed) return null;
 
-  const stats = [
-    ["Total Cohorts", dashboardStats.totalCohorts, "All ANN cohorts"],
+  const firstRowStats = [
+    ["Active Cohorts", dashboardStats.activeCohorts, "Currently operational"],
     [
       "Total Registrations",
       dashboardStats.totalRegistrations,
-      "Across all cohorts",
+      "Application submitted",
     ],
-    [
-      "Total Selected",
-      dashboardStats.totalSelected,
-      "FGD selected participants",
-    ],
-    ["Total Enrolled", dashboardStats.totalEnrolled, "Payment completed"],
-    [
-      "Total Graduated",
-      dashboardStats.totalGraduated,
-      "Successfully completed",
-    ],
+    ["Total Selected", dashboardStats.totalSelected, "Selected for FGD"],
+  ];
+
+  const secondRowStats = [
+    ["Total Enrolled", dashboardStats.totalEnrolled, "Successfully admitted"],
+    ["Total Graduated", dashboardStats.totalGraduated, "Completed programme"],
     ["Total Projects", dashboardStats.totalProjects, "Community projects"],
   ];
 
@@ -216,8 +218,19 @@ export default function Admin() {
       subtitle="ANN operational overview and quick actions"
     >
       <PageContainer className="py-6 lg:py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
-          {stats.map(([title, value, subtitle]) => (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
+          {firstRowStats.map(([title, value, subtitle]) => (
+            <StatCard
+              key={title}
+              title={title}
+              value={value}
+              subtitle={subtitle}
+            />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5 mt-4">
+          {secondRowStats.map(([title, value, subtitle]) => (
             <StatCard
               key={title}
               title={title}
@@ -238,6 +251,7 @@ export default function Admin() {
                   Recent cohort progress summary
                 </p>
               </div>
+
               <button
                 onClick={() => navigate(ROUTES.cohorts)}
                 className="text-sm font-semibold text-[var(--ann-pink)] text-left"
