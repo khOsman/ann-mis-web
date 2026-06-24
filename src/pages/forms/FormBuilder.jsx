@@ -32,6 +32,7 @@ import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
 import { FIELD_TYPES } from "../../constants/fieldTypes";
+import RichTextEditor from "../../components/common/RichTextEditor";
 
 function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -525,45 +526,29 @@ const handleCopyLink = async () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Description English
               </label>
-              <textarea
-                value={formMeta?.description_en || ""}
-                onChange={(e) =>
-                  setFormMeta((prev) => ({
-                    ...prev,
-                    description_en: e.target.value,
-                  }))
+
+              <RichTextEditor
+                value={formMeta.description_en || ""}
+                onChange={(value) =>
+                  handleUpdateForm({
+                    description_en: value,
+                  })
                 }
-                onBlur={async (e) => {
-                  await updateDoc(doc(db, "forms", id), {
-                    description_en: e.target.value,
-                    updated_at: serverTimestamp(),
-                  });
-                  showAlert("success", "English description updated.");
-                }}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:border-[var(--ann-pink)]"
               />
             </div>
 
-            <div>
+           <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Description Bangla
               </label>
-              <textarea
-                value={formMeta?.description_bn || ""}
-                onChange={(e) =>
-                  setFormMeta((prev) => ({
-                    ...prev,
-                    description_bn: e.target.value,
-                  }))
+
+              <RichTextEditor
+                value={formMeta.description_bn || ""}
+                onChange={(value) =>
+                  handleUpdateForm({
+                    description_bn: value,
+                  })
                 }
-                onBlur={async (e) => {
-                  await updateDoc(doc(db, "forms", id), {
-                    description_bn: e.target.value,
-                    updated_at: serverTimestamp(),
-                  });
-                  showAlert("success", "Bangla description updated.");
-                }}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:border-[var(--ann-pink)]"
               />
             </div>
           </div>
