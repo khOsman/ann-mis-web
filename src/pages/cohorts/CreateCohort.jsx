@@ -82,6 +82,7 @@ export default function CreateCohort() {
         graduation_target: Number(form.graduation_target),
         status: form.status,
 
+        current_participant_sequence: 0,
         total_registrations: 0,
         total_selected: 0,
         total_enrolled: 0,

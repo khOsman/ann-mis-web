@@ -112,11 +112,26 @@ export default function ParticipantProfile() {
               {participant.name || "-"}
             </h2>
 
-            <p className="text-sm text-gray-500 mt-1">
-              {participant.registration_status || "Registered"}
-            </p>
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold">
+                    {participant.registration_status || "Registered"}
+                </span>
+
+                <span className="font-mono text-xs text-gray-500">
+                    {participant.participant_code}
+                </span>
+            </div>
 
             <div className="mt-6 space-y-4 text-sm">
+              
+              <div>
+                <p className="text-gray-500">Participant Code</p>
+
+                <p className="font-mono font-bold text-[var(--ann-purple)]">
+                    {participant.participant_code || "-"}
+                </p>
+              </div>
+              
               <div>
                 <p className="text-gray-500">Email</p>
                 <p className="font-semibold text-gray-800">
