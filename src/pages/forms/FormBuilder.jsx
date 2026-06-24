@@ -521,7 +521,7 @@ const handleCopyLink = async () => {
             </div></div>
         </div>
         {/* Description */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+        {formMeta && (<div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Description English
@@ -551,7 +551,7 @@ const handleCopyLink = async () => {
                 }
               />
             </div>
-          </div>
+          </div>)}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <aside className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Field Toolbox</h3>
