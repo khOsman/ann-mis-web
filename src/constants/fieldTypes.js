@@ -8,9 +8,18 @@ import {
   CircleDot,
   CheckSquare,
   Hash,
+  Heading
 } from "lucide-react";
 
 export const FIELD_TYPES = [
+  {
+    type: "section",
+    label: "Section",
+    icon: Heading,
+    defaultLabel: "Section Title",
+    placeholder: "",
+    defaultDescription: "",
+  },
   {
     type: "text",
     label: "Text",

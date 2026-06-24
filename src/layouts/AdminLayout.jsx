@@ -26,11 +26,11 @@ export default function AdminLayout({ children, title, subtitle }) {
           <img
             src={annLogo}
             alt={BRAND.fullName}
-            className="w-14 h-14 object-contain bg-white rounded-2xl p-1"
+            className="w-14 h-14 object-contain bg-white-200 rounded-2xl "
           />
           <div>
-            <h1 className="text-lg xl:text-xl font-extrabold leading-tight">
-              {BRAND.appName}
+            <h1 className="text-lg xl:text-xl text-[var(--ann-pink)] font-extrabold leading-tight">
+              {BRAND.appName} <span className="text-white">{BRAND.mis}</span>
             </h1>
             <p className="text-xs text-pink-200">{BRAND.tagline}</p>
           </div>

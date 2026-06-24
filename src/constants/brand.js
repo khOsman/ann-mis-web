@@ -1,5 +1,6 @@
 export const BRAND = {
-  appName: "ANN MIS",
+  appName: "ANN",
+  mis:"MIS",
   fullName: "Amra Notun Network",
   tagline: "A Changemakers’ Network",
   organization: "BRAC",

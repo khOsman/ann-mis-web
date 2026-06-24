@@ -9,6 +9,7 @@ import {
 import { auth, db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
+import RichTextEditor from "../../components/common/RichTextEditor";
 import { useAlert } from "../../context/AlertContext";
 
 export default function CreateForm() {
@@ -20,6 +21,8 @@ export default function CreateForm() {
 
   const [form, setForm] = useState({
     form_title: "",
+    description_en:"",
+    description_bn:"",
     cohort_id: "",
     form_type: "registration",
     status: "Draft",
@@ -106,6 +109,8 @@ export default function CreateForm() {
         form_title: form.form_title.trim(),
         cohort_id: form.cohort_id,
         cohort_name: selectedCohort?.cohort_name || "",
+        description_en: form.description_en.trim(),
+        description_bn: form.description_bn.trim(),
         cohort_code: selectedCohort?.cohort_code || "",
         form_type: form.form_type,
         status: form.status,
@@ -203,6 +208,35 @@ export default function CreateForm() {
                 />
               </div>
 
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description English
+                </label>
+                <RichTextEditor
+                  value={form.description_en}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description_en: value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description Bangla
+                </label>
+                <RichTextEditor
+                  value={form.description_bn}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description_bn: value,
+                    }))
+                  }
+                />
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Cohort

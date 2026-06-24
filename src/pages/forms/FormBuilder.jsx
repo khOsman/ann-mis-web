@@ -139,11 +139,24 @@ export default function FormBuilder() {
         label: fieldType.defaultLabel,
         label_en: fieldType.defaultLabel,
         label_bn: "",
+        description_en: fieldType.defaultDescription || "",
+        description_bn: "",
         field_type: fieldType.type,
         placeholder: fieldType.placeholder || "",
         placeholder_en: fieldType.placeholder || "",
         placeholder_bn: "",
         required: true,
+        validation: {
+          min_age: "",
+          max_age: "",
+          min_value: "",
+          max_value: "",
+          min_length: "",
+          max_length: "",
+          pattern: "",
+          error_message_en: "",
+          error_message_bn: "",
+        },
         options: fieldType.defaultOptions || [],
         order: fields.length + 1,
         created_at: serverTimestamp(),
@@ -225,6 +238,27 @@ export default function FormBuilder() {
     const previewPlaceholder = field.placeholder_bn
       ? `${field.placeholder_en || field.placeholder || ""} / ${field.placeholder_bn}`
       : field.placeholder_en || field.placeholder || "";
+
+    if (field.field_type === "section") {
+      return (
+        <div className="bg-[var(--ann-purple)] text-white rounded-2xl p-5">
+          <h3 className="text-xl font-bold">
+            {field.label_bn
+              ? `${field.label_en || field.label} / ${field.label_bn}`
+              : field.label_en || field.label}
+          </h3>
+
+          {(field.description_en || field.description_bn) && (
+            <p className="text-sm text-purple-100 mt-2 leading-6">
+              {field.description_bn
+                ? `${field.description_en || ""} / ${field.description_bn}`
+                : field.description_en}
+            </p>
+          )}
+        </div>
+      );
+    }
+
 
     if (field.field_type === "textarea") {
       return <textarea disabled placeholder={previewPlaceholder} className={`${baseClass} min-h-24`} />;
@@ -420,7 +454,7 @@ const handleCopyLink = async () => {
             <button
             type="button"
             onClick={() => handleUpdateFormStatus("Closed")}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            className=" border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
             >
             Close
             </button>
@@ -483,9 +517,56 @@ const handleCopyLink = async () => {
             <p className="text-xs text-gray-500 mt-2">
                 Upload support will be added later with Firebase Storage.
             </p>
+            </div></div>
+        </div>
+        {/* Description */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Description English
+              </label>
+              <textarea
+                value={formMeta?.description_en || ""}
+                onChange={(e) =>
+                  setFormMeta((prev) => ({
+                    ...prev,
+                    description_en: e.target.value,
+                  }))
+                }
+                onBlur={async (e) => {
+                  await updateDoc(doc(db, "forms", id), {
+                    description_en: e.target.value,
+                    updated_at: serverTimestamp(),
+                  });
+                  showAlert("success", "English description updated.");
+                }}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:border-[var(--ann-pink)]"
+              />
             </div>
-        </div>
-        </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Description Bangla
+              </label>
+              <textarea
+                value={formMeta?.description_bn || ""}
+                onChange={(e) =>
+                  setFormMeta((prev) => ({
+                    ...prev,
+                    description_bn: e.target.value,
+                  }))
+                }
+                onBlur={async (e) => {
+                  await updateDoc(doc(db, "forms", id), {
+                    description_bn: e.target.value,
+                    updated_at: serverTimestamp(),
+                  });
+                  showAlert("success", "Bangla description updated.");
+                }}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:border-[var(--ann-pink)]"
+              />
+            </div>
+          </div>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <aside className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">Field Toolbox</h3>
@@ -595,50 +676,174 @@ const handleCopyLink = async () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Placeholder English
-                  </label>
-                  <input
-                    value={selectedField.placeholder_en || selectedField.placeholder || ""}
-                    onChange={(e) =>
-                      handleUpdateField(selectedField.id, {
-                        placeholder: e.target.value,
-                        placeholder_en: e.target.value,
-                      })
-                    }
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
-                  />
-                </div>
+                {selectedField.field_type !== "section" && (
+                  <>
+                
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Placeholder English
+                      </label>
+                      <input
+                        value={selectedField.placeholder_en || selectedField.placeholder || ""}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            placeholder: e.target.value,
+                            placeholder_en: e.target.value,
+                          })
+                        }
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Placeholder Bangla
-                  </label>
-                  <input
-                    value={selectedField.placeholder_bn || ""}
-                    onChange={(e) =>
-                      handleUpdateField(selectedField.id, {
-                        placeholder_bn: e.target.value,
-                      })
-                    }
-                    placeholder="আপনার উত্তর লিখুন"
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Placeholder Bangla
+                      </label>
+                      <input
+                        value={selectedField.placeholder_bn || ""}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            placeholder_bn: e.target.value,
+                          })
+                        }
+                        placeholder="আপনার উত্তর লিখুন"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
 
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={!!selectedField.required}
-                    onChange={(e) =>
-                      handleUpdateField(selectedField.id, {
-                        required: e.target.checked,
-                      })
-                    }
-                  />
-                  Required field
-                </label>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedField.required}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            required: e.target.checked,
+                          })
+                        }
+                      />
+                      Required field
+                    </label>
+                 </>
+                )}
+
+                {selectedField.field_type === "date" && (
+                  <div className="border border-gray-200 rounded-2xl p-4 space-y-4">
+                    <h4 className="font-bold text-[var(--ann-text-dark)]">
+                      Age Validation
+                    </h4>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Minimum Age
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedField.validation?.min_age || ""}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            validation: {
+                              ...(selectedField.validation || {}),
+                              min_age: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="18"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Maximum Age
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedField.validation?.max_age || ""}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            validation: {
+                              ...(selectedField.validation || {}),
+                              max_age: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="35"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Error Message English
+                      </label>
+                      <input
+                        value={selectedField.validation?.error_message_en || ""}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            validation: {
+                              ...(selectedField.validation || {}),
+                              error_message_en: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Age must be between 18 and 35 years."
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Error Message Bangla
+                      </label>
+                      <input
+                        value={selectedField.validation?.error_message_bn || ""}
+                        onChange={(e) =>
+                          handleUpdateField(selectedField.id, {
+                            validation: {
+                              ...(selectedField.validation || {}),
+                              error_message_bn: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="বয়স ১৮ থেকে ৩৫ বছরের মধ্যে হতে হবে।"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {selectedField.field_type === "phone" && (
+                <div className="border border-gray-200 rounded-2xl p-4 space-y-4">
+                  <h4 className="font-bold text-[var(--ann-text-dark)]">
+                    Mobile Number Validation
+                  </h4>
+
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedField.validation?.pattern === "^01[0-9]{9}$"
+                      }
+                      onChange={(e) =>
+                        handleUpdateField(selectedField.id, {
+                          validation: {
+                            ...(selectedField.validation || {}),
+                            pattern: e.target.checked ? "^01[0-9]{9}$" : "",
+                            error_message_en: e.target.checked
+                              ? "Please enter a valid 11-digit Bangladeshi mobile number."
+                              : "",
+                            error_message_bn: e.target.checked
+                              ? "সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর লিখুন।"
+                              : "",
+                          },
+                        })
+                      }
+                    />
+                    Require valid Bangladeshi mobile number
+                  </label>
+                </div>
+              )}
+
 
                 {["dropdown", "radio", "checkbox"].includes(selectedField.field_type) && (
                   <div>
