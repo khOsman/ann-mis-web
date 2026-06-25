@@ -27,8 +27,11 @@ export default function ProtectedRoute({
     return <Navigate to="/admin" replace />;
   }
 
+  // if (permission && !isSuperAdmin && !hasPermission(permission)) {
+  //   return <Navigate to="/admin" replace />;
+  // }
   if (permission && !isSuperAdmin && !hasPermission(permission)) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/access-denied" replace />;
   }
 
   return children;
