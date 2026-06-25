@@ -1,8 +1,15 @@
 import { ShieldX } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function AccountInactive() {
   const { appUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
+    };
 
   return (
     <div className="min-h-screen bg-[var(--ann-bg)] flex items-center justify-center px-4">
@@ -31,7 +38,7 @@ export default function AccountInactive() {
         </div>
 
         <button
-          onClick={logout}
+          onClick={handleLogout}
           className="mt-6 w-full bg-[var(--ann-pink)] text-white py-3 rounded-2xl font-semibold hover:opacity-90"
         >
           Sign Out

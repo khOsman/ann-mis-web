@@ -1,8 +1,15 @@
 import { Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function AccessDenied() {
+  const { appUser, logout } = useAuth();
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+      await logout();
+      navigate("/", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-[var(--ann-bg)] flex items-center justify-center px-4">
@@ -32,10 +39,10 @@ export default function AccessDenied() {
         </div>
 
         <button
-          onClick={() => navigate("/admin")}
+          onClick={handleLogout}
           className="mt-6 w-full bg-[var(--ann-pink)] text-white py-3 rounded-2xl font-semibold hover:opacity-90"
         >
-          Back to Dashboard
+          Sign Out
         </button>
       </div>
     </div>

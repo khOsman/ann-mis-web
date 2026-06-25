@@ -1,9 +1,15 @@
 import { Clock3 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function AccountPending() {
   const { appUser, logout } = useAuth();
+  const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
+  };
   return (
     <div className="min-h-screen bg-[var(--ann-bg)] flex items-center justify-center px-4">
       <div className="max-w-lg w-full bg-white rounded-3xl shadow-sm border border-gray-200 p-8 text-center">
@@ -31,7 +37,7 @@ export default function AccountPending() {
         </div>
 
         <button
-          onClick={logout}
+          onClick={handleLogout}
           className="mt-6 w-full bg-[var(--ann-pink)] text-white py-3 rounded-2xl font-semibold hover:opacity-90"
         >
           Sign Out
