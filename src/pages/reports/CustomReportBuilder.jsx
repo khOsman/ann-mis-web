@@ -17,6 +17,11 @@ export default function CustomReportBuilder() {
     REPORT_SOURCES.participants.defaultColumns
   );
   const [rows, setRows] = useState([]);
+  const [filters, setFilters] = useState({
+    cohort: "",
+    gender: "",
+    registrationStatus: "",
+    });
   const [loading, setLoading] = useState(false);
 
   const selectedColumnObjects = useMemo(() => {
@@ -24,6 +29,24 @@ export default function CustomReportBuilder() {
       .map((key) => availableColumns.find((column) => column.key === key))
       .filter(Boolean);
   }, [availableColumns, selectedColumns]);
+
+  const filteredRows = useMemo(() => {
+        return rows.filter((row) => {
+            const matchCohort = filters.cohort
+            ? row.cohort_code === filters.cohort || row.cohort_name === filters.cohort
+            : true;
+
+            const matchGender = filters.gender
+            ? row.gender === filters.gender
+            : true;
+
+            const matchStatus = filters.registrationStatus
+            ? row.registration_status === filters.registrationStatus
+            : true;
+
+            return matchCohort && matchGender && matchStatus;
+        });
+        }, [rows, filters]);
 
   const filteredAvailableColumns = useMemo(() => {
     const keyword = columnSearch.toLowerCase().trim();
@@ -127,6 +150,93 @@ export default function CustomReportBuilder() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+    <div>
+      <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+        Filters
+      </h3>
+      <p className="text-sm text-gray-500 mt-1">
+        Narrow down report data before reviewing or exporting.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() =>
+        setFilters({
+          cohort: "",
+          gender: "",
+          registrationStatus: "",
+        })
+      }
+      className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold hover:border-red-400 hover:text-red-500"
+    >
+      Reset Filters
+    </button>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        Cohort
+      </label>
+      <input
+        value={filters.cohort}
+        onChange={(e) =>
+          setFilters((prev) => ({
+            ...prev,
+            cohort: e.target.value,
+          }))
+        }
+        placeholder="Type cohort code or name"
+        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        Gender
+      </label>
+      <select
+        value={filters.gender}
+        onChange={(e) =>
+          setFilters((prev) => ({
+            ...prev,
+            gender: e.target.value,
+          }))
+        }
+        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+      >
+        <option value="">All Gender</option>
+        <option value="Female">Female</option>
+        <option value="Male">Male</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        Registration Status
+      </label>
+      <select
+        value={filters.registrationStatus}
+        onChange={(e) =>
+          setFilters((prev) => ({
+            ...prev,
+            registrationStatus: e.target.value,
+          }))
+        }
+        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+      >
+        <option value="">All Status</option>
+        <option value="Registered">Registered</option>
+        <option value="Pending">Pending</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
@@ -199,7 +309,7 @@ export default function CustomReportBuilder() {
                 Report Result
               </h3>
               <p className="text-sm text-gray-500">
-                {rows.length} record(s) found.
+                {filteredRows.length} record(s) found.
               </p>
             </div>
           </div>
@@ -217,7 +327,7 @@ export default function CustomReportBuilder() {
               </thead>
 
               <tbody>
-                {rows.length === 0 ? (
+                {filteredRows.length === 0 ? (
                   <tr>
                     <td
                       colSpan={selectedColumnObjects.length || 1}
@@ -233,7 +343,7 @@ export default function CustomReportBuilder() {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((row) => (
+                  filteredRows.map((row) => (
                     <tr key={row.id} className="border-t border-gray-100">
                       {selectedColumnObjects.map((column) => (
                         <td key={column.key} className="p-4 text-gray-700">
