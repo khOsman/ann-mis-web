@@ -9,7 +9,7 @@ import { ROUTES } from "../constants/routes";
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { authLoading, appUser, isActive, isAdmin } = useAuth();
+  const { authLoading, appUser, isActive } = useAuth();
 
   const [pageLoading, setPageLoading] = useState(true);
   const [activeCohorts, setActiveCohorts] = useState([]);
@@ -34,7 +34,7 @@ export default function Admin() {
     const loadDashboard = async () => {
       if (authLoading) return;
 
-      if (!appUser || !isActive || !isAdmin) {
+      if (!appUser || !isActive) {
         navigate("/");
         return;
       }
@@ -48,7 +48,7 @@ export default function Admin() {
     };
 
     loadDashboard();
-  }, [authLoading, appUser, isActive, isAdmin]);
+  }, [authLoading, appUser, isActive]);
 
   if (authLoading || pageLoading) {
     return (

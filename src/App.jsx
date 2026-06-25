@@ -155,6 +155,22 @@ export default function App() {
             }
           />
 
+          <Route
+            path="/access-denied"
+            element={
+              <div className="min-h-screen flex items-center justify-center bg-[var(--ann-bg)]">
+                <div className="bg-white border border-gray-200 rounded-3xl p-8 max-w-md text-center shadow-sm">
+                  <h1 className="text-2xl font-bold text-[var(--ann-purple)]">
+                    Access Denied
+                  </h1>
+                  <p className="text-gray-600 mt-3">
+                    You do not have permission to access this module.
+                  </p>
+                </div>
+              </div>
+            }
+          />
+
           <Route path="/form/:slug" element={<PublicForm />} />
         </Routes>
       </BrowserRouter>

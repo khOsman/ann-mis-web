@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 export default function ProtectedRoute({
   children,
   permission,
-  adminOnly = true,
+  adminOnly = false,
 }) {
   const { authLoading, appUser, isActive, isAdmin, isSuperAdmin, hasPermission } =
     useAuth();
