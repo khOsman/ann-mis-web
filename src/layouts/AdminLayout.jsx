@@ -1,34 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+
 import { useLocation, useNavigate } from "react-router-dom";
-import { signOut, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { Menu, X } from "lucide-react";
-import { auth, db } from "../firebase";
 import annLogo from "../assets/ann-logo.png";
 import { ADMIN_MENU_ITEMS } from "../constants/menuItems";
 import { BRAND } from "../constants/brand";
 
 export default function AdminLayout({ children, title, subtitle }) {
+  const { appUser, logout } = useAuth();
+  const permissions = appUser?.permissions || {};
   const navigate = useNavigate();
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [permissions, setPermissions] = useState(null);
+  
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-
-      if (userSnap.exists()) {
-        setPermissions(userSnap.data().permissions || {});
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const isActive = (item) => {
     if (item.path === "/admin") return location.pathname === "/admin";
@@ -48,9 +36,9 @@ export default function AdminLayout({ children, title, subtitle }) {
   }, [permissions]);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/");
-  };
+  await logout();
+  navigate("/");
+};
 
   const SidebarContent = () => (
     <>

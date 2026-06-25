@@ -1,28 +1,17 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase";
-import { useAlert } from "../context/AlertContext";
+import { getDashboardData } from "../services/dashboardService";
+import { useAuth } from "../context/AuthContext";
 import AdminLayout from "../layouts/AdminLayout";
 import PageContainer from "../layouts/PageContainer";
 import StatCard from "../components/dashboard/StatCard";
 import { ROUTES } from "../constants/routes";
-import { getPermissionsByRole } from "../constants/roles";
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { showAlert } = useAlert();
+  const { authLoading, appUser, isActive, isAdmin } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [allowed, setAllowed] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [activeCohorts, setActiveCohorts] = useState([]);
 
   const [dashboardStats, setDashboardStats] = useState({
@@ -35,158 +24,45 @@ export default function Admin() {
   });
 
   const fetchDashboardData = async () => {
-    const cohortSnapshot = await getDocs(collection(db, "cohorts"));
+    const data = await getDashboardData();
 
-    const cohorts = cohortSnapshot.docs
-      .map((item) => ({
-        id: item.id,
-        ...item.data(),
-      }))
-      .filter((item) => item.is_deleted !== true);
-
-    const activeOnly = cohorts.filter((item) => item.status === "Active");
-
-    setDashboardStats({
-      activeCohorts: activeOnly.length,
-      totalRegistrations: cohorts.reduce(
-        (sum, item) => sum + Number(item.total_registrations || 0),
-        0
-      ),
-      totalSelected: cohorts.reduce(
-        (sum, item) => sum + Number(item.total_selected || 0),
-        0
-      ),
-      totalEnrolled: cohorts.reduce(
-        (sum, item) => sum + Number(item.total_enrolled || 0),
-        0
-      ),
-      totalGraduated: cohorts.reduce(
-        (sum, item) => sum + Number(item.total_graduated || 0),
-        0
-      ),
-      totalProjects: cohorts.reduce(
-        (sum, item) => sum + Number(item.total_projects || 0),
-        0
-      ),
-    });
-
-    const recentCohorts = activeOnly
-      .sort((a, b) => {
-        const aTime = a.created_at?.toDate?.()?.getTime?.() || 0;
-        const bTime = b.created_at?.toDate?.()?.getTime?.() || 0;
-        return bTime - aTime;
-      })
-      .slice(0, 3);
-
-    setActiveCohorts(recentCohorts);
+    setDashboardStats(data.stats);
+    setActiveCohorts(data.activeCohorts);
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (!user || !user.email.endsWith("@brac.net")) {
-          await signOut(auth);
-          window.location.href = "/";
-          return;
-        }
+    const loadDashboard = async () => {
+      if (authLoading) return;
 
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            uid: user.uid,
-            name: user.displayName || "",
-            email: user.email,
-            photo_url: user.photoURL || "",
-            role: "pending",
-            status: "pending",
-            permissions: getPermissionsByRole("pending"),
-            created_at: serverTimestamp(),
-            updated_at: serverTimestamp(),
-          });
-
-          showAlert(
-            "info",
-            "Your BRAC account has been registered and is awaiting administrator approval."
-          );
-
-          setTimeout(async () => {
-            await signOut(auth);
-            window.location.href = "/";
-          }, 2500);
-
-          return;
-        }
-
-        const userData = userSnap.data();
-
-        if (userData.status !== "active") {
-          showAlert(
-            "warning",
-            "Your account is currently inactive. Please contact the administrator."
-          );
-
-          setTimeout(async () => {
-            await signOut(auth);
-            window.location.href = "/";
-          }, 2500);
-
-          return;
-        }
-
-        if (!["super_admin", "admin"].includes(userData.role)) {
-          showAlert(
-            "error",
-            "You do not have permission to access ANN MIS. Please contact the administrator."
-          );
-
-          setTimeout(async () => {
-            await signOut(auth);
-            window.location.href = "/";
-          }, 2500);
-
-          return;
-        }
-
-        await fetchDashboardData();
-
-        setAllowed(true);
-        setLoading(false);
-      } catch (error) {
-        console.error("Access check failed:", error);
-        showAlert("error", error.message || "Access check failed.");
-
-        setTimeout(async () => {
-          setLoading(false);
-          await signOut(auth);
-          window.location.href = "/";
-        }, 2500);
+      if (!appUser || !isActive || !isAdmin) {
+        navigate("/");
+        return;
       }
-    });
 
-    return () => unsubscribe();
-  }, []);
+      try {
+        setPageLoading(true);
+        await fetchDashboardData();
+      } finally {
+        setPageLoading(false);
+      }
+    };
 
-  if (loading) {
+    loadDashboard();
+  }, [authLoading, appUser, isActive, isAdmin]);
+
+  if (authLoading || pageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--ann-bg)]">
         <p className="text-[var(--ann-purple)] font-medium">
-          Checking access...
+          Loading dashboard...
         </p>
       </div>
     );
   }
 
-  if (!allowed) return null;
-
   const firstRowStats = [
     ["Active Cohorts", dashboardStats.activeCohorts, "Currently operational"],
-    [
-      "Total Registrations",
-      dashboardStats.totalRegistrations,
-      "Application submitted",
-    ],
+    ["Total Registrations", dashboardStats.totalRegistrations, "Application submitted"],
     ["Total Selected", dashboardStats.totalSelected, "Selected for FGD"],
   ];
 
@@ -197,49 +73,24 @@ export default function Admin() {
   ];
 
   const quickActions = [
-    {
-      label: "Create New Cohort",
-      path: ROUTES.createCohort,
-    },
-    {
-      label: "Design Registration Form",
-      path: ROUTES.forms,
-    },
-    {
-      label: "View Participants",
-      path: ROUTES.participants,
-    },
-    {
-      label: "Generate Report",
-      path: ROUTES.reports,
-    },
+    { label: "Create New Cohort", path: ROUTES.createCohort },
+    { label: "Design Registration Form", path: ROUTES.forms },
+    { label: "View Participants", path: ROUTES.participants },
+    { label: "Generate Report", path: ROUTES.reports },
   ];
 
   return (
-    <AdminLayout
-      title="Dashboard"
-      subtitle="ANN operational overview and quick actions"
-    >
+    <AdminLayout title="Dashboard" subtitle="ANN operational overview and quick actions">
       <PageContainer className="py-6 lg:py-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
           {firstRowStats.map(([title, value, subtitle]) => (
-            <StatCard
-              key={title}
-              title={title}
-              value={value}
-              subtitle={subtitle}
-            />
+            <StatCard key={title} title={title} value={value} subtitle={subtitle} />
           ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5 mt-4">
           {secondRowStats.map(([title, value, subtitle]) => (
-            <StatCard
-              key={title}
-              title={title}
-              value={value}
-              subtitle={subtitle}
-            />
+            <StatCard key={title} title={title} value={value} subtitle={subtitle} />
           ))}
         </div>
 
@@ -291,19 +142,11 @@ export default function Admin() {
                         <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                           <div>{cohort.cohort_name || "-"}</div>
                           <div className="text-xs text-gray-400">
-                            {cohort.cohort_code || "-"} •{" "}
-                            {cohort.district || "-"}
+                            {cohort.cohort_code || "-"} • {cohort.district || "-"}
                           </div>
                         </td>
-
-                        <td className="p-4 text-gray-600">
-                          {cohort.total_registrations || 0}
-                        </td>
-
-                        <td className="p-4 text-gray-600">
-                          {cohort.total_selected || 0}
-                        </td>
-
+                        <td className="p-4 text-gray-600">{cohort.total_registrations || 0}</td>
+                        <td className="p-4 text-gray-600">{cohort.total_selected || 0}</td>
                         <td className="p-4">
                           <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold">
                             {cohort.status || "Draft"}
