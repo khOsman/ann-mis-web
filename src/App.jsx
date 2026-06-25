@@ -18,7 +18,7 @@ import CustomReportBuilder from "./pages/reports/CustomReportBuilder";
 
 import AccountPending from "./pages/system/AccountPending";
 import AccountInactive from "./pages/system/AccountInactive";
-import AccessDenied from "./pages/system/AccessDenied.jsx";
+import AccessDenied from "./pages/system/AccountDenied.jsx";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
