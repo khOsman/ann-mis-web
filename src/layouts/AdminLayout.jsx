@@ -8,7 +8,7 @@ import { ADMIN_MENU_ITEMS } from "../constants/menuItems";
 import { BRAND } from "../constants/brand";
 
 export default function AdminLayout({ children, title, subtitle }) {
-  const { appUser, logout } = useAuth();
+  const { appUser, logout, isSuperAdmin } = useAuth();
   const permissions = appUser?.permissions || {};
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,7 +24,9 @@ export default function AdminLayout({ children, title, subtitle }) {
   };
 
   const canShowItem = (item) => {
+    if (isSuperAdmin) return true;
     if (!item.permission) return true;
+
     return permissions?.[item.permission] === true;
   };
 
