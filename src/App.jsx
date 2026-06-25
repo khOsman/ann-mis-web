@@ -13,6 +13,7 @@ import AllParticipants from "./pages/participants/AllParticipants";
 import ParticipantProfile from "./pages/participants/ParticipantProfile";
 import AllUsers from "./pages/users/AllUsers";
 import UserProfile from "./pages/users/UserProfile";
+import ReportsDashboard from "./pages/reports/ReportsDashboard";
 import CustomReportBuilder from "./pages/reports/CustomReportBuilder";
 
 
@@ -132,6 +133,15 @@ export default function App() {
             element={
               <ProtectedRoute permission="users">
                 <UserProfile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute permission="reports">
+                <ReportsDashboard />
               </ProtectedRoute>
             }
           />

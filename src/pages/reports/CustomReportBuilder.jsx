@@ -9,6 +9,7 @@ export default function CustomReportBuilder() {
   const { showAlert } = useAlert();
 
   const [sourceKey, setSourceKey] = useState("participants");
+  const [columnSearch, setColumnSearch] = useState("");
   const [availableColumns, setAvailableColumns] = useState(
     REPORT_SOURCES.participants.columns
   );
@@ -19,16 +20,27 @@ export default function CustomReportBuilder() {
   const [loading, setLoading] = useState(false);
 
   const selectedColumnObjects = useMemo(() => {
-    return availableColumns.filter((column) =>
-      selectedColumns.includes(column.key)
-    );
+    return selectedColumns
+      .map((key) => availableColumns.find((column) => column.key === key))
+      .filter(Boolean);
   }, [availableColumns, selectedColumns]);
 
+  const filteredAvailableColumns = useMemo(() => {
+    const keyword = columnSearch.toLowerCase().trim();
+
+    if (!keyword) return availableColumns;
+
+    return availableColumns.filter((column) =>
+      column.label.toLowerCase().includes(keyword)
+    );
+  }, [availableColumns, columnSearch]);
+
   const handleSourceChange = (value) => {
+    const source = REPORT_SOURCES[value];
+
     setSourceKey(value);
     setRows([]);
-
-    const source = REPORT_SOURCES[value];
+    setColumnSearch("");
     setAvailableColumns(source.columns);
     setSelectedColumns(source.defaultColumns);
   };
@@ -39,6 +51,14 @@ export default function CustomReportBuilder() {
         ? prev.filter((item) => item !== key)
         : [...prev, key]
     );
+  };
+
+  const handleSelectAllColumns = () => {
+    setSelectedColumns(availableColumns.map((column) => column.key));
+  };
+
+  const handleClearAllColumns = () => {
+    setSelectedColumns([]);
   };
 
   const handleRunReport = async () => {
@@ -57,7 +77,9 @@ export default function CustomReportBuilder() {
       setSelectedColumns(
         validSelected.length > 0
           ? validSelected
-          : REPORT_SOURCES[sourceKey].defaultColumns
+          : REPORT_SOURCES[sourceKey].defaultColumns.filter((key) =>
+              result.columns.some((column) => column.key === key)
+            )
       );
     } catch (error) {
       showAlert("error", error.message || "Failed to run report.");
@@ -78,6 +100,7 @@ export default function CustomReportBuilder() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Report Source
               </label>
+
               <select
                 value={sourceKey}
                 onChange={(e) => handleSourceChange(e.target.value)}
@@ -104,29 +127,68 @@ export default function CustomReportBuilder() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-            Columns
-          </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Select the fields you want to include in the report.
-          </p>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                Columns
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {selectedColumns.length} of {availableColumns.length} columns
+                selected.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleSelectAllColumns}
+                className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+              >
+                Select All
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearAllColumns}
+                className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold hover:border-red-400 hover:text-red-500"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <input
+              value={columnSearch}
+              onChange={(e) => setColumnSearch(e.target.value)}
+              placeholder="Search columns..."
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-            {availableColumns.map((column) => (
-              <label
-                key={column.key}
-                className="flex items-center justify-between gap-3 border border-gray-200 rounded-xl px-4 py-3 text-sm"
-              >
-                <span className="font-medium text-gray-700">
-                  {column.label}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={selectedColumns.includes(column.key)}
-                  onChange={() => toggleColumn(column.key)}
-                />
-              </label>
-            ))}
+            {filteredAvailableColumns.length === 0 ? (
+              <p className="text-sm text-gray-500 col-span-full">
+                No matching column found.
+              </p>
+            ) : (
+              filteredAvailableColumns.map((column) => (
+                <label
+                  key={column.key}
+                  className="flex items-center justify-between gap-3 border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                >
+                  <span className="font-medium text-gray-700">
+                    {column.label}
+                  </span>
+
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.includes(column.key)}
+                    onChange={() => toggleColumn(column.key)}
+                  />
+                </label>
+              ))
+            )}
           </div>
         </div>
 
@@ -162,6 +224,12 @@ export default function CustomReportBuilder() {
                       className="p-6 text-center text-gray-500"
                     >
                       Run report to view data.
+                    </td>
+                  </tr>
+                ) : selectedColumnObjects.length === 0 ? (
+                  <tr>
+                    <td className="p-6 text-center text-gray-500">
+                      Please select at least one column.
                     </td>
                   </tr>
                 ) : (
