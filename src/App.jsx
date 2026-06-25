@@ -16,6 +16,9 @@ import UserProfile from "./pages/users/UserProfile";
 import ReportsDashboard from "./pages/reports/ReportsDashboard";
 import CustomReportBuilder from "./pages/reports/CustomReportBuilder";
 
+import AccountPending from "./pages/system/AccountPending";
+import AccountInactive from "./pages/system/AccountInactive";
+import AccessDenied from "./pages/system/AccessDenied.jsx";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -171,6 +174,9 @@ export default function App() {
             }
           />
 
+        <Route path="/account-pending" element={<AccountPending />} />
+        <Route path="/account-inactive" element={<AccountInactive />} />
+        <Route path="/access-denied" element={<AccessDenied />} />
           <Route path="/form/:slug" element={<PublicForm />} />
         </Routes>
       </BrowserRouter>

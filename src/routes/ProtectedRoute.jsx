@@ -6,7 +6,7 @@ export default function ProtectedRoute({
   permission,
   adminOnly = false,
 }) {
-  const { authLoading, appUser, isActive, isAdmin, isSuperAdmin, hasPermission } =
+  const { authLoading, appUser, isAdmin, isSuperAdmin, hasPermission } =
     useAuth();
 
   if (authLoading) {
@@ -19,17 +19,22 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!appUser || !isActive) {
+  if (!appUser) {
     return <Navigate to="/" replace />;
   }
 
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/admin" replace />;
+  if (appUser.status === "pending") {
+    return <Navigate to="/account-pending" replace />;
   }
 
-  // if (permission && !isSuperAdmin && !hasPermission(permission)) {
-  //   return <Navigate to="/admin" replace />;
-  // }
+  if (appUser.status !== "active") {
+    return <Navigate to="/account-inactive" replace />;
+  }
+
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/access-denied" replace />;
+  }
+
   if (permission && !isSuperAdmin && !hasPermission(permission)) {
     return <Navigate to="/access-denied" replace />;
   }
