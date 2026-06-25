@@ -38,6 +38,7 @@ export default function AllParticipants() {
       return (
         participant.participant_code?.toLowerCase().includes(keyword) ||
         participant.name?.toLowerCase().includes(keyword) ||
+        participant.gender?.toLowerCase().includes(keyword) ||
         participant.email?.toLowerCase().includes(keyword) ||
         participant.phone?.toLowerCase().includes(keyword) ||
         participant.cohort_name?.toLowerCase().includes(keyword) ||
@@ -81,7 +82,7 @@ export default function AllParticipants() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search participant code, name, email, phone, cohort..."
+              placeholder="Search participant code, name, gender, email, phone, cohort..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
             />
           </div>
@@ -92,6 +93,7 @@ export default function AllParticipants() {
                 <tr>
                   <th className="text-left p-4">Participant Code</th>
                   <th className="text-left p-4">Name</th>
+                  <th className="text-left p-4">Gender</th>
                   <th className="text-left p-4">Email</th>
                   <th className="text-left p-4">Phone</th>
                   <th className="text-left p-4">Cohort</th>
@@ -104,13 +106,13 @@ export default function AllParticipants() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="p-6 text-center text-gray-500">
+                    <td colSpan="9" className="p-6 text-center text-gray-500">
                       Loading participants...
                     </td>
                   </tr>
                 ) : filteredParticipants.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="p-6 text-center text-gray-500">
+                    <td colSpan="9" className="p-6 text-center text-gray-500">
                       No participant found.
                     </td>
                   </tr>
@@ -128,6 +130,10 @@ export default function AllParticipants() {
                       </td>
                       <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                         {participant.name || "-"}
+                      </td>
+
+                      <td className="p-4 text-gray-600">
+                        {participant.gender || "-"}
                       </td>
 
                       <td className="p-4 text-gray-600">

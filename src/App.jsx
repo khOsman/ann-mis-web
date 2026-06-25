@@ -13,6 +13,9 @@ import AllParticipants from "./pages/participants/AllParticipants";
 import ParticipantProfile from "./pages/participants/ParticipantProfile";
 import AllUsers from "./pages/users/AllUsers";
 import UserProfile from "./pages/users/UserProfile";
+import CustomReportBuilder from "./pages/reports/CustomReportBuilder";
+
+
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 import { AlertProvider } from "./context/AlertContext";
@@ -129,6 +132,15 @@ export default function App() {
             element={
               <ProtectedRoute permission="users">
                 <UserProfile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/reports/custom"
+            element={
+              <ProtectedRoute permission="reports">
+                <CustomReportBuilder />
               </ProtectedRoute>
             }
           />

@@ -8,16 +8,62 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 
+const normalizeLabel = (answer) => {
+  return `${answer.field_label_en || ""} ${
+    answer.field_label_bn || ""
+  }`.toLowerCase();
+};
+
 const getAnswerValueByKeywords = (responseAnswers, keywords) => {
   const matchedAnswer = responseAnswers.find((answer) => {
-    const label = `${answer.field_label_en || ""} ${
-      answer.field_label_bn || ""
-    }`.toLowerCase();
+    const label = normalizeLabel(answer);
 
     return keywords.some((keyword) => label.includes(keyword.toLowerCase()));
   });
 
   return matchedAnswer?.value || "";
+};
+
+const calculateAge = (dateString) => {
+  if (!dateString) return "";
+
+  const birthDate = new Date(dateString);
+
+  if (Number.isNaN(birthDate.getTime())) return "";
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return age;
+};
+
+const normalizeGender = (value) => {
+  if (!value) return "";
+
+  const text = String(value).trim().toLowerCase();
+
+  if (text.includes("female") || text.includes("নারী")) {
+    return "Female";
+  }
+
+  if (text.includes("male") || text.includes("পুরুষ")) {
+    return "Male";
+  }
+
+  if (text.includes("other") || text.includes("অন্যান্য")) {
+    return "Other";
+  }
+
+  return value;
 };
 
 export const submitPublicRegistration = async ({
@@ -59,10 +105,24 @@ export const submitPublicRegistration = async ({
     "ফোন",
   ]);
 
+  const gender = normalizeGender(
+    getAnswerValueByKeywords(responseAnswers, [
+      "gender",
+      "sex",
+      "লিঙ্গ",
+    ])
+  );
+
+  const dateOfBirth = responseAnswers.find((answer) => answer.field_type === "date")?.value || "";
+
+  const age = calculateAge(dateOfBirth);
+
   const formRef = doc(db, "forms", formMeta.id);
   const cohortRef = doc(db, "cohorts", formMeta.cohort_id);
   const responseRef = doc(collection(db, "form_responses"));
   const participantRef = doc(collection(db, "participants"));
+
+  const unixTime = Math.floor(Date.now() / 1000);
 
   await runTransaction(db, async (transaction) => {
     const cohortSnap = await transaction.get(cohortRef);
@@ -72,7 +132,6 @@ export const submitPublicRegistration = async ({
     }
 
     const cohortData = cohortSnap.data();
-
     const currentSequence = Number(
       cohortData.current_participant_sequence || 0
     );
@@ -81,7 +140,7 @@ export const submitPublicRegistration = async ({
 
     const participantCode = `ANN-${formMeta.cohort_code}-${String(
       nextSequence
-    ).padStart(6, "0")}`;
+    ).padStart(4, "0")}-${unixTime}`;
 
     transaction.set(responseRef, {
       form_id: formMeta.id,
@@ -98,6 +157,13 @@ export const submitPublicRegistration = async ({
       search_name: name,
       search_email: email,
       search_phone: phone,
+
+      name,
+      email,
+      phone,
+      gender,
+      date_of_birth: dateOfBirth,
+      age,
 
       answers: responseAnswers,
 
@@ -118,6 +184,9 @@ export const submitPublicRegistration = async ({
       name,
       email,
       phone,
+      gender,
+      date_of_birth: dateOfBirth,
+      age,
 
       search_name: name,
       search_email: email,

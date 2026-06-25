@@ -87,6 +87,14 @@ export const ADMIN_MENU_ITEMS = [
     path: ROUTES.reports,
     icon: BarChart3,
     permission: "reports",
+    children: [
+      {
+        label: "Custom Report",
+        path: "/admin/reports/custom",
+        icon: List,
+        permission: "reports",
+      },
+    ],
   },
 
   {

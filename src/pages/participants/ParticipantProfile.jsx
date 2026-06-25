@@ -121,6 +121,27 @@ export default function ParticipantProfile() {
                     {participant.participant_code || "-"}
                 </p>
               </div>
+
+              <div>
+                <p className="text-gray-500">Gender</p>
+                <p className="font-semibold text-gray-800">
+                  {participant.gender || "-"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-gray-500">Date of Birth</p>
+                <p className="font-semibold text-gray-800">
+                  {participant.date_of_birth || "-"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-gray-500">Age</p>
+                <p className="font-semibold text-gray-800">
+                  {participant.age || "-"}
+                </p>
+              </div>
               
               <div>
                 <p className="text-gray-500">Email</p>
