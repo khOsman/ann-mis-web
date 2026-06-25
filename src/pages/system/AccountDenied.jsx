@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+
 
 export default function AccessDenied() {
   const { appUser, logout } = useAuth();
