@@ -4,6 +4,7 @@ import PageContainer from "../../layouts/PageContainer";
 import { REPORT_SOURCES } from "../../constants/reportColumns";
 import { getReportData } from "../../services/reportService";
 import { useAlert } from "../../context/AlertContext";
+import { exportCSV, exportExcel } from "../../services/exportService";
 
 const FILTER_OPERATORS = [
   { value: "contains", label: "Contains" },
@@ -45,6 +46,9 @@ export default function CustomReportBuilder() {
       column.label.toLowerCase().includes(keyword)
     );
   }, [availableColumns, columnSearch]);
+
+  const sourceLabel = REPORT_SOURCES[sourceKey]?.label || "Report";
+
 
   const applyFilter = (row, filter) => {
     if (!filter.field || !filter.operator) return true;
@@ -185,6 +189,22 @@ export default function CustomReportBuilder() {
       setLoading(false);
     }
   };
+
+  const handleExportCSV = () => {
+  exportCSV({
+    rows: filteredRows,
+    columns: selectedColumnObjects,
+    sourceLabel,
+  });
+};
+
+const handleExportExcel = () => {
+  exportExcel({
+    rows: filteredRows,
+    columns: selectedColumnObjects,
+    sourceLabel,
+  });
+};
 
   return (
     <AdminLayout
@@ -454,16 +474,18 @@ export default function CustomReportBuilder() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled
-                    className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-400 cursor-not-allowed"
+                    onClick={handleExportCSV}
+                    disabled={filteredRows.length === 0 || selectedColumnObjects.length === 0}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed"
                   >
                     Export CSV
                   </button>
 
                   <button
                     type="button"
-                    disabled
-                    className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-400 cursor-not-allowed"
+                    onClick={handleExportExcel}
+                    disabled={filteredRows.length === 0 || selectedColumnObjects.length === 0}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed"
                   >
                     Export XLSX
                   </button>
