@@ -94,7 +94,7 @@ export default function Admin() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-5 lg:mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 mt-5 lg:mt-6">
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-2 lg:p-4 shadow-sm overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <div>
@@ -159,8 +159,8 @@ export default function Admin() {
               </table>
             </div>
           </div>
-
-          <div className="bg-white border border-gray-200 rounded-2xl p-2 lg:p-4 shadow-sm">
+          {/* Hiding Quick actions */}
+          {/* <div className="bg-white border border-gray-200 rounded-2xl p-2 lg:p-4 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
               Quick Actions
             </h3>
@@ -179,7 +179,7 @@ export default function Admin() {
                 </button>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
       </PageContainer>
     </AdminLayout>
