@@ -1,3 +1,5 @@
+import { GENDER_OPTIONS, GENDERS } from "./genders";
+
 export const FILTER_TYPES = {
   TEXT: "text",
   NUMBER: "number",
@@ -8,6 +10,7 @@ export const FILTER_TYPES = {
 export const textFilter = {
   type: FILTER_TYPES.TEXT,
 };
+
 
 export const numberFilter = {
   type: FILTER_TYPES.NUMBER,
@@ -32,7 +35,7 @@ const participantColumns = [
   {
     key: "gender",
     label: "Gender",
-    filter: optionFilter(["Female", "Male", "Other"]),
+    filter: optionFilter(GENDER_OPTIONS),
   },
   { key: "date_of_birth", label: "Date of Birth", filter: dateFilter },
   { key: "age", label: "Age", filter: numberFilter },

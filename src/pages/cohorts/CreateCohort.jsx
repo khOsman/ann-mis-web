@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../../firebase";
+import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -8,6 +7,11 @@ import {
   DIVISIONS,
   DISTRICTS_BY_DIVISION,
 } from "../../constants/locations";
+import { createCohortRecord } from "../../services/cohortService";
+import {
+  COHORT_STATUS,
+  COHORT_STATUS_OPTIONS,
+} from "../../constants/status";
 
 export default function CreateCohort() {
   const { showAlert } = useAlert();
@@ -22,7 +26,7 @@ export default function CreateCohort() {
     registration_end_date: "",
     selection_target: "",
     graduation_target: "",
-    status: "Draft",
+    status: COHORT_STATUS.DRAFT,
   };
 
   const [form, setForm] = useState(initialFormState);
@@ -50,55 +54,58 @@ export default function CreateCohort() {
     setForm(initialFormState);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
+  const validateForm = () => {
     if (
       form.registration_start_date &&
       form.registration_end_date &&
-      new Date(form.registration_start_date) > new Date(form.registration_end_date)
+      new Date(form.registration_start_date) >
+        new Date(form.registration_end_date)
     ) {
       showAlert(
         "warning",
         "Registration Start Date cannot be later than Registration End Date."
       );
-      setSaving(false);
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const buildCohortPayload = () => {
+    const user = auth.currentUser;
+
+    return {
+      cohort_code: form.cohort_code.trim().toUpperCase(),
+      cohort_name: form.cohort_name.trim(),
+      division: form.division,
+      district: form.district,
+      cohort_year: form.cohort_year.trim(),
+
+      registration_start_date: form.registration_start_date,
+      registration_end_date: form.registration_end_date,
+
+      selection_target: Number(form.selection_target || 0),
+      graduation_target: Number(form.graduation_target || 0),
+
+      status: form.status,
+
+      created_by_email: user?.email || "",
+      created_by_name: user?.displayName || "",
+
+      updated_by_email: user?.email || "",
+      updated_by_name: user?.displayName || "",
+    };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setSaving(true);
+
     try {
-      const user = auth.currentUser;
-
-      await addDoc(collection(db, "cohorts"), {
-        cohort_code: form.cohort_code.trim().toUpperCase(),
-        cohort_name: form.cohort_name.trim(),
-        division: form.division,
-        district: form.district,
-        cohort_year: form.cohort_year.trim(),
-        registration_start_date: form.registration_start_date,
-        registration_end_date: form.registration_end_date,
-        selection_target: Number(form.selection_target),
-        graduation_target: Number(form.graduation_target),
-        status: form.status,
-
-        current_participant_sequence: 0,
-        total_registrations: 0,
-        total_selected: 0,
-        total_enrolled: 0,
-        total_graduated: 0,
-        total_projects: 0,
-
-        is_deleted: false,
-
-        created_at: serverTimestamp(),
-        created_by_email: user?.email || "",
-        created_by_name: user?.displayName || "",
-
-        updated_at: serverTimestamp(),
-        updated_by_email: user?.email || "",
-        updated_by_name: user?.displayName || "",
-      });
+      await createCohortRecord(buildCohortPayload());
 
       showAlert("success", "Cohort created successfully.");
       resetForm();
@@ -244,10 +251,11 @@ export default function CreateCohort() {
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
               >
-                <option>Draft</option>
-                <option>Active</option>
-                <option>Closed</option>
-                <option>Archived</option>
+                {COHORT_STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
               </select>
             </div>
 

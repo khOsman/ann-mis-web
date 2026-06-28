@@ -2,7 +2,13 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
-import { getPermissionsByRole } from "../constants/roles";
+import {
+  USER_ROLES,
+  USER_STATUSES,
+  getPermissionsByRole,
+} from "../constants/roles";
+import { COLLECTIONS } from "../constants/collections";
+import { createUser } from "../entities";
 
 const AuthContext = createContext(null);
 
@@ -29,31 +35,26 @@ export function AuthProvider({ children }) {
 
         setFirebaseUser(user);
 
-        const userRef = doc(db, "users", user.uid);
+        const userRef = doc(db, COLLECTIONS.USERS, user.uid);
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          await setDoc(userRef, {
+          const newUser = createUser({
+            id: user.uid,
             uid: user.uid,
             name: user.displayName || "",
             email: user.email,
             photo_url: user.photoURL || "",
-            role: "pending",
-            status: "pending",
-            permissions: getPermissionsByRole("pending"),
+            role: USER_ROLES.PENDING,
+            status: USER_STATUSES.PENDING,
+            permissions: getPermissionsByRole(USER_ROLES.PENDING),
             created_at: serverTimestamp(),
             updated_at: serverTimestamp(),
           });
 
-          setAppUser({
-            uid: user.uid,
-            name: user.displayName || "",
-            email: user.email,
-            photo_url: user.photoURL || "",
-            role: "pending",
-            status: "pending",
-            permissions: getPermissionsByRole("pending"),
-          });
+          await setDoc(userRef, newUser);
+
+          setAppUser(newUser);
 
           return;
         }
@@ -84,9 +85,13 @@ export function AuthProvider({ children }) {
     return appUser?.permissions?.[key] === true;
   };
 
-  const isActive = appUser?.status === "active";
-  const isAdmin = ["super_admin", "admin"].includes(appUser?.role);
-  const isSuperAdmin = appUser?.role === "super_admin";
+  const isActive = appUser?.status === USER_STATUSES.ACTIVE;
+
+  const isAdmin = [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN].includes(
+    appUser?.role
+  );
+
+  const isSuperAdmin = appUser?.role === USER_ROLES.SUPER_ADMIN;
 
   return (
     <AuthContext.Provider

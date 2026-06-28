@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   doc,
   increment,
@@ -7,6 +6,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { createParticipant } from "../entities";
+import { REGISTRATION_STATUS } from "../constants/status";
+import { COLLECTIONS } from "../constants/collections";
+import { GENDERS } from "../constants/genders";
 
 const normalizeLabel = (answer) => {
   return `${answer.field_label_en || ""} ${
@@ -17,7 +20,6 @@ const normalizeLabel = (answer) => {
 const getAnswerValueByKeywords = (responseAnswers, keywords) => {
   const matchedAnswer = responseAnswers.find((answer) => {
     const label = normalizeLabel(answer);
-
     return keywords.some((keyword) => label.includes(keyword.toLowerCase()));
   });
 
@@ -28,7 +30,6 @@ const calculateAge = (dateString) => {
   if (!dateString) return "";
 
   const birthDate = new Date(dateString);
-
   if (Number.isNaN(birthDate.getTime())) return "";
 
   const today = new Date();
@@ -52,15 +53,15 @@ const normalizeGender = (value) => {
   const text = String(value).trim().toLowerCase();
 
   if (text.includes("female") || text.includes("নারী")) {
-    return "Female";
+  return GENDERS.FEMALE;
   }
 
   if (text.includes("male") || text.includes("পুরুষ")) {
-    return "Male";
+    return GENDERS.MALE;
   }
 
   if (text.includes("other") || text.includes("অন্যান্য")) {
-    return "Other";
+    return GENDERS.OTHER;
   }
 
   return value;
@@ -106,21 +107,18 @@ export const submitPublicRegistration = async ({
   ]);
 
   const gender = normalizeGender(
-    getAnswerValueByKeywords(responseAnswers, [
-      "gender",
-      "sex",
-      "লিঙ্গ",
-    ])
+    getAnswerValueByKeywords(responseAnswers, ["gender", "sex", "লিঙ্গ"])
   );
 
-  const dateOfBirth = responseAnswers.find((answer) => answer.field_type === "date")?.value || "";
+  const dateOfBirth =
+    responseAnswers.find((answer) => answer.field_type === "date")?.value || "";
 
   const age = calculateAge(dateOfBirth);
 
   const formRef = doc(db, "forms", formMeta.id);
   const cohortRef = doc(db, "cohorts", formMeta.cohort_id);
-  const responseRef = doc(collection(db, "form_responses"));
-  const participantRef = doc(collection(db, "participants"));
+  const responseRef = doc(collection(db, COLLECTIONS.FORM_RESPONSES));
+  const participantRef = doc(collection(db, COLLECTIONS.PARTICIPANTS));
 
   const unixTime = Math.floor(Date.now() / 1000);
 
@@ -132,10 +130,7 @@ export const submitPublicRegistration = async ({
     }
 
     const cohortData = cohortSnap.data();
-    const currentSequence = Number(
-      cohortData.current_participant_sequence || 0
-    );
-
+    const currentSequence = Number(cohortData.current_participant_sequence || 0);
     const nextSequence = currentSequence + 1;
 
     const participantCode = `ANN-${formMeta.cohort_code}-${String(
@@ -170,7 +165,9 @@ export const submitPublicRegistration = async ({
       submitted_at: serverTimestamp(),
     });
 
-    transaction.set(participantRef, {
+    const participantData = createParticipant({
+      id: participantRef.id,
+
       participant_code: participantCode,
 
       cohort_id: formMeta.cohort_id,
@@ -192,16 +189,14 @@ export const submitPublicRegistration = async ({
       search_email: email,
       search_phone: phone,
 
-      registration_status: "Registered",
-      selection_status: "Pending",
-      enrollment_status: "Pending",
-      graduation_status: "Pending",
-      project_status: "Pending",
+      registration_status: REGISTRATION_STATUS.REGISTERED,
 
       submitted_at: serverTimestamp(),
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
     });
+
+    transaction.set(participantRef, participantData);
 
     transaction.update(formRef, {
       total_responses: increment(1),

@@ -9,9 +9,14 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { COLLECTIONS } from "../constants/collections";
 
 export const getUsers = async () => {
-  const q = query(collection(db, "users"), orderBy("created_at", "desc"));
+  const q = query(
+    collection(db, COLLECTIONS.USERS),
+    orderBy("created_at", "desc")
+  );
+
   const snapshot = await getDocs(q);
 
   return snapshot.docs.map((item) => ({
@@ -21,7 +26,7 @@ export const getUsers = async () => {
 };
 
 export const getUserById = async (userId) => {
-  const snapshot = await getDoc(doc(db, "users", userId));
+  const snapshot = await getDoc(doc(db, COLLECTIONS.USERS, userId));
 
   if (!snapshot.exists()) return null;
 
@@ -32,7 +37,7 @@ export const getUserById = async (userId) => {
 };
 
 export const updateUser = async (userId, updates) => {
-  await updateDoc(doc(db, "users", userId), {
+  await updateDoc(doc(db, COLLECTIONS.USERS, userId), {
     ...updates,
     updated_at: serverTimestamp(),
   });

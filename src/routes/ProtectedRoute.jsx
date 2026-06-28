@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { USER_STATUSES } from "../constants/roles";
 
 export default function ProtectedRoute({
   children,
@@ -23,11 +24,11 @@ export default function ProtectedRoute({
     return <Navigate to="/" replace />;
   }
 
-  if (appUser.status === "pending") {
+  if (appUser.status === USER_STATUSES.PENDING) {
     return <Navigate to="/account-pending" replace />;
   }
 
-  if (appUser.status !== "active") {
+  if (appUser.status !== USER_STATUSES.ACTIVE) {
     return <Navigate to="/account-inactive" replace />;
   }
 
