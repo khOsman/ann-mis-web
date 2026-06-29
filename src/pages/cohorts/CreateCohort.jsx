@@ -12,6 +12,7 @@ import {
   COHORT_STATUS,
   COHORT_STATUS_OPTIONS,
 } from "../../constants/status";
+import { validateCreateCohort } from "../../validators";
 
 export default function CreateCohort() {
   const { showAlert } = useAlert();
@@ -55,16 +56,10 @@ export default function CreateCohort() {
   };
 
   const validateForm = () => {
-    if (
-      form.registration_start_date &&
-      form.registration_end_date &&
-      new Date(form.registration_start_date) >
-        new Date(form.registration_end_date)
-    ) {
-      showAlert(
-        "warning",
-        "Registration Start Date cannot be later than Registration End Date."
-      );
+    const validation = validateCreateCohort(form);
+
+    if (!validation.valid) {
+      showAlert(validation.type, validation.message);
       return false;
     }
 

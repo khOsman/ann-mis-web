@@ -1,63 +1,40 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-  updateDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../../firebase";
+import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { ROUTES } from "../../constants/routes";
+import {
+  COHORT_STATUS,
+  COHORT_STATUS_OPTIONS,
+} from "../../constants/status";
 import { useAlert } from "../../context/AlertContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
+import { useCohorts } from "../../hooks";
+
+const STATUS_FILTER_ALL = "All";
 
 export default function AllCohorts() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+
+  const {
+    data: cohorts,
+    loading,
+    remove,
+  } = useCohorts();
+
   const [archiveTarget, setArchiveTarget] = useState(null);
-
-  const [cohorts, setCohorts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-
-  const fetchCohorts = async () => {
-    setLoading(true);
-
-    try {
-      const q = query(collection(db, "cohorts"), orderBy("created_at", "desc"));
-      const snapshot = await getDocs(q);
-
-      const data = snapshot.docs
-        .map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }))
-        .filter((item) => item.is_deleted !== true);
-
-      setCohorts(data);
-    } catch (error) {
-      console.error("Failed to fetch cohorts:", error);
-      showAlert("error", error.message || "Failed to load cohorts.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCohorts();
-  }, []);
+  const [statusFilter, setStatusFilter] = useState(STATUS_FILTER_ALL);
 
   const filteredCohorts = useMemo(() => {
     return cohorts.filter((cohort) => {
-      const keyword = search.toLowerCase();
+      const keyword = search.toLowerCase().trim();
 
       const matchesSearch =
+        !keyword ||
         cohort.cohort_code?.toLowerCase().includes(keyword) ||
         cohort.cohort_name?.toLowerCase().includes(keyword) ||
         cohort.division?.toLowerCase().includes(keyword) ||
@@ -65,63 +42,43 @@ export default function AllCohorts() {
         cohort.cohort_year?.toLowerCase().includes(keyword);
 
       const matchesStatus =
-        statusFilter === "All" || cohort.status === statusFilter;
+        statusFilter === STATUS_FILTER_ALL || cohort.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
   }, [cohorts, search, statusFilter]);
 
   const handleArchive = async () => {
-  if (!archiveTarget) return;
+    if (!archiveTarget) return;
 
-  try {
-    const user = auth.currentUser;
+    try {
+      const user = auth.currentUser;
 
-    await updateDoc(doc(db, "cohorts", archiveTarget.id), {
-      is_deleted: true,
-      status: "Archived",
-      deleted_at: serverTimestamp(),
-      deleted_by_email: user?.email || "",
-      deleted_by_name: user?.displayName || "",
-      updated_at: serverTimestamp(),
-      updated_by_email: user?.email || "",
-      updated_by_name: user?.displayName || "",
-    });
+      await remove({
+        cohortId: archiveTarget.id,
+        updatedByEmail: user?.email || "",
+        updatedByName: user?.displayName || "",
+      });
 
-    showAlert("success", "Cohort archived successfully.");
-    setArchiveTarget(null);
-    fetchCohorts();
-  } catch (error) {
-    console.error("Failed to archive cohort:", error);
-    showAlert("error", error.message || "Failed to archive cohort.");
-  }
-};
+      showAlert("success", "Cohort archived successfully.");
+      setArchiveTarget(null);
+    } catch (error) {
+      console.error("Failed to archive cohort:", error);
+      showAlert("error", error.message || "Failed to archive cohort.");
+    }
+  };
 
   const formatDate = (timestamp) => {
-  if (!timestamp?.toDate) return "-";
+    if (!timestamp?.toDate) return "-";
 
-  return timestamp.toDate().toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "Closed":
-        return "bg-gray-100 text-gray-700 border-gray-200";
-      case "Archived":
-        return "bg-red-50 text-red-700 border-red-200";
-      case "Draft":
-      default:
-        return "bg-pink-50 text-[var(--ann-pink)] border-pink-100";
-    }
+    return timestamp.toDate().toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
   return (
@@ -159,11 +116,13 @@ export default function AllCohorts() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
             >
-              <option>All</option>
-              <option>Draft</option>
-              <option>Active</option>
-              <option>Closed</option>
-              <option>Archived</option>
+              <option value={STATUS_FILTER_ALL}>{STATUS_FILTER_ALL}</option>
+
+              {COHORT_STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -244,13 +203,9 @@ export default function AllCohorts() {
                       </td>
 
                       <td className="p-4">
-                        <span
-                          className={`px-3 py-1 rounded-full border text-xs font-semibold ${getStatusBadgeClass(
-                            cohort.status
-                          )}`}
-                        >
-                          {cohort.status || "Draft"}
-                        </span>
+                        <CohortStatusBadge
+                          status={cohort.status || COHORT_STATUS.DRAFT}
+                        />
                       </td>
 
                       <td className="p-4 text-gray-600">
@@ -311,6 +266,7 @@ export default function AllCohorts() {
           </div>
         </div>
       </PageContainer>
+
       <ConfirmDialog
         open={!!archiveTarget}
         title="Archive Cohort?"

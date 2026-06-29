@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
+import { COHORT_STATUS } from "../constants/status";
 import { createCohort } from "../entities";
 
 export const createCohortRecord = async (payload) => {
@@ -39,6 +40,12 @@ export const getCohorts = async () => {
   }));
 };
 
+export const getActiveCohorts = async () => {
+  const cohorts = await getCohorts();
+
+  return cohorts.filter((item) => item.is_deleted !== true);
+};
+
 export const getCohortById = async (cohortId) => {
   const snapshot = await getDoc(doc(db, COLLECTIONS.COHORTS, cohortId));
 
@@ -57,11 +64,11 @@ export const updateCohortRecord = async (cohortId, updates) => {
   });
 };
 
-export const archiveCohort = async (
+export const archiveCohort = async ({
   cohortId,
-  updatedByEmail,
-  updatedByName
-) => {
+  updatedByEmail = "",
+  updatedByName = "",
+}) => {
   await updateDoc(doc(db, COLLECTIONS.COHORTS, cohortId), {
     is_deleted: true,
     status: COHORT_STATUS.ARCHIVED,
