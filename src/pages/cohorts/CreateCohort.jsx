@@ -13,6 +13,7 @@ import {
   COHORT_STATUS_OPTIONS,
 } from "../../constants/status";
 import { validateCreateCohort } from "../../validators";
+import { buildCreateCohortPayload } from "../../builders";
 
 export default function CreateCohort() {
   const { showAlert } = useAlert();
@@ -66,31 +67,7 @@ export default function CreateCohort() {
     return true;
   };
 
-  const buildCohortPayload = () => {
-    const user = auth.currentUser;
-
-    return {
-      cohort_code: form.cohort_code.trim().toUpperCase(),
-      cohort_name: form.cohort_name.trim(),
-      division: form.division,
-      district: form.district,
-      cohort_year: form.cohort_year.trim(),
-
-      registration_start_date: form.registration_start_date,
-      registration_end_date: form.registration_end_date,
-
-      selection_target: Number(form.selection_target || 0),
-      graduation_target: Number(form.graduation_target || 0),
-
-      status: form.status,
-
-      created_by_email: user?.email || "",
-      created_by_name: user?.displayName || "",
-
-      updated_by_email: user?.email || "",
-      updated_by_name: user?.displayName || "",
-    };
-  };
+ 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -100,7 +77,11 @@ export default function CreateCohort() {
     setSaving(true);
 
     try {
-      await createCohortRecord(buildCohortPayload());
+      const user = auth.currentUser;
+
+      await createCohortRecord(
+        buildCreateCohortPayload(form, user)
+      );
 
       showAlert("success", "Cohort created successfully.");
       resetForm();

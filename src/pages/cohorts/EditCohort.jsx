@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
-import { auth, db } from "../../firebase";
+import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -15,16 +9,23 @@ import {
   DISTRICTS_BY_DIVISION,
 } from "../../constants/locations";
 import { ROUTES } from "../../constants/routes";
+import {
+  COHORT_STATUS,
+  COHORT_STATUS_OPTIONS,
+} from "../../constants/status";
+import { updateCohortRecord } from "../../services/cohortService";
+import { useCohort } from "../../hooks";
+import { validateCreateCohort } from "../../validators";
+import { buildUpdateCohortPayload } from "../../builders";
 
 export default function EditCohort() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { data: cohort, loading, error } = useCohort(id);
 
-  const [audit, setAudit] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     cohort_code: "",
@@ -36,47 +37,39 @@ export default function EditCohort() {
     registration_end_date: "",
     selection_target: "",
     graduation_target: "",
-    status: "Draft",
+    status: COHORT_STATUS.DRAFT,
   });
 
   useEffect(() => {
-    const fetchCohort = async () => {
-      try {
-        const ref = doc(db, "cohorts", id);
-        const snap = await getDoc(ref);
+    if (!loading && !cohort) {
+      showAlert("error", "Cohort not found.");
+      navigate(ROUTES.cohorts);
+    }
+  }, [loading, cohort, navigate, showAlert]);
 
-        if (!snap.exists()) {
-          showAlert("error", "Cohort not found.");
-          navigate(ROUTES.cohorts);
-          return;
-        }
+  useEffect(() => {
+    if (error) {
+      console.error("Failed to load cohort:", error);
+      showAlert("error", error.message || "Failed to load cohort.");
+    }
+  }, [error, showAlert]);
 
-        const data = snap.data();
+  useEffect(() => {
+    if (!cohort) return;
 
-        setForm({
-          cohort_code: data.cohort_code || "",
-          cohort_name: data.cohort_name || "",
-          division: data.division || "",
-          district: data.district || "",
-          cohort_year: data.cohort_year || "",
-          registration_start_date: data.registration_start_date || "",
-          registration_end_date: data.registration_end_date || "",
-          selection_target: data.selection_target || "",
-          graduation_target: data.graduation_target || "",
-          status: data.status || "Draft",
-        });
-
-        setAudit(data);
-      } catch (error) {
-        console.error("Failed to load cohort:", error);
-        showAlert("error", error.message || "Failed to load cohort.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCohort();
-  }, [id, navigate, showAlert]);
+    setForm({
+      cohort_code: cohort.cohort_code || "",
+      cohort_name: cohort.cohort_name || "",
+      division: cohort.division || "",
+      district: cohort.district || "",
+      cohort_year: cohort.cohort_year || "",
+      registration_start_date: cohort.registration_start_date || "",
+      registration_end_date: cohort.registration_end_date || "",
+      selection_target: cohort.selection_target || "",
+      graduation_target: cohort.graduation_target || "",
+      status: cohort.status || COHORT_STATUS.DRAFT,
+    });
+  }, [cohort]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -96,6 +89,19 @@ export default function EditCohort() {
     }));
   };
 
+  const validateForm = () => {
+    const validation = validateCreateCohort(form);
+
+    if (!validation.valid) {
+      showAlert(validation.type, validation.message);
+      return false;
+    }
+
+    return true;
+  };
+
+  
+
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";
     return timestamp.toDate().toLocaleString("en-GB");
@@ -103,40 +109,14 @@ export default function EditCohort() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
 
-    if (
-      form.registration_start_date &&
-      form.registration_end_date &&
-      new Date(form.registration_start_date) > new Date(form.registration_end_date)
-    ) {
-      showAlert(
-        "warning",
-        "Registration Start Date cannot be later than Registration End Date."
-      );
-      setSaving(false);
-      return;
-    }
+    if (!validateForm()) return;
+
+    setSaving(true);
 
     try {
       const user = auth.currentUser;
-
-      await updateDoc(doc(db, "cohorts", id), {
-        cohort_code: form.cohort_code.trim().toUpperCase(),
-        cohort_name: form.cohort_name.trim(),
-        division: form.division,
-        district: form.district,
-        cohort_year: form.cohort_year.trim(),
-        registration_start_date: form.registration_start_date,
-        registration_end_date: form.registration_end_date,
-        selection_target: Number(form.selection_target),
-        graduation_target: Number(form.graduation_target),
-        status: form.status,
-
-        updated_at: serverTimestamp(),
-        updated_by_email: user?.email || "",
-        updated_by_name: user?.displayName || "",
-      });
+      await updateCohortRecord(id, buildUpdateCohortPayload(form, user));
 
       showAlert("success", "Cohort updated successfully.");
       navigate(ROUTES.cohorts);
@@ -148,7 +128,7 @@ export default function EditCohort() {
     }
   };
 
-  if (loading) {
+  if (loading || !cohort) {
     return (
       <AdminLayout title="Edit Cohort" subtitle="Loading cohort information">
         <PageContainer className="py-6 lg:py-8">
@@ -159,7 +139,10 @@ export default function EditCohort() {
   }
 
   return (
-    <AdminLayout title="Edit Cohort" subtitle="Update cohort information and settings">
+    <AdminLayout
+      title="Edit Cohort"
+      subtitle="Update cohort information and settings"
+    >
       <PageContainer className="py-6 lg:py-8">
         <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -227,11 +210,13 @@ export default function EditCohort() {
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)] disabled:bg-gray-100"
                 >
                   <option value="">Select District</option>
-                  {(DISTRICTS_BY_DIVISION[form.division] || []).map((district) => (
-                    <option key={district} value={district}>
-                      {district}
-                    </option>
-                  ))}
+                  {(DISTRICTS_BY_DIVISION[form.division] || []).map(
+                    (district) => (
+                      <option key={district} value={district}>
+                        {district}
+                      </option>
+                    )
+                  )}
                 </select>
               </div>
 
@@ -258,10 +243,11 @@ export default function EditCohort() {
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
                 >
-                  <option>Draft</option>
-                  <option>Active</option>
-                  <option>Closed</option>
-                  <option>Archived</option>
+                  {COHORT_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -348,28 +334,28 @@ export default function EditCohort() {
               <div>
                 <p className="text-gray-500">Created By</p>
                 <p className="font-semibold text-gray-800">
-                  {audit?.created_by_name || audit?.created_by_email || "-"}
+                  {cohort.created_by_name || cohort.created_by_email || "-"}
                 </p>
               </div>
 
               <div>
                 <p className="text-gray-500">Created At</p>
                 <p className="font-semibold text-gray-800">
-                  {formatDate(audit?.created_at)}
+                  {formatDate(cohort.created_at)}
                 </p>
               </div>
 
               <div>
                 <p className="text-gray-500">Last Updated By</p>
                 <p className="font-semibold text-gray-800">
-                  {audit?.updated_by_name || audit?.updated_by_email || "-"}
+                  {cohort.updated_by_name || cohort.updated_by_email || "-"}
                 </p>
               </div>
 
               <div>
                 <p className="text-gray-500">Last Updated At</p>
                 <p className="font-semibold text-gray-800">
-                  {formatDate(audit?.updated_at)}
+                  {formatDate(cohort.updated_at)}
                 </p>
               </div>
             </div>
