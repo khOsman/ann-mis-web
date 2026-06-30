@@ -37,6 +37,23 @@ export const createParticipantEntity = (overrides = {}) => ({
   graduation_status: GRADUATION_STATUS.PENDING,
   project_status: PROJECT_STATUS.PENDING,
 
+  // FGD / Selection
+  fgd_id: "",
+  fgd_code: "",
+  fgd_name: "",
+
+  fgd_attendance_status: "Pending",
+  fgd_score: null,
+
+  fgd_feedback: "",
+
+  selection_recommendation: "", // Selected, Waitlisted, Rejected
+
+  selection_committee_notes: "",
+
+  fgd_evaluated_by: "",
+  fgd_evaluated_at: null,
+
   // Training Information
   payment_status: "",
   attendance_count: 0,

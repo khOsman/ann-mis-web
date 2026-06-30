@@ -1,4 +1,3 @@
-
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -15,32 +14,87 @@ export default function AdminLayout({ children, title, subtitle }) {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  
-
-
-  const isActive = (item) => {
-    if (item.path === "/admin") return location.pathname === "/admin";
-    return location.pathname.startsWith(item.path);
-  };
 
   const canShowItem = (item) => {
     if (isSuperAdmin) return true;
     if (!item.permission) return true;
-
     return permissions?.[item.permission] === true;
   };
 
+  const filterMenuItems = (items = []) => {
+    return items
+      .filter(canShowItem)
+      .map((item) => ({
+        ...item,
+        children: item.children ? filterMenuItems(item.children) : undefined,
+      }));
+  };
+
   const visibleMenuItems = useMemo(() => {
-    return ADMIN_MENU_ITEMS.filter(canShowItem).map((item) => ({
-      ...item,
-      children: item.children?.filter(canShowItem),
-    }));
-  }, [permissions]);
+    return filterMenuItems(ADMIN_MENU_ITEMS);
+  }, [permissions, isSuperAdmin]);
+
+  const isActive = (item) => {
+    if (!item.path) return false;
+
+    if (item.path === "/admin") {
+      return location.pathname === "/admin";
+    }
+
+    if (location.pathname === item.path) return true;
+
+    return item.children?.some(isActive);
+  };
+
+  const handleNavigate = (path) => {
+    if (!path) return;
+
+    navigate(path);
+    setMobileSidebarOpen(false);
+  };
+
+  const renderMenuItems = (items, level = 0) => {
+    return items.map((item) => {
+      const active = isActive(item);
+      const Icon = item.icon;
+      const hasChildren = item.children && item.children.length > 0;
+
+      return (
+        <div key={`${item.label}-${item.path || level}`}>
+          <button
+            type="button"
+            onClick={() => handleNavigate(item.path)}
+            className={`w-full flex items-center gap-3 text-left rounded-xl cursor-pointer font-medium transition ${
+              level === 0 ? "px-4 py-3 text-sm" : "px-3 py-2 text-xs"
+            } ${
+              active
+                ? level === 0
+                  ? "bg-[var(--ann-pink)] text-white shadow-lg"
+                  : "bg-white text-[var(--ann-purple)]"
+                : "text-purple-100 hover:bg-white/10"
+            }`}
+            style={{
+              paddingLeft: level === 0 ? undefined : `${12 + level * 10}px`,
+            }}
+          >
+            {Icon && <Icon size={level === 0 ? 18 : 14} />}
+            {sidebarOpen && <span>{item.label}</span>}
+          </button>
+
+          {sidebarOpen && hasChildren && active && (
+            <div className="ml-4 mt-2 space-y-1 border-l border-white/20 pl-3">
+              {renderMenuItems(item.children, level + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
 
   const handleLogout = async () => {
-  await logout();
-  navigate("/");
-};
+    await logout();
+    navigate("/");
+  };
 
   const SidebarContent = () => (
     <>
@@ -61,57 +115,7 @@ export default function AdminLayout({ children, title, subtitle }) {
         )}
       </div>
 
-      <nav className="space-y-2">
-        {visibleMenuItems.map((item) => {
-          const active = isActive(item);
-          const Icon = item.icon;
-
-          return (
-            <div key={item.label}>
-              <button
-                onClick={() => {
-                  navigate(item.path);
-                  setMobileSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 text-left px-4 py-3 rounded-xl cursor-pointer text-sm font-medium transition ${
-                  active
-                    ? "bg-[var(--ann-pink)] text-white shadow-lg"
-                    : "text-purple-100 hover:bg-white/10"
-                }`}
-              >
-                {Icon && <Icon size={18} />}
-                {sidebarOpen && <span>{item.label}</span>}
-              </button>
-
-              {sidebarOpen && item.children && active && (
-                <div className="ml-4 mt-2 space-y-1 border-l border-white/20 pl-3">
-                  {item.children.map((child) => {
-                    const ChildIcon = child.icon;
-
-                    return (
-                      <button
-                        key={child.label}
-                        onClick={() => {
-                          navigate(child.path);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-xs font-medium transition ${
-                          location.pathname === child.path
-                            ? "bg-white text-[var(--ann-purple)]"
-                            : "text-purple-100 hover:bg-white/10"
-                        }`}
-                      >
-                        {ChildIcon && <ChildIcon size={14} />}
-                        <span>{child.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
+      <nav className="space-y-2">{renderMenuItems(visibleMenuItems)}</nav>
 
       {sidebarOpen && (
         <div className="mt-auto rounded-2xl bg-white/10 p-4">

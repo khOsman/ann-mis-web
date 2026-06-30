@@ -4,5 +4,6 @@ export const COLLECTIONS = {
   FORMS: "forms",
   FORM_FIELDS: "form_fields",
   FORM_RESPONSES: "form_responses",
+  FGDS: "fgds",
   PARTICIPANTS: "participants",
 };

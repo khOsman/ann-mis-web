@@ -1,0 +1,188 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+import { db } from "../firebase";
+import { COLLECTIONS } from "../constants/collections";
+import { REGISTRATION_STATUS, SELECTION_STATUS } from "../constants/status";
+import { FGD_ATTENDANCE_STATUS, FGD_STATUS } from "../constants/fgd";
+import { createFGD } from "../entities";
+
+export const getFGDsByCohort = async (cohortId) => {
+  const q = query(
+    collection(db, COLLECTIONS.FGDS),
+    where("cohort_id", "==", cohortId),
+    orderBy("sequence_no", "asc")
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  }));
+};
+
+export const getFGDById = async (fgdId) => {
+  const snapshot = await getDoc(doc(db, COLLECTIONS.FGDS, fgdId));
+
+  if (!snapshot.exists()) {
+    throw new Error("FGD not found.");
+  }
+
+  return {
+    id: snapshot.id,
+    ...snapshot.data(),
+  };
+};
+
+export const generateFGDsForCohort = async ({
+  cohort,
+  participantLimit,
+  createdByEmail = "",
+  createdByName = "",
+}) => {
+  if (!cohort?.id) {
+    throw new Error("Cohort is required.");
+  }
+
+  const limit = Number(participantLimit);
+
+  if (!limit || limit <= 0) {
+    throw new Error("Participant limit must be greater than 0.");
+  }
+
+  const participantsQuery = query(
+    collection(db, COLLECTIONS.PARTICIPANTS),
+    where("cohort_id", "==", cohort.id),
+    where("registration_status", "==", REGISTRATION_STATUS.REGISTERED),
+    where("selection_status", "==", SELECTION_STATUS.PENDING),
+    orderBy("name", "asc")
+  );
+
+  const participantSnap = await getDocs(participantsQuery);
+
+  const participants = participantSnap.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  }));
+
+  if (participants.length === 0) {
+    throw new Error("No eligible registered participants found.");
+  }
+
+  const existingFgdSnap = await getDocs(
+    query(collection(db, COLLECTIONS.FGDS), where("cohort_id", "==", cohort.id))
+  );
+
+  if (!existingFgdSnap.empty) {
+    throw new Error("FGDs have already been generated for this cohort.");
+  }
+
+  const batch = writeBatch(db);
+  const totalFGDs = Math.ceil(participants.length / limit);
+
+  for (let index = 0; index < totalFGDs; index += 1) {
+    const sequenceNo = index + 1;
+    const startIndex = index * limit;
+    const groupParticipants = participants.slice(startIndex, startIndex + limit);
+
+    const fgdRef = doc(collection(db, COLLECTIONS.FGDS));
+
+    const fgdCode = `${cohort.cohort_code}-FGD-${String(sequenceNo).padStart(
+      3,
+      "0"
+    )}`;
+
+    const fgdName = `FGD ${String(sequenceNo).padStart(2, "0")}`;
+
+    const fgd = createFGD({
+      id: fgdRef.id,
+
+      cohort_id: cohort.id,
+      cohort_name: cohort.cohort_name,
+      cohort_code: cohort.cohort_code,
+
+      sequence_no: sequenceNo,
+      fgd_code: fgdCode,
+      fgd_name: fgdName,
+
+      participant_limit: limit,
+      total_participants: groupParticipants.length,
+      total_pending_feedback: groupParticipants.length,
+
+      status: FGD_STATUS.DRAFT,
+
+      created_at: serverTimestamp(),
+      created_by_email: createdByEmail,
+      created_by_name: createdByName,
+
+      updated_at: serverTimestamp(),
+      updated_by_email: createdByEmail,
+      updated_by_name: createdByName,
+    });
+
+    batch.set(fgdRef, fgd);
+
+    groupParticipants.forEach((participant) => {
+      const participantRef = doc(db, COLLECTIONS.PARTICIPANTS, participant.id);
+
+      batch.update(participantRef, {
+        fgd_id: fgdRef.id,
+        fgd_code: fgdCode,
+        fgd_name: fgdName,
+        fgd_attendance_status: FGD_ATTENDANCE_STATUS.PENDING,
+        fgd_feedback: "",
+        fgd_score: "",
+        selection_committee_feedback: "",
+        updated_at: serverTimestamp(),
+      });
+    });
+  }
+
+  const cohortRef = doc(db, COLLECTIONS.COHORTS, cohort.id);
+
+  batch.update(cohortRef, {
+    total_fgds: totalFGDs,
+    updated_at: serverTimestamp(),
+    updated_by_email: createdByEmail,
+    updated_by_name: createdByName,
+  });
+
+  await batch.commit();
+
+  return {
+    totalFGDs,
+    totalParticipants: participants.length,
+  };
+};
+
+export const getParticipantsByFGD = async (fgdId) => {
+  const q = query(
+    collection(db, COLLECTIONS.PARTICIPANTS),
+    where("fgd_id", "==", fgdId),
+    orderBy("name", "asc")
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  }));
+};
+
+export const updateFGDParticipant = async (participantId, updates) => {
+  await updateDoc(doc(db, COLLECTIONS.PARTICIPANTS, participantId), {
+    ...updates,
+    updated_at: serverTimestamp(),
+  });
+};

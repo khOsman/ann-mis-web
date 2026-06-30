@@ -20,6 +20,10 @@ import AccountPending from "./pages/system/AccountPending";
 import AccountInactive from "./pages/system/AccountInactive";
 import AccessDenied from "./pages/system/AccountDenied.jsx";
 
+import AllFGDs from "./pages/selection/fgd/AllFGDs";
+import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
+import FGDDetails from "./pages/selection/fgd/FGDDetails";
+
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 import { AlertProvider } from "./context/AlertContext";
@@ -32,11 +36,48 @@ export default function App() {
         <Routes>
           <Route path={ROUTES.login} element={<Login />} />
 
+          
           <Route
             path={ROUTES.admin}
             element={
               <ProtectedRoute permission="dashboard">
                 <Admin />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionFGDs}
+            element={
+              <ProtectedRoute permission="selection">
+                <AllFGDs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionFGDDetails}
+            element={
+              <ProtectedRoute permission="selection">
+                <FGDDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionCohortFGDs}
+            element={
+              <ProtectedRoute permission="selection">
+                <CohortFGDs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/participants/:id"
+            element={
+              <ProtectedRoute permission="participants">
+                <ParticipantProfile />
               </ProtectedRoute>
             }
           />
@@ -174,10 +215,39 @@ export default function App() {
             }
           />
 
+        <Route
+          path={ROUTES.selectionFGDs}
+          element={
+            <ProtectedRoute permission="selection">
+              <AllFGDs />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path={ROUTES.selectionCohortFGDs}
+          element={
+            <ProtectedRoute permission="selection">
+              <CohortFGDs />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path={ROUTES.selectionFGDDetails}
+          element={
+            <ProtectedRoute permission="selection">
+              <FGDDetails />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/account-pending" element={<AccountPending />} />
         <Route path="/account-inactive" element={<AccountInactive />} />
         <Route path="/access-denied" element={<AccessDenied />} />
-          <Route path="/form/:slug" element={<PublicForm />} />
+        <Route path="/form/:slug" element={<PublicForm />} />
+       
+
         </Routes>
       </BrowserRouter>
     </AlertProvider>

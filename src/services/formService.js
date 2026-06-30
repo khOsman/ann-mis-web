@@ -7,6 +7,21 @@ import {
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 
+export const getFGDsByCohort = async (cohortId) => {
+  const q = query(
+    collection(db, COLLECTIONS.FGDS),
+    where("cohort_id", "==", cohortId),
+    orderBy("fgd_code", "asc")
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  }));
+};
+
 export const normalizeSlug = (slug) => {
   return String(slug || "")
     .trim()
@@ -35,3 +50,4 @@ export const isSlugAvailable = async (slug, currentFormId = null) => {
 
   return false;
 };
+

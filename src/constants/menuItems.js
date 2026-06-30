@@ -67,11 +67,39 @@ export const ADMIN_MENU_ITEMS = [
   path: ROUTES.participants,
   icon: GraduationCap,
   permission: "participants",
-  children: [
-    { label: "All Participants", path: ROUTES.participants, icon: List, permission: "participants" },
-    { label: "Selection", path: "/admin/participants/selection", icon: List, permission: "selection" },
-    { label: "Enrollment", path: "/admin/participants/enrollment", icon: List, permission: "enrollment" },
-    { label: "Graduation", path: "/admin/participants/graduation", icon: List, permission: "graduation" },
+    children: [
+    {
+      label: "All Participants",
+      path: ROUTES.participants,
+      icon: List,
+      permission: "participants",
+    },
+    {
+      label: "Selection",
+      path: ROUTES.selectionFGDs,
+      icon: List,
+      permission: "selection",
+        children: [
+          {
+            label: "All FGDs",
+            path: ROUTES.selectionFGDs,
+            icon: List,
+            permission: "selection",
+          },
+        ],
+    },
+    {
+      label: "Enrollment",
+      path: "/admin/participants/enrollment",
+      icon: List,
+      permission: "enrollment",
+    },
+    {
+      label: "Graduation",
+      path: "/admin/participants/graduation",
+      icon: List,
+      permission: "graduation",
+    },
   ],
   },
 

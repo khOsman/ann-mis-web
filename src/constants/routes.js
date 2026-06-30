@@ -11,6 +11,10 @@ export const ROUTES = {
   editForm: "/admin/forms/:id/edit",
   formBuilder: "/admin/forms/:id/builder",
 
+  selectionFGDs: "/admin/participants/selection/fgds",
+  selectionCohortFGDs: "/admin/participants/selection/fgds/:cohortId",
+  selectionFGDDetails: "/admin/participants/selection/fgds/details/:fgdId",
+
   participants: "/admin/participants",
   projects: "/admin/projects",
   reports: "/admin/reports",
