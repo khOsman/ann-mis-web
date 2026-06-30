@@ -59,8 +59,14 @@ export default function ParticipantEvaluationModal({
 
       const user = auth.currentUser;
 
+      const updatedSelectionStatus = form.selection_recommendation || participant.selection_status;
+
       await updateFGDParticipant(participant.id, {
         ...form,
+        // Update participant journey
+        selection_status: updatedSelectionStatus,
+
+        // Audit information
         fgd_evaluated_by: user?.displayName || user?.email || "",
         fgd_evaluated_at: new Date(),
       });
