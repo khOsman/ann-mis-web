@@ -11,6 +11,7 @@ import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { useAlert } from "../../context/AlertContext";
+import { isSlugAvailable, normalizeSlug } from "../../services/formService";
 
 export default function CreateForm() {
   const { showAlert } = useAlert();
@@ -64,6 +65,17 @@ export default function CreateForm() {
       }));
       return;
     }
+    if (name === "public_slug") {
+      setForm((prev) => ({
+        ...prev,
+        public_slug: value
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, ""),
+      }));
+      return;
+    }
 
     setForm((prev) => ({
       ...prev,
@@ -105,6 +117,19 @@ export default function CreateForm() {
 
       const user = auth.currentUser;
 
+      const normalizedSlug = normalizeSlug(form.public_slug);
+
+      const slugAvailable = await isSlugAvailable(normalizedSlug);
+
+      if (!slugAvailable) {
+        showAlert(
+          "warning",
+          "This public slug already exists. Please choose another one."
+        );
+        setSaving(false);
+        return;
+      }
+
       const docRef = await addDoc(collection(db, "forms"), {
         form_title: form.form_title.trim(),
         cohort_id: form.cohort_id,
@@ -114,7 +139,7 @@ export default function CreateForm() {
         cohort_code: selectedCohort?.cohort_code || "",
         form_type: form.form_type,
         status: form.status,
-        public_slug: form.public_slug,
+        public_slug: normalizedSlug,
         banner_type: form.banner_type,
         banner_url:
           form.banner_type === "default"

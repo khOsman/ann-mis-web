@@ -33,6 +33,7 @@ import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
 import { FIELD_TYPES } from "../../constants/fieldTypes";
 import RichTextEditor from "../../components/common/RichTextEditor";
+import { isSlugAvailable } from "../../services/formService";
 
 function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -301,6 +302,13 @@ export default function FormBuilder() {
 
     const handleUpdateFormStatus = async (nextStatus) => {
     if (nextStatus === "Published") {
+        const slugAvailable = await isSlugAvailable(formMeta.public_slug, formMeta.id);
+
+        if (!slugAvailable) {
+          showAlert("warning", "This public slug is already used by another form.");
+          return;
+        }
+        
         if (!formMeta?.public_slug) {
         showAlert("warning", "Public slug is required before publishing.");
         return;

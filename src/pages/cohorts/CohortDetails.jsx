@@ -6,13 +6,14 @@ import { useAlert } from "../../context/AlertContext";
 import { ROUTES } from "../../constants/routes";
 import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
 import { useCohort } from "../../hooks";
+import ParticipantImportBox from "../../components/cohorts/ParticipantImportBox";
 
 export default function CohortDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
-  const { data: cohort, loading, error } = useCohort(id);
+  const { data: cohort, loading, error,refresh } = useCohort(id);
 
   useEffect(() => {
     if (!loading && !cohort) {
@@ -164,6 +165,12 @@ export default function CohortDetails() {
             </div>
           </div>
         </div>
+
+        <ParticipantImportBox
+          cohort={cohort}
+          showAlert={showAlert}
+          onImported={refresh}
+        />
 
         <div className="bg-white rounded-2xl border p-6">
           <h3 className="text-lg font-bold mb-5">Future Modules</h3>
