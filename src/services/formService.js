@@ -20,8 +20,9 @@ export const isSlugAvailable = async (slug, currentFormId = null) => {
   if (!normalizedSlug) return false;
 
   const q = query(
-    collection(db, COLLECTIONS.FORMS),
-    where("public_slug", "==", normalizedSlug)
+    collection(db, "forms"),
+    where("public_slug", "==", slug),
+    where("is_deleted", "==", false)
   );
 
   const snapshot = await getDocs(q);
