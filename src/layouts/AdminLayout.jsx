@@ -41,7 +41,11 @@ export default function AdminLayout({ children, title, subtitle }) {
       return location.pathname === "/admin";
     }
 
-    if (location.pathname === item.path) return true;
+    const matches = item.path.includes("?")
+      ? location.pathname + location.search === item.path
+      : location.pathname === item.path;
+
+    if (matches) return true;
 
     return item.children?.some(isActive);
   };

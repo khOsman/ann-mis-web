@@ -1,8 +1,7 @@
-import { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useChampions } from "../../hooks";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ROUTES } from "../../constants/routes";
 import { CHAMPION_ROLE_LABELS } from "../../constants/champions";
 
@@ -15,7 +14,12 @@ const ROLE_FILTERS = [
 export default function AllChampions() {
   const { data, loading, error } = useChampions();
   const navigate = useNavigate();
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const roleFilter = searchParams.get("role") || "all";
+
+  const setRoleFilter = (key) => {
+    setSearchParams(key === "all" ? {} : { role: key });
+  };
 
   const totalChampions = data.length;
 

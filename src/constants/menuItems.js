@@ -9,6 +9,7 @@ import {
   PlusCircle,
   List,
   Users,
+  Trophy,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
@@ -81,18 +82,11 @@ export const ADMIN_MENU_ITEMS = [
       permission: "selection",
         children: [
           {
-            label: "Champions Pool",
-            path: ROUTES.champions,
-            icon: List,
-            permission: "selection",
-          },
-          {
             label: "All FGDs",
             path: ROUTES.selectionFGDs,
             icon: List,
             permission: "selection",
           },
-          
         ],
     },
     {
@@ -128,6 +122,51 @@ export const ADMIN_MENU_ITEMS = [
         path: "/admin/reports/custom",
         icon: List,
         permission: "reports",
+      },
+    ],
+  },
+
+  {
+    label: "Champions",
+    path: ROUTES.champions,
+    icon: Trophy,
+    permission: "selection",
+    children: [
+      {
+        label: "All Champions",
+        path: ROUTES.champions,
+        icon: List,
+        permission: "selection",
+      },
+      {
+        label: "Selection Committee",
+        path: `${ROUTES.champions}?role=selection_committee`,
+        icon: List,
+        permission: "selection",
+      },
+      {
+        label: "Facilitator",
+        path: `${ROUTES.champions}?role=facilitator`,
+        icon: List,
+        permission: "selection",
+      },
+      {
+        label: "Co-Facilitator",
+        path: `${ROUTES.champions}?role=co_facilitator`,
+        icon: List,
+        permission: "selection",
+      },
+      {
+        label: "Mentor",
+        path: `${ROUTES.champions}?role=mentor`,
+        icon: List,
+        permission: "selection",
+      },
+      {
+        label: "YCN",
+        path: `${ROUTES.champions}?role=ycn`,
+        icon: List,
+        permission: "selection",
       },
     ],
   },
