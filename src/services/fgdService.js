@@ -16,6 +16,46 @@ import { REGISTRATION_STATUS, SELECTION_STATUS } from "../constants/status";
 import { FGD_ATTENDANCE_STATUS, FGD_STATUS } from "../constants/fgd";
 import { createFGD } from "../entities";
 
+// An FGD group smaller than this isn't worth running on its own — if the
+// leftover after filling full-size groups is below this, those leftover
+// participants get spread one-by-one across the existing groups instead of
+// forming an undersized final group.
+const MIN_PARTICIPANTS_PER_FGD = 10;
+
+export const distributeParticipantsIntoFGDGroups = (participants, limit) => {
+  const total = participants.length;
+
+  if (total <= limit) {
+    return [participants];
+  }
+
+  const baseGroupCount = Math.floor(total / limit);
+  const remainder = total % limit;
+
+  const groups = [];
+
+  for (let index = 0; index < baseGroupCount; index += 1) {
+    groups.push(participants.slice(index * limit, (index + 1) * limit));
+  }
+
+  if (remainder === 0) {
+    return groups;
+  }
+
+  const leftover = participants.slice(baseGroupCount * limit);
+
+  if (remainder < MIN_PARTICIPANTS_PER_FGD) {
+    // Top-to-bottom: give group 1 an extra participant, then group 2, etc.
+    leftover.forEach((participant, index) => {
+      groups[index % groups.length].push(participant);
+    });
+  } else {
+    groups.push(leftover);
+  }
+
+  return groups;
+};
+
 export const getFGDsByCohort = async (cohortId) => {
   const q = query(
     collection(db, COLLECTIONS.FGDS),
@@ -88,12 +128,11 @@ export const generateFGDsForCohort = async ({
   }
 
   const batch = writeBatch(db);
-  const totalFGDs = Math.ceil(participants.length / limit);
+  const groups = distributeParticipantsIntoFGDGroups(participants, limit);
+  const totalFGDs = groups.length;
 
-  for (let index = 0; index < totalFGDs; index += 1) {
+  groups.forEach((groupParticipants, index) => {
     const sequenceNo = index + 1;
-    const startIndex = index * limit;
-    const groupParticipants = participants.slice(startIndex, startIndex + limit);
 
     const fgdRef = doc(collection(db, COLLECTIONS.FGDS));
 
@@ -146,7 +185,7 @@ export const generateFGDsForCohort = async ({
         updated_at: serverTimestamp(),
       });
     });
-  }
+  });
 
   const cohortRef = doc(db, COLLECTIONS.COHORTS, cohort.id);
 

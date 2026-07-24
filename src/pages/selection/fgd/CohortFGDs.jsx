@@ -4,6 +4,7 @@ import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { ROUTES } from "../../../constants/routes";
 import { useCohort } from "../../../hooks";
 import {
@@ -26,6 +27,7 @@ export default function CohortFGDs() {
   const [regenerating, setRegenerating] = useState(false);
   const [showRegeneratePanel, setShowRegeneratePanel] = useState(false);
   const [regenerateLimit, setRegenerateLimit] = useState(25);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const fetchFGDs = async () => {
     if (!cohortId) return;
@@ -79,12 +81,11 @@ export default function CohortFGDs() {
   const handleRegenerateFGDs = async () => {
     if (!cohort) return;
 
-    const confirmed = window.confirm(
-      "Regenerating will permanently delete all existing FGD groups for this cohort, including any attendance, scores, and feedback already entered by the selection committee. This cannot be undone. Continue?"
-    );
+    setShowConfirmDialog(true);
+  };
 
-    if (!confirmed) return;
-
+  const performRegenerateFGDs = async () => {
+    setShowConfirmDialog(false);
     setRegenerating(true);
 
     try {
@@ -289,6 +290,17 @@ export default function CohortFGDs() {
           </div>
         )}
       </PageContainer>
+
+      <ConfirmDialog
+        open={showConfirmDialog}
+        title="Regenerate FGD Groups?"
+        message={`This will permanently delete all ${fgds.length} existing FGD group(s) for this cohort, including any attendance, scores, and feedback already entered by the selection committee. This cannot be undone.`}
+        confirmText="Regenerate"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={performRegenerateFGDs}
+        onCancel={() => setShowConfirmDialog(false)}
+      />
     </AdminLayout>
   );
 }
