@@ -1,24 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getParticipants } from "../../services/participantService";
+import { getCohorts } from "../../services/cohortService";
+import { COHORT_STATUS } from "../../constants/status";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+
+const TABLE_COLUMN_COUNT = 13;
 
 export default function AllParticipants() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
   const [participants, setParticipants] = useState([]);
+  const [cohorts, setCohorts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [cohortFilter, setCohortFilter] = useState("");
 
-  const fetchParticipants = async () => {
+  const fetchData = async () => {
     setLoading(true);
 
     try {
-      const data = await getParticipants();
-      setParticipants(data);
+      const [participantData, cohortData] = await Promise.all([
+        getParticipants(),
+        getCohorts(),
+      ]);
+
+      setParticipants(participantData);
+      setCohorts(
+        cohortData.filter(
+          (cohort) =>
+            cohort.is_deleted !== true && cohort.status === COHORT_STATUS.ACTIVE
+        )
+      );
     } catch (error) {
       console.error("Failed to fetch participants:", error);
       showAlert("error", error.message || "Failed to load participants.");
@@ -28,13 +44,18 @@ export default function AllParticipants() {
   };
 
   useEffect(() => {
-    fetchParticipants();
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredParticipants = useMemo(() => {
     const keyword = search.toLowerCase();
 
     return participants.filter((participant) => {
+      if (cohortFilter && participant.cohort_id !== cohortFilter) {
+        return false;
+      }
+
       return (
         participant.participant_code?.toLowerCase().includes(keyword) ||
         participant.name?.toLowerCase().includes(keyword) ||
@@ -45,7 +66,7 @@ export default function AllParticipants() {
         participant.cohort_code?.toLowerCase().includes(keyword)
       );
     });
-  }, [participants, search]);
+  }, [participants, search, cohortFilter]);
 
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";
@@ -59,6 +80,12 @@ export default function AllParticipants() {
       hour12: true,
     });
   };
+
+  const StatusBadge = ({ value }) => (
+    <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold whitespace-nowrap">
+      {value || "-"}
+    </span>
+  );
 
   return (
     <AdminLayout
@@ -78,50 +105,74 @@ export default function AllParticipants() {
             </div>
           </div>
 
-          <div className="mb-5">
+          <div className="mb-5 flex flex-col md:flex-row gap-3">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search participant code, name, gender, email, phone, cohort..."
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+              className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
             />
+
+            <select
+              value={cohortFilter}
+              onChange={(e) => setCohortFilter(e.target.value)}
+              className="md:w-64 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+            >
+              <option value="">All Active Cohorts</option>
+              {cohorts.map((cohort) => (
+                <option key={cohort.id} value={cohort.id}>
+                  {cohort.cohort_name} ({cohort.cohort_code})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-gray-100">
-            <table className="w-full min-w-[1050px] text-sm">
+            <table className="w-full min-w-[1400px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">Participant Code</th>
                   <th className="text-left p-4">Name</th>
                   <th className="text-left p-4">Gender</th>
                   <th className="text-left p-4">Email</th>
                   <th className="text-left p-4">Phone</th>
                   <th className="text-left p-4">Cohort</th>
-                  <th className="text-left p-4">Status</th>
+                  <th className="text-left p-4">Registration</th>
+                  <th className="text-left p-4">Selection</th>
+                  <th className="text-left p-4">Enrollment</th>
+                  <th className="text-left p-4">Graduation</th>
                   <th className="text-left p-4">Submitted At</th>
-                  <th className="text-left p-4">Actions</th>
+                  <th className="text-left p-4">Action</th>
                 </tr>
               </thead>
 
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-gray-500">
+                    <td
+                      colSpan={TABLE_COLUMN_COUNT}
+                      className="p-6 text-center text-gray-500"
+                    >
                       Loading participants...
                     </td>
                   </tr>
                 ) : filteredParticipants.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-gray-500">
+                    <td
+                      colSpan={TABLE_COLUMN_COUNT}
+                      className="p-6 text-center text-gray-500"
+                    >
                       No participant found.
                     </td>
                   </tr>
                 ) : (
-                  filteredParticipants.map((participant) => (
+                  filteredParticipants.map((participant, index) => (
                     <tr
                       key={participant.id}
                       className="border-t border-gray-100"
                     >
+                      <td className="p-4 text-gray-500">{index + 1}</td>
 
                       <td className="p-4">
                         <span className="font-mono text-xs font-bold text-[var(--ann-purple)]">
@@ -152,9 +203,19 @@ export default function AllParticipants() {
                       </td>
 
                       <td className="p-4">
-                        <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold">
-                          {participant.registration_status || "Registered"}
-                        </span>
+                        <StatusBadge value={participant.registration_status} />
+                      </td>
+
+                      <td className="p-4">
+                        <StatusBadge value={participant.selection_status} />
+                      </td>
+
+                      <td className="p-4">
+                        <StatusBadge value={participant.enrollment_status} />
+                      </td>
+
+                      <td className="p-4">
+                        <StatusBadge value={participant.graduation_status} />
                       </td>
 
                       <td className="p-4 text-gray-600">
