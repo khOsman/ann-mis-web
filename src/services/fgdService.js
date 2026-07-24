@@ -100,20 +100,26 @@ export const generateFGDsForCohort = async ({
     throw new Error("Participant limit must be greater than 0.");
   }
 
+  // Sorting is done client-side rather than via Firestore's orderBy("name"):
+  // combining orderBy(field) with where() filters makes Firestore silently
+  // drop any document missing that field entirely, which would exclude
+  // otherwise-eligible participants (e.g. bulk-imported records with a
+  // blank name) from FGD generation with no error.
   const participantsQuery = query(
     collection(db, COLLECTIONS.PARTICIPANTS),
     where("cohort_id", "==", cohort.id),
     where("registration_status", "==", REGISTRATION_STATUS.REGISTERED),
-    where("selection_status", "==", SELECTION_STATUS.PENDING),
-    orderBy("name", "asc")
+    where("selection_status", "==", SELECTION_STATUS.PENDING)
   );
 
   const participantSnap = await getDocs(participantsQuery);
 
-  const participants = participantSnap.docs.map((item) => ({
-    id: item.id,
-    ...item.data(),
-  }));
+  const participants = participantSnap.docs
+    .map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   if (participants.length === 0) {
     throw new Error("No eligible registered participants found.");
@@ -292,16 +298,17 @@ export const regenerateFGDsForCohort = async ({
 export const getParticipantsByFGD = async (fgdId) => {
   const q = query(
     collection(db, COLLECTIONS.PARTICIPANTS),
-    where("fgd_id", "==", fgdId),
-    orderBy("name", "asc")
+    where("fgd_id", "==", fgdId)
   );
 
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map((item) => ({
-    id: item.id,
-    ...item.data(),
-  }));
+  return snapshot.docs
+    .map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 };
 
 export const updateFGDParticipant = async (participantId, updates) => {
