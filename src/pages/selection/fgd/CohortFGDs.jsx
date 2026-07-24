@@ -9,6 +9,7 @@ import { useCohort } from "../../../hooks";
 import {
   generateFGDsForCohort,
   getFGDsByCohort,
+  regenerateFGDsForCohort,
 } from "../../../services/fgdService";
 
 export default function CohortFGDs() {
@@ -22,6 +23,9 @@ export default function CohortFGDs() {
   const [loadingFgds, setLoadingFgds] = useState(true);
   const [participantLimit, setParticipantLimit] = useState(25);
   const [generating, setGenerating] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [showRegeneratePanel, setShowRegeneratePanel] = useState(false);
+  const [regenerateLimit, setRegenerateLimit] = useState(25);
 
   const fetchFGDs = async () => {
     if (!cohortId) return;
@@ -69,6 +73,42 @@ export default function CohortFGDs() {
       showAlert("error", error.message || "Failed to generate FGDs.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleRegenerateFGDs = async () => {
+    if (!cohort) return;
+
+    const confirmed = window.confirm(
+      "Regenerating will permanently delete all existing FGD groups for this cohort, including any attendance, scores, and feedback already entered by the selection committee. This cannot be undone. Continue?"
+    );
+
+    if (!confirmed) return;
+
+    setRegenerating(true);
+
+    try {
+      const user = auth.currentUser;
+
+      const result = await regenerateFGDsForCohort({
+        cohort,
+        participantLimit: regenerateLimit,
+        updatedByEmail: user?.email || "",
+        updatedByName: user?.displayName || "",
+      });
+
+      showAlert(
+        "success",
+        `FGDs regenerated: ${result.totalFGDs} groups for ${result.totalParticipants} participants.`
+      );
+
+      setShowRegeneratePanel(false);
+      await fetchFGDs();
+    } catch (error) {
+      console.error("FGD regeneration failed:", error);
+      showAlert("error", error.message || "Failed to regenerate FGDs.");
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -130,15 +170,58 @@ export default function CohortFGDs() {
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-                Generated FGDs
-              </h3>
+            <div className="px-6 py-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                  Generated FGDs
+                </h3>
 
-              <p className="text-sm text-gray-500 mt-1">
-                {fgds.length} FGD group(s) generated.
-              </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {fgds.length} FGD group(s) generated.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRegeneratePanel((prev) => !prev)}
+                className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold"
+              >
+                {showRegeneratePanel ? "Cancel" : "Regenerate FGDs"}
+              </button>
             </div>
+
+            {showRegeneratePanel && (
+              <div className="px-6 py-5 border-b border-gray-200 bg-red-50/50">
+                <p className="text-sm text-red-700 font-semibold">
+                  Warning: regenerating permanently deletes all {fgds.length} existing
+                  FGD group(s), including any attendance, scores, and feedback already
+                  entered. This cannot be undone.
+                </p>
+
+                <div className="mt-4 max-w-sm">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Participants per FGD
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={regenerateLimit}
+                    onChange={(e) => setRegenerateLimit(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={regenerating}
+                  onClick={handleRegenerateFGDs}
+                  className="mt-4 bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                >
+                  {regenerating ? "Regenerating..." : "Confirm Regenerate"}
+                </button>
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-sm">

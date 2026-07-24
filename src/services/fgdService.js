@@ -165,6 +165,82 @@ export const generateFGDsForCohort = async ({
   };
 };
 
+export const deleteFGDsForCohort = async ({
+  cohortId,
+  updatedByEmail = "",
+  updatedByName = "",
+}) => {
+  if (!cohortId) {
+    throw new Error("Cohort is required.");
+  }
+
+  const fgdSnap = await getDocs(
+    query(collection(db, COLLECTIONS.FGDS), where("cohort_id", "==", cohortId))
+  );
+
+  if (fgdSnap.empty) return;
+
+  const fgdIds = new Set(fgdSnap.docs.map((item) => item.id));
+
+  const participantSnap = await getDocs(
+    query(collection(db, COLLECTIONS.PARTICIPANTS), where("cohort_id", "==", cohortId))
+  );
+
+  const affectedParticipants = participantSnap.docs.filter((item) =>
+    fgdIds.has(item.data().fgd_id)
+  );
+
+  const batch = writeBatch(db);
+
+  fgdSnap.docs.forEach((fgdDoc) => {
+    batch.delete(fgdDoc.ref);
+  });
+
+  affectedParticipants.forEach((participantDoc) => {
+    batch.update(participantDoc.ref, {
+      fgd_id: "",
+      fgd_code: "",
+      fgd_name: "",
+      fgd_attendance_status: "",
+      fgd_score: "",
+      fgd_feedback: "",
+      selection_committee_feedback: "",
+      updated_at: serverTimestamp(),
+    });
+  });
+
+  const cohortRef = doc(db, COLLECTIONS.COHORTS, cohortId);
+
+  batch.update(cohortRef, {
+    total_fgds: 0,
+    updated_at: serverTimestamp(),
+    updated_by_email: updatedByEmail,
+    updated_by_name: updatedByName,
+  });
+
+  await batch.commit();
+};
+
+export const regenerateFGDsForCohort = async ({
+  cohort,
+  participantLimit,
+  updatedByEmail = "",
+  updatedByName = "",
+}) => {
+  await deleteFGDsForCohort({
+    cohortId: cohort.id,
+    updatedByEmail,
+    updatedByName,
+  });
+
+  return generateFGDsForCohort({
+    cohort,
+    participantLimit,
+    createdByEmail: updatedByEmail,
+    createdByName: updatedByName,
+  });
+};
+
 export const getParticipantsByFGD = async (fgdId) => {
   const q = query(
     collection(db, COLLECTIONS.PARTICIPANTS),
