@@ -14,6 +14,7 @@ import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { ROUTES } from "../../constants/routes";
 import { useAlert } from "../../context/AlertContext";
+import { cloneForm } from "../../services/formService";
 
 export default function AllForms() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function AllForms() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [cloningId, setCloningId] = useState(null);
 
   const fetchForms = async () => {
     setLoading(true);
@@ -120,6 +122,22 @@ export default function AllForms() {
     showAlert("error", error.message || "Failed to delete form.");
   }
 };
+
+  const handleCloneForm = async (formId) => {
+    setCloningId(formId);
+
+    try {
+      const newFormId = await cloneForm(formId);
+
+      showAlert("success", "Form cloned successfully. Opening the copy for editing.");
+      navigate(`/admin/forms/${newFormId}/builder`);
+    } catch (error) {
+      console.error("Failed to clone form:", error);
+      showAlert("error", error.message || "Failed to clone form.");
+    } finally {
+      setCloningId(null);
+    }
+  };
 
   return (
     <AdminLayout title="All Forms" subtitle="View and manage registration forms">
@@ -273,6 +291,14 @@ export default function AllForms() {
                             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                           >
                             Preview
+                          </button>
+
+                          <button
+                            onClick={() => handleCloneForm(form.id)}
+                            disabled={cloningId === form.id}
+                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold disabled:opacity-50"
+                          >
+                            {cloningId === form.id ? "Cloning..." : "Clone"}
                           </button>
 
                           <button
