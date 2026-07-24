@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
@@ -33,12 +34,7 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      const user = auth.currentUser;
-
-      await approveSelectionCommitteeMember({
-        memberId,
-        approvedBy: user?.displayName || user?.email || "",
-      });
+      await approveSelectionCommitteeMember({ memberId });
 
       showAlert("success", "Committee member approved successfully.");
       await refresh();
@@ -56,13 +52,7 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      const user = auth.currentUser;
-
-      await rejectSelectionCommitteeMember({
-        memberId,
-        rejectedBy: user?.displayName || user?.email || "",
-        rejectionReason,
-      });
+      await rejectSelectionCommitteeMember({ memberId, rejectionReason });
 
       showAlert("success", "Committee member rejected.");
       await refresh();
@@ -77,16 +67,21 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      await createSelectionCommitteeAccount({ memberId });
+      const result = await createSelectionCommitteeAccount({ memberId });
+
+      await sendPasswordResetEmail(auth, result.email, {
+        url: `${window.location.origin}/`,
+        handleCodeInApp: false,
+      });
 
       showAlert(
         "success",
-        "Invitation status updated. Email sending will be connected through backend."
+        "Invitation email sent. The member can set their password from the link."
       );
 
       await refresh();
     } catch (error) {
-      showAlert("error", error.message || "Failed to update invitation.");
+      showAlert("error", error.message || "Failed to send invitation.");
     } finally {
       setActionLoading(false);
     }

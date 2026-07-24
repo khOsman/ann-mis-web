@@ -1,0 +1,125 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isBracUser() {
+      return isSignedIn()
+        && request.auth.token.email.matches('.*@brac\\.net$');
+    }
+
+    function currentUserDoc() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function currentCommitteeDoc() {
+      // Requires the backend's create-account endpoint to call
+      // admin.auth().createUser({ uid: memberId, email }) so the Firestore
+      // doc ID and the member's Firebase Auth UID are the same value.
+      return /databases/$(database)/documents/selection_committee_members/$(request.auth.uid);
+    }
+
+    function isActiveUser() {
+      return isBracUser()
+        && exists(currentUserDoc())
+        && get(currentUserDoc()).data.status == "active";
+    }
+
+    function isAdmin() {
+      return isActiveUser()
+        && get(currentUserDoc()).data.role in ["super_admin", "admin"];
+    }
+
+    function isSuperAdmin() {
+      return isActiveUser()
+        && get(currentUserDoc()).data.role == "super_admin";
+    }
+
+    function isActiveCommitteeMember() {
+      return isSignedIn()
+        && exists(currentCommitteeDoc())
+        && get(currentCommitteeDoc()).data.member_status == "Active"
+        && get(currentCommitteeDoc()).data.account_status == "Active";
+    }
+
+    function isSelectionUser() {
+      return isActiveUser() || isActiveCommitteeMember();
+    }
+
+    match /users/{userId} {
+      allow read: if isBracUser()
+        && (request.auth.uid == userId || isActiveUser());
+
+      allow create: if isBracUser()
+        && request.auth.uid == userId
+        && request.resource.data.role == "pending"
+        && request.resource.data.status == "pending";
+
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /cohorts/{cohortId} {
+      allow read: if isActiveUser();
+      allow create, update: if isAdmin();
+
+      allow update: if request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "total_registrations",
+            "current_participant_sequence",
+            "total_fgds",
+            "updated_at"
+          ]);
+    }
+
+    match /forms/{formId} {
+      allow read: if true;
+
+      allow update: if request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "total_responses",
+            "updated_at"
+          ]);
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /form_fields/{fieldId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /form_responses/{responseId} {
+      allow create: if true;
+      allow read: if isActiveUser();
+      allow update, delete: if isAdmin();
+    }
+
+    match /participants/{participantId} {
+      allow create: if true;
+      allow read: if isSelectionUser();
+      allow update, delete: if isAdmin();
+    }
+
+    match /fgds/{fgdId} {
+      allow read: if isSelectionUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /selection_committee_members/{memberId} {
+      allow create: if request.resource.data.registration_status == "Pending"
+        && request.resource.data.account_status == "Not Created"
+        && request.resource.data.member_status == "Inactive";
+
+      allow read: if isAdmin()
+        || (isSignedIn() && request.auth.uid == memberId);
+
+      allow update, delete: if isAdmin();
+    }
+  }
+}
