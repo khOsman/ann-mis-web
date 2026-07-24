@@ -21,6 +21,8 @@ import AccountInactive from "./pages/system/AccountInactive";
 import AccessDenied from "./pages/system/AccountDenied.jsx";
 
 import CommitteeRegistration from "./pages/selection/committee/CommitteeRegistration";
+import CommitteeActivateAccount from "./pages/selection/committee/CommitteeActivateAccount";
+import CommitteeHome from "./pages/selection/committee/CommitteeHome";
 import CommitteeProfile from "./pages/selection/committee/CommitteeProfile";
 import AllCommitteeMembers from "./pages/selection/committee/AllCommitteeMembers";
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
@@ -43,7 +45,21 @@ export default function App() {
             element={<CommitteeRegistration />}
           />
 
-          
+          <Route
+            path={ROUTES.selectionCommitteeActivate}
+            element={<CommitteeActivateAccount />}
+          />
+
+          <Route
+            path={ROUTES.committeeHome}
+            element={
+              <ProtectedRoute committeeOnly>
+                <CommitteeHome />
+              </ProtectedRoute>
+            }
+          />
+
+
           <Route
             path={ROUTES.admin}
             element={

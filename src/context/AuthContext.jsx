@@ -7,6 +7,10 @@ import {
   USER_STATUSES,
   getPermissionsByRole,
 } from "../constants/roles";
+import {
+  ACCOUNT_STATUS,
+  MEMBER_STATUS,
+} from "../constants/selectionCommittee";
 import { COLLECTIONS } from "../constants/collections";
 import { createUser } from "../entities";
 
@@ -22,14 +26,36 @@ export function AuthProvider({ children }) {
       try {
         setAuthLoading(true);
 
-        if (!user || !user.email?.endsWith("@brac.net")) {
+        if (!user) {
           setFirebaseUser(null);
           setAppUser(null);
+          return;
+        }
 
-          if (user) {
-            await signOut(auth);
+        if (!user.email?.endsWith("@brac.net")) {
+          // Not BRAC staff — check whether this is an approved Selection
+          // Committee member (a separate account type, stored outside the
+          // `users` collection) before rejecting the sign-in outright.
+          const memberRef = doc(
+            db,
+            COLLECTIONS.SELECTION_COMMITTEE_MEMBERS,
+            user.uid
+          );
+          const memberSnap = await getDoc(memberRef);
+
+          if (memberSnap.exists()) {
+            setFirebaseUser(user);
+            setAppUser({
+              id: memberSnap.id,
+              userType: "committee",
+              ...memberSnap.data(),
+            });
+            return;
           }
 
+          setFirebaseUser(null);
+          setAppUser(null);
+          await signOut(auth);
           return;
         }
 
@@ -85,7 +111,12 @@ export function AuthProvider({ children }) {
     return appUser?.permissions?.[key] === true;
   };
 
-  const isActive = appUser?.status === USER_STATUSES.ACTIVE;
+  const isCommitteeMember = appUser?.userType === "committee";
+
+  const isActive = isCommitteeMember
+    ? appUser?.member_status === MEMBER_STATUS.ACTIVE &&
+      appUser?.account_status === ACCOUNT_STATUS.ACTIVE
+    : appUser?.status === USER_STATUSES.ACTIVE;
 
   const isAdmin = [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN].includes(
     appUser?.role
@@ -102,6 +133,7 @@ export function AuthProvider({ children }) {
         isActive,
         isAdmin,
         isSuperAdmin,
+        isCommitteeMember,
         hasPermission,
         logout,
       }}

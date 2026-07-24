@@ -1,10 +1,16 @@
-import { signInWithPopup, signOut } from "firebase/auth";
+import { useState } from "react";
+import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
 import annLogo from "../assets/ann-logo.png";
 import { BRAND } from "../constants/brand";
 
 
 export default function Login() {
+  const [committeeEmail, setCommitteeEmail] = useState("");
+  const [committeePassword, setCommitteePassword] = useState("");
+  const [committeeLoggingIn, setCommitteeLoggingIn] = useState(false);
+  const [committeeError, setCommitteeError] = useState("");
+
   const handleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -19,6 +25,21 @@ export default function Login() {
       window.location.href = "/admin";
     } catch (error) {
       alert(error.message);
+    }
+  };
+
+  const handleCommitteeLogin = async (e) => {
+    e.preventDefault();
+    setCommitteeError("");
+    setCommitteeLoggingIn(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, committeeEmail.trim().toLowerCase(), committeePassword);
+      window.location.href = "/committee";
+    } catch {
+      setCommitteeError("Incorrect email or password.");
+    } finally {
+      setCommitteeLoggingIn(false);
     }
   };
 
@@ -68,6 +89,46 @@ export default function Login() {
               <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-purple-50 flex items-center justify-center">🛡️</span>
               <span>Only @brac.net users can access this system.</span>
             </div>
+
+            <div className="mt-8 flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                Selection Committee Member
+              </span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            <form onSubmit={handleCommitteeLogin} className="mt-5 space-y-3 text-left">
+              <input
+                type="email"
+                placeholder="Email"
+                value={committeeEmail}
+                onChange={(e) => setCommitteeEmail(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={committeePassword}
+                onChange={(e) => setCommitteePassword(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+              />
+
+              {committeeError && (
+                <p className="text-xs text-red-600">{committeeError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={committeeLoggingIn}
+                className="w-full bg-[var(--ann-purple)] text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                {committeeLoggingIn ? "Signing in..." : "Sign in as Committee Member"}
+              </button>
+            </form>
+
             <div className="mt-8 bg-pink-50 border border-pink-100 rounded-2xl p-5 text-left">
             <p className="font-bold text-[var(--ann-pink)]">
                 Need access?

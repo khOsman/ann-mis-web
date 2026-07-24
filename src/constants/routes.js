@@ -12,6 +12,8 @@ export const ROUTES = {
   formBuilder: "/admin/forms/:id/builder",
 
   selectionCommitteeRegistration: "/selection-committee/register",
+  selectionCommitteeActivate: "/committee/activate",
+  committeeHome: "/committee",
   selectionCommitteeMembers: "/admin/participants/selection/committee-members",
   selectionCommitteeProfile: "/admin/participants/selection/committee-members/:memberId",
   selectionFGDs: "/admin/participants/selection/fgds",

@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { sendPasswordResetEmail } from "firebase/auth";
 
-import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
@@ -13,6 +11,7 @@ import {
   REGISTRATION_STATUS,
 } from "../../../constants/selectionCommittee";
 import {
+  activateCommitteeMember,
   approveSelectionCommitteeMember,
   createSelectionCommitteeAccount,
   rejectSelectionCommitteeMember,
@@ -67,12 +66,7 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      const result = await createSelectionCommitteeAccount({ memberId });
-
-      await sendPasswordResetEmail(auth, result.email, {
-        url: `${window.location.origin}/`,
-        handleCodeInApp: false,
-      });
+      await createSelectionCommitteeAccount({ memberId });
 
       showAlert(
         "success",
@@ -82,6 +76,21 @@ export default function CommitteeProfile() {
       await refresh();
     } catch (error) {
       showAlert("error", error.message || "Failed to send invitation.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleActivateMember = async () => {
+    setActionLoading(true);
+
+    try {
+      await activateCommitteeMember({ memberId });
+
+      showAlert("success", "Committee member activated.");
+      await refresh();
+    } catch (error) {
+      showAlert("error", error.message || "Failed to activate member.");
     } finally {
       setActionLoading(false);
     }
@@ -170,6 +179,7 @@ export default function CommitteeProfile() {
                       <button
                         type="button"
                         disabled={actionLoading}
+                        onClick={handleActivateMember}
                         className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
                       >
                         Activate Member

@@ -6,9 +6,17 @@ export default function ProtectedRoute({
   children,
   permission,
   adminOnly = false,
+  committeeOnly = false,
 }) {
-  const { authLoading, appUser, isAdmin, isSuperAdmin, hasPermission } =
-    useAuth();
+  const {
+    authLoading,
+    appUser,
+    isAdmin,
+    isSuperAdmin,
+    isCommitteeMember,
+    isActive,
+    hasPermission,
+  } = useAuth();
 
   if (authLoading) {
     return (
@@ -22,6 +30,22 @@ export default function ProtectedRoute({
 
   if (!appUser) {
     return <Navigate to="/" replace />;
+  }
+
+  if (committeeOnly) {
+    if (!isCommitteeMember) {
+      return <Navigate to="/access-denied" replace />;
+    }
+
+    if (!isActive) {
+      return <Navigate to="/account-pending" replace />;
+    }
+
+    return children;
+  }
+
+  if (isCommitteeMember) {
+    return <Navigate to="/access-denied" replace />;
   }
 
   if (appUser.status === USER_STATUSES.PENDING) {

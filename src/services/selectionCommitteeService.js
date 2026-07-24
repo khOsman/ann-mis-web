@@ -76,3 +76,18 @@ export const createSelectionCommitteeAccount = async ({ memberId }) => {
     { authenticated: true }
   );
 };
+
+export const activateCommitteeAccount = async ({ memberId, token, password }) => {
+  return apiClient.post(`/api/selection-committee/${memberId}/activate`, {
+    token,
+    password,
+  });
+};
+
+export const activateCommitteeMember = async ({ memberId }) => {
+  return apiClient.post(
+    `/api/selection-committee/${memberId}/activate-member`,
+    {},
+    { authenticated: true }
+  );
+};
