@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 import { useChampions } from "../../hooks";
 import {
   ACCOUNT_STATUS,
@@ -17,13 +18,25 @@ import {
   approveChampion,
   createChampionAccount,
   rejectChampion,
+  updateChampion,
 } from "../../services/championsService";
+
+const EDIT_FIELDS = [
+  ["name", "Full Name", "text"],
+  ["email", "Email Address", "email"],
+  ["phone", "Phone", "text"],
+  ["date_of_birth", "Date of Birth", "date"],
+  ["institution", "Institution", "text"],
+];
 
 export default function ChampionProfile() {
   const { championId } = useParams();
   const { showAlert } = useAlert();
+  const { isSuperAdmin } = useAuth();
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState(null);
 
   const {
     data: champion,
@@ -104,6 +117,49 @@ export default function ChampionProfile() {
     }
   };
 
+  const startEditing = () => {
+    setEditForm({
+      name: champion.name || "",
+      email: champion.email || "",
+      phone: champion.phone || "",
+      date_of_birth: champion.date_of_birth || "",
+      institution: champion.institution || "",
+      address: champion.address || "",
+      role: champion.role || "",
+    });
+    setEditing(true);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = async () => {
+    setActionLoading(true);
+
+    try {
+      await updateChampion({ championId, updates: editForm });
+
+      showAlert("success", "Champion updated successfully.");
+      setEditing(false);
+      await refresh();
+    } catch (error) {
+      showAlert("error", error.message || "Failed to update champion.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isApproved = champion?.registration_status === REGISTRATION_STATUS.APPROVED;
+
+  const showRegularInviteButton =
+    isApproved &&
+    (champion?.account_status === ACCOUNT_STATUS.NOT_CREATED ||
+      champion?.account_status === ACCOUNT_STATUS.INVITATION_SENT);
+
+  const showSuperAdminResend = isSuperAdmin && isApproved && !showRegularInviteButton;
+
   return (
     <AdminLayout
       title="Champion Profile"
@@ -174,31 +230,29 @@ export default function ChampionProfile() {
                     </>
                   )}
 
-                  {champion.registration_status ===
-                    REGISTRATION_STATUS.APPROVED &&
-                    champion.account_status === ACCOUNT_STATUS.NOT_CREATED && (
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handleSendInvitation}
-                        className="bg-[var(--ann-purple)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
-                      >
-                        Send Invitation
-                      </button>
-                    )}
+                  {showRegularInviteButton && (
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={handleSendInvitation}
+                      className="bg-[var(--ann-purple)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                      {champion.account_status === ACCOUNT_STATUS.NOT_CREATED
+                        ? "Send Invitation"
+                        : "Resend Invitation"}
+                    </button>
+                  )}
 
-                  {champion.registration_status ===
-                    REGISTRATION_STATUS.APPROVED &&
-                    champion.account_status === ACCOUNT_STATUS.INVITATION_SENT && (
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handleSendInvitation}
-                        className="bg-[var(--ann-purple)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
-                      >
-                        Resend Invitation
-                      </button>
-                    )}
+                  {showSuperAdminResend && (
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={handleSendInvitation}
+                      className="bg-[var(--ann-purple)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                      Resend Invitation
+                    </button>
+                  )}
 
                   {champion.account_status === ACCOUNT_STATUS.PASSWORD_SET &&
                     champion.member_status === MEMBER_STATUS.INACTIVE && (
@@ -211,23 +265,110 @@ export default function ChampionProfile() {
                         Activate Champion
                       </button>
                     )}
+
+                  {isSuperAdmin && !editing && (
+                    <button
+                      type="button"
+                      onClick={startEditing}
+                      className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-              <div className="border-b px-6 py-4">
-                <h3 className="font-bold text-lg">Basic Information</h3>
-              </div>
+            {editing ? (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <div className="border-b px-6 py-4 flex items-center justify-between">
+                  <h3 className="font-bold text-lg">
+                    Edit Champion (Super Admin)
+                  </h3>
+                </div>
 
-              <div className="grid md:grid-cols-2 gap-6 p-6">
-                <Info label="Email" value={champion.email} />
-                <Info label="Phone" value={champion.phone} />
-                <Info label="Institution" value={champion.institution} />
-                <Info label="Date of Birth" value={champion.date_of_birth} />
-                <Info label="Address" value={champion.address} />
+                <div className="grid md:grid-cols-2 gap-6 p-6">
+                  {EDIT_FIELDS.map(([name, label, type]) => (
+                    <div key={name}>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {label}
+                      </label>
+                      <input
+                        type={type}
+                        name={name}
+                        value={editForm[name]}
+                        onChange={handleEditChange}
+                        className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+                  ))}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Role
+                    </label>
+                    <select
+                      name="role"
+                      value={editForm.role}
+                      onChange={handleEditChange}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)]"
+                    >
+                      <option value="">Unassigned</option>
+                      {CHAMPION_ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>
+                          {CHAMPION_ROLE_LABELS[role]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Address
+                    </label>
+                    <textarea
+                      name="address"
+                      value={editForm.address}
+                      onChange={handleEditChange}
+                      rows={3}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)] resize-none"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(false)}
+                      className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-gray-400"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={handleSaveEdit}
+                      className="bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                      {actionLoading ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <div className="border-b px-6 py-4">
+                  <h3 className="font-bold text-lg">Basic Information</h3>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 p-6">
+                  <Info label="Email" value={champion.email} />
+                  <Info label="Phone" value={champion.phone} />
+                  <Info label="Institution" value={champion.institution} />
+                  <Info label="Date of Birth" value={champion.date_of_birth} />
+                  <Info label="Address" value={champion.address} />
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
               <div className="border-b px-6 py-4">

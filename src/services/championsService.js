@@ -80,3 +80,9 @@ export const activateChampionMember = async ({ championId }) => {
     { authenticated: true }
   );
 };
+
+export const updateChampion = async ({ championId, updates }) => {
+  return apiClient.patch(`/api/champions/${championId}`, updates, {
+    authenticated: true,
+  });
+};
