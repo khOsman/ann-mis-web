@@ -141,7 +141,7 @@ export default function FGDDetails() {
                       <td className="p-4 font-semibold">
                         {participant.name || "-"}
                       </td>
-                      <td className="p-4">{participant.phone || "-"}</td>
+                      <td className="p-4">0{participant.phone || "-"}</td>
                       <td className="p-4">
                         {participant.institution || "-"}
                       </td>

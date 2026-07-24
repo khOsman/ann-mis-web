@@ -81,11 +81,18 @@ export const ADMIN_MENU_ITEMS = [
       permission: "selection",
         children: [
           {
+            label: "Committee Members",
+            path: ROUTES.selectionCommitteeMembers,
+            icon: List,
+            permission: "selection",
+          },
+          {
             label: "All FGDs",
             path: ROUTES.selectionFGDs,
             icon: List,
             permission: "selection",
           },
+          
         ],
     },
     {

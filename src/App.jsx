@@ -20,6 +20,9 @@ import AccountPending from "./pages/system/AccountPending";
 import AccountInactive from "./pages/system/AccountInactive";
 import AccessDenied from "./pages/system/AccountDenied.jsx";
 
+import CommitteeRegistration from "./pages/selection/committee/CommitteeRegistration";
+import CommitteeProfile from "./pages/selection/committee/CommitteeProfile";
+import AllCommitteeMembers from "./pages/selection/committee/AllCommitteeMembers";
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
@@ -35,6 +38,10 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path={ROUTES.login} element={<Login />} />
+          <Route
+            path={ROUTES.selectionCommitteeRegistration}
+            element={<CommitteeRegistration />}
+          />
 
           
           <Route
@@ -51,6 +58,24 @@ export default function App() {
             element={
               <ProtectedRoute permission="selection">
                 <AllFGDs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionCommitteeProfile}
+            element={
+              <ProtectedRoute permission="selection">
+                <CommitteeProfile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionCommitteeMembers}
+            element={
+              <ProtectedRoute permission="selection">
+                <AllCommitteeMembers />
               </ProtectedRoute>
             }
           />
