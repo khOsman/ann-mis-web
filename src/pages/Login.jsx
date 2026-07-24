@@ -36,8 +36,20 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, committeeEmail.trim().toLowerCase(), committeePassword);
       window.location.href = "/committee";
-    } catch {
-      setCommitteeError("Incorrect email or password.");
+    } catch (error) {
+      if (error.code === "auth/operation-not-allowed") {
+        setCommitteeError(
+          "Email/Password sign-in is not enabled for this project yet. Ask an admin to enable it in Firebase Console → Authentication → Sign-in method."
+        );
+      } else if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/user-not-found"
+      ) {
+        setCommitteeError("Incorrect email or password.");
+      } else {
+        setCommitteeError(error.message || "Failed to sign in.");
+      }
     } finally {
       setCommitteeLoggingIn(false);
     }
