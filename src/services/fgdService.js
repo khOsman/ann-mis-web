@@ -237,13 +237,22 @@ export const deleteFGDsForCohort = async ({
 
   affectedParticipants.forEach((participantDoc) => {
     batch.update(participantDoc.ref, {
+      // FGD assignment
       fgd_id: "",
       fgd_code: "",
       fgd_name: "",
       fgd_attendance_status: "",
+
+      // Evaluation data entered by the selection committee
       fgd_score: "",
       fgd_feedback: "",
       selection_committee_feedback: "",
+      selection_committee_notes: "",
+      selection_recommendation: "",
+      selection_status: SELECTION_STATUS.PENDING,
+      fgd_evaluated_by: "",
+      fgd_evaluated_at: null,
+
       updated_at: serverTimestamp(),
     });
   });

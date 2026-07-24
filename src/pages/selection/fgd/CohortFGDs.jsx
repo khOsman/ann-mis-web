@@ -195,8 +195,9 @@ export default function CohortFGDs() {
               <div className="px-6 py-5 border-b border-gray-200 bg-red-50/50">
                 <p className="text-sm text-red-700 font-semibold">
                   Warning: regenerating permanently deletes all {fgds.length} existing
-                  FGD group(s), including any attendance, scores, and feedback already
-                  entered. This cannot be undone.
+                  FGD group(s) and resets every affected participant's attendance,
+                  scores, feedback, and selection decision (Selected/Waitlisted/
+                  Rejected) back to Pending. This cannot be undone.
                 </p>
 
                 <div className="mt-4 max-w-sm">
@@ -294,7 +295,7 @@ export default function CohortFGDs() {
       <ConfirmDialog
         open={showConfirmDialog}
         title="Regenerate FGD Groups?"
-        message={`This will permanently delete all ${fgds.length} existing FGD group(s) for this cohort, including any attendance, scores, and feedback already entered by the selection committee. This cannot be undone.`}
+        message={`This will permanently delete all ${fgds.length} existing FGD group(s) for this cohort and reset every affected participant's attendance, scores, feedback, and selection decision (Selected/Waitlisted/Rejected) back to Pending. This cannot be undone.`}
         confirmText="Regenerate"
         cancelText="Cancel"
         variant="danger"
