@@ -8,10 +8,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useChampions } from "../../hooks";
 import {
   ACCOUNT_STATUS,
+  ACCOUNT_STATUS_OPTIONS,
   CHAMPION_ROLE_LABELS,
   CHAMPION_ROLE_OPTIONS,
   MEMBER_STATUS,
+  MEMBER_STATUS_OPTIONS,
   REGISTRATION_STATUS,
+  REGISTRATION_STATUS_OPTIONS,
 } from "../../constants/champions";
 import {
   activateChampionMember,
@@ -126,6 +129,9 @@ export default function ChampionProfile() {
       institution: champion.institution || "",
       address: champion.address || "",
       role: champion.role || "",
+      registration_status: champion.registration_status || "",
+      account_status: champion.account_status || "",
+      member_status: champion.member_status || "",
     });
     setEditing(true);
   };
@@ -335,6 +341,60 @@ export default function ChampionProfile() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Registration Status
+                    </label>
+                    <select
+                      name="registration_status"
+                      value={editForm.registration_status}
+                      onChange={handleEditChange}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)]"
+                    >
+                      {REGISTRATION_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Account Status
+                    </label>
+                    <select
+                      name="account_status"
+                      value={editForm.account_status}
+                      onChange={handleEditChange}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)]"
+                    >
+                      {ACCOUNT_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Member Status
+                    </label>
+                    <select
+                      name="member_status"
+                      value={editForm.member_status}
+                      onChange={handleEditChange}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)]"
+                    >
+                      {MEMBER_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="md:col-span-2 flex justify-end gap-3 pt-2">
                     <button
                       type="button"
@@ -370,24 +430,26 @@ export default function ChampionProfile() {
               </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-              <div className="border-b px-6 py-4">
-                <h3 className="font-bold text-lg">Account Information</h3>
-              </div>
+            {!editing && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <div className="border-b px-6 py-4">
+                  <h3 className="font-bold text-lg">Account Information</h3>
+                </div>
 
-              <div className="grid md:grid-cols-3 gap-6 p-6">
-                <Info
-                  label="Role"
-                  value={champion.role ? CHAMPION_ROLE_LABELS[champion.role] : ""}
-                />
-                <Info
-                  label="Registration"
-                  value={champion.registration_status}
-                />
-                <Info label="Account" value={champion.account_status} />
-                <Info label="Member" value={champion.member_status} />
+                <div className="grid md:grid-cols-3 gap-6 p-6">
+                  <Info
+                    label="Role"
+                    value={champion.role ? CHAMPION_ROLE_LABELS[champion.role] : ""}
+                  />
+                  <Info
+                    label="Registration"
+                    value={champion.registration_status}
+                  />
+                  <Info label="Account" value={champion.account_status} />
+                  <Info label="Member" value={champion.member_status} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </PageContainer>
