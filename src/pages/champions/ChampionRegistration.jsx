@@ -1,9 +1,9 @@
 import { useState } from "react";
-import annLogo from "../../../assets/ann-logo.png";
-import { registerSelectionCommitteeMemberRequest } from "../../../services/selectionCommitteeService";
-import { useAlert } from "../../../context/AlertContext";
+import annLogo from "../../assets/ann-logo.png";
+import { registerChampionRequest } from "../../services/championsService";
+import { useAlert } from "../../context/AlertContext";
 
-export default function CommitteeRegistration() {
+export default function ChampionRegistration() {
   const { showAlert } = useAlert();
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +26,7 @@ export default function CommitteeRegistration() {
     setSaving(true);
 
     try {
-      await registerSelectionCommitteeMemberRequest({
+      await registerChampionRequest({
         email: form.email.trim().toLowerCase(),
         profile: {
           name: form.name.trim(),
@@ -48,8 +48,8 @@ export default function CommitteeRegistration() {
         address: "",
       });
     } catch (error) {
-      console.error("Committee registration failed:", error);
-      showAlert("error", error.message || "Failed to register committee member.");
+      console.error("Champion registration failed:", error);
+      showAlert("error", error.message || "Failed to register.");
     } finally {
       setSaving(false);
     }
@@ -63,12 +63,13 @@ export default function CommitteeRegistration() {
             <img src={annLogo} alt="ANN Logo" className="w-40 h-40 object-contain rounded-2xl p-2" />
 
             <h1 className="text-3xl sm:text-4xl font-extrabold mt-8 leading-tight">
-              Join as a Selection Committee Member
+              Join the Amra Notun Network Champions Pool
             </h1>
 
             <p className="text-purple-100 mt-4 leading-7">
-              Support the Amra Notun selection process by reviewing participants,
-              joining FGD sessions, and contributing your expertise.
+              Register once to be considered as a Selection Committee member,
+              Facilitator, Co-Facilitator, Mentor, or Youth Content Network (YCN)
+              contributor for Amra Notun Network.
             </p>
           </div>
 
@@ -77,8 +78,8 @@ export default function CommitteeRegistration() {
               Registration Process
             </p>
             <p className="text-sm text-purple-100 mt-2 leading-6">
-              Submit your information once. The ANN team will review your profile
-              and activate your access after approval.
+              Submit your information once. The ANN team will review your profile,
+              assign you a role, and activate your access after approval.
             </p>
           </div>
         </div>
@@ -89,7 +90,7 @@ export default function CommitteeRegistration() {
               ANN MIS
             </p>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[var(--ann-text-dark)] mt-2">
-              Committee Registration
+              Champions Pool Registration
             </h2>
             <p className="text-sm text-gray-500 mt-2">
               Please provide accurate information for verification and onboarding.
@@ -114,7 +115,6 @@ export default function CommitteeRegistration() {
                   value={form[name]}
                   onChange={handleChange}
                   required
-                  minLength={name === "password" ? 6 : undefined}
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
                 />
               </div>

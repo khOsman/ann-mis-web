@@ -2,14 +2,13 @@ import { useState } from "react";
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
 import annLogo from "../assets/ann-logo.png";
-import { BRAND } from "../constants/brand";
 
 
 export default function Login() {
-  const [committeeEmail, setCommitteeEmail] = useState("");
-  const [committeePassword, setCommitteePassword] = useState("");
-  const [committeeLoggingIn, setCommitteeLoggingIn] = useState(false);
-  const [committeeError, setCommitteeError] = useState("");
+  const [championEmail, setChampionEmail] = useState("");
+  const [championPassword, setChampionPassword] = useState("");
+  const [championLoggingIn, setChampionLoggingIn] = useState(false);
+  const [championError, setChampionError] = useState("");
 
   const handleLogin = async () => {
     try {
@@ -28,17 +27,17 @@ export default function Login() {
     }
   };
 
-  const handleCommitteeLogin = async (e) => {
+  const handleChampionLogin = async (e) => {
     e.preventDefault();
-    setCommitteeError("");
-    setCommitteeLoggingIn(true);
+    setChampionError("");
+    setChampionLoggingIn(true);
 
     try {
-      await signInWithEmailAndPassword(auth, committeeEmail.trim().toLowerCase(), committeePassword);
-      window.location.href = "/committee";
+      await signInWithEmailAndPassword(auth, championEmail.trim().toLowerCase(), championPassword);
+      window.location.href = "/champions";
     } catch (error) {
       if (error.code === "auth/operation-not-allowed") {
-        setCommitteeError(
+        setChampionError(
           "Email/Password sign-in is not enabled for this project yet. Ask an admin to enable it in Firebase Console → Authentication → Sign-in method."
         );
       } else if (
@@ -46,12 +45,12 @@ export default function Login() {
         error.code === "auth/wrong-password" ||
         error.code === "auth/user-not-found"
       ) {
-        setCommitteeError("Incorrect email or password.");
+        setChampionError("Incorrect email or password.");
       } else {
-        setCommitteeError(error.message || "Failed to sign in.");
+        setChampionError(error.message || "Failed to sign in.");
       }
     } finally {
-      setCommitteeLoggingIn(false);
+      setChampionLoggingIn(false);
     }
   };
 
@@ -105,39 +104,39 @@ export default function Login() {
             <div className="mt-8 flex items-center gap-3">
               <div className="flex-1 h-px bg-gray-200" />
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                Selection Committee Member
+                Champion Login
               </span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            <form onSubmit={handleCommitteeLogin} className="mt-5 space-y-3 text-left">
+            <form onSubmit={handleChampionLogin} className="mt-5 space-y-3 text-left">
               <input
                 type="email"
                 placeholder="Email"
-                value={committeeEmail}
-                onChange={(e) => setCommitteeEmail(e.target.value)}
+                value={championEmail}
+                onChange={(e) => setChampionEmail(e.target.value)}
                 required
                 className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
               />
               <input
                 type="password"
                 placeholder="Password"
-                value={committeePassword}
-                onChange={(e) => setCommitteePassword(e.target.value)}
+                value={championPassword}
+                onChange={(e) => setChampionPassword(e.target.value)}
                 required
                 className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
               />
 
-              {committeeError && (
-                <p className="text-xs text-red-600">{committeeError}</p>
+              {championError && (
+                <p className="text-xs text-red-600">{championError}</p>
               )}
 
               <button
                 type="submit"
-                disabled={committeeLoggingIn}
+                disabled={championLoggingIn}
                 className="w-full bg-[var(--ann-purple)] text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {committeeLoggingIn ? "Signing in..." : "Sign in as Committee Member"}
+                {championLoggingIn ? "Signing in..." : "Sign in as Champion"}
               </button>
             </form>
 
@@ -153,8 +152,8 @@ export default function Login() {
           </div>
         </section>
       </div>
-      
-      
+
+
 
       <footer className="mt-6 text-center text-xs sm:text-sm text-gray-500">
         © 2026 BRAC | Amra Notun Network (ANN)

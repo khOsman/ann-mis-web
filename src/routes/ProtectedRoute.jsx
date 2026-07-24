@@ -6,14 +6,14 @@ export default function ProtectedRoute({
   children,
   permission,
   adminOnly = false,
-  committeeOnly = false,
+  championOnly = false,
 }) {
   const {
     authLoading,
     appUser,
     isAdmin,
     isSuperAdmin,
-    isCommitteeMember,
+    isChampion,
     isActive,
     hasPermission,
   } = useAuth();
@@ -32,8 +32,8 @@ export default function ProtectedRoute({
     return <Navigate to="/" replace />;
   }
 
-  if (committeeOnly) {
-    if (!isCommitteeMember) {
+  if (championOnly) {
+    if (!isChampion) {
       return <Navigate to="/access-denied" replace />;
     }
 
@@ -44,7 +44,7 @@ export default function ProtectedRoute({
     return children;
   }
 
-  if (isCommitteeMember) {
+  if (isChampion) {
     return <Navigate to="/access-denied" replace />;
   }
 

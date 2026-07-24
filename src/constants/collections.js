@@ -6,5 +6,5 @@ export const COLLECTIONS = {
   FORM_RESPONSES: "form_responses",
   FGDS: "fgds",
   PARTICIPANTS: "participants",
-  SELECTION_COMMITTEE_MEMBERS: "selection_committee_members",
+  CHAMPIONS_POOL: "champions_pool",
 };

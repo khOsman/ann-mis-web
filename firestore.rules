@@ -16,11 +16,11 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    function currentCommitteeDoc() {
+    function currentChampionDoc() {
       // Requires the backend's create-account endpoint to call
-      // admin.auth().createUser({ uid: memberId, email }) so the Firestore
-      // doc ID and the member's Firebase Auth UID are the same value.
-      return /databases/$(database)/documents/selection_committee_members/$(request.auth.uid);
+      // admin.auth().createUser({ uid: championId, email }) so the Firestore
+      // doc ID and the champion's Firebase Auth UID are the same value.
+      return /databases/$(database)/documents/champions_pool/$(request.auth.uid);
     }
 
     function isActiveUser() {
@@ -39,15 +39,15 @@ service cloud.firestore {
         && get(currentUserDoc()).data.role == "super_admin";
     }
 
-    function isActiveCommitteeMember() {
+    function isActiveChampion() {
       return isSignedIn()
-        && exists(currentCommitteeDoc())
-        && get(currentCommitteeDoc()).data.member_status == "Active"
-        && get(currentCommitteeDoc()).data.account_status == "Active";
+        && exists(currentChampionDoc())
+        && get(currentChampionDoc()).data.member_status == "Active"
+        && get(currentChampionDoc()).data.account_status == "Active";
     }
 
     function isSelectionUser() {
-      return isActiveUser() || isActiveCommitteeMember();
+      return isActiveUser() || isActiveChampion();
     }
 
     match /users/{userId} {
@@ -111,13 +111,13 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    match /selection_committee_members/{memberId} {
+    match /champions_pool/{championId} {
       allow create: if request.resource.data.registration_status == "Pending"
         && request.resource.data.account_status == "Not Created"
         && request.resource.data.member_status == "Inactive";
 
       allow read: if isAdmin()
-        || (isSignedIn() && request.auth.uid == memberId);
+        || (isSignedIn() && request.auth.uid == championId);
 
       allow update, delete: if isAdmin();
     }

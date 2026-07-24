@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import annLogo from "../../../assets/ann-logo.png";
-import { activateCommitteeAccount } from "../../../services/selectionCommitteeService";
+import annLogo from "../../assets/ann-logo.png";
+import { activateChampionAccount } from "../../services/championsService";
 
-export default function CommitteeActivateAccount() {
+export default function ChampionActivateAccount() {
   const [searchParams] = useSearchParams();
-  const memberId = searchParams.get("id") || "";
+  const championId = searchParams.get("id") || "";
   const token = searchParams.get("token") || "";
 
   const [password, setPassword] = useState("");
@@ -14,7 +14,7 @@ export default function CommitteeActivateAccount() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
-  const missingParams = !memberId || !token;
+  const missingParams = !championId || !token;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +33,7 @@ export default function CommitteeActivateAccount() {
     setSaving(true);
 
     try {
-      await activateCommitteeAccount({ memberId, token, password });
+      await activateChampionAccount({ championId, token, password });
       setDone(true);
     } catch (err) {
       setError(
@@ -74,8 +74,8 @@ export default function CommitteeActivateAccount() {
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <p className="text-sm text-gray-500 text-center">
-              Choose a password to finish setting up your Selection Committee
-              account.
+              Choose a password to finish setting up your Amra Notun Network
+              Champions Pool account.
             </p>
 
             <div>

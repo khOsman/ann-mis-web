@@ -1,31 +1,46 @@
-import AdminLayout from "../../../layouts/AdminLayout";
-import PageContainer from "../../../layouts/PageContainer";
-import { useSelectionCommittee } from "../../../hooks";
+import { useState } from "react";
+import AdminLayout from "../../layouts/AdminLayout";
+import PageContainer from "../../layouts/PageContainer";
+import { useChampions } from "../../hooks";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../../constants/routes";
+import { ROUTES } from "../../constants/routes";
+import { CHAMPION_ROLE_LABELS } from "../../constants/champions";
 
-export default function AllCommitteeMembers() {
-  const { data, loading, error } = useSelectionCommittee();
+const ROLE_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "unassigned", label: "Unassigned" },
+  ...Object.entries(CHAMPION_ROLE_LABELS).map(([key, label]) => ({ key, label })),
+];
+
+export default function AllChampions() {
+  const { data, loading, error } = useChampions();
   const navigate = useNavigate();
+  const [roleFilter, setRoleFilter] = useState("all");
 
-  const totalMembers = data.length;
+  const totalChampions = data.length;
 
   const pendingApplications = data.filter(
     (m) => m.registration_status === "Pending"
   ).length;
 
-  const approvedMembers = data.filter(
+  const approvedChampions = data.filter(
     (m) => m.registration_status === "Approved"
   ).length;
 
-  const activeMembers = data.filter(
+  const activeChampions = data.filter(
     (m) => m.member_status === "Active"
   ).length;
 
+  const filteredData = data.filter((champion) => {
+    if (roleFilter === "all") return true;
+    if (roleFilter === "unassigned") return !champion.role;
+    return champion.role === roleFilter;
+  });
+
   return (
     <AdminLayout
-      title="Selection Committee"
-      subtitle="Manage committee registrations and committee members"
+      title="Champions Pool"
+      subtitle="Manage registrations across Selection Committee, Facilitator, Co-Facilitator, Mentor and YCN"
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
 
@@ -37,7 +52,7 @@ export default function AllCommitteeMembers() {
             <p className="text-sm text-gray-500">Total Applications</p>
 
             <h2 className="text-3xl font-bold text-[var(--ann-purple)] mt-2">
-              {totalMembers}
+              {totalChampions}
             </h2>
           </div>
 
@@ -53,15 +68,15 @@ export default function AllCommitteeMembers() {
             <p className="text-sm text-gray-500">Approved</p>
 
             <h2 className="text-3xl font-bold text-green-600 mt-2">
-              {approvedMembers}
+              {approvedChampions}
             </h2>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <p className="text-sm text-gray-500">Active Members</p>
+            <p className="text-sm text-gray-500">Active Champions</p>
 
             <h2 className="text-3xl font-bold text-blue-600 mt-2">
-              {activeMembers}
+              {activeChampions}
             </h2>
           </div>
 
@@ -71,19 +86,38 @@ export default function AllCommitteeMembers() {
 
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
 
-          <div className="px-6 py-5 border-b">
-            <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
-              Committee Registration Applications
-            </h2>
+          <div className="px-6 py-5 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
+                Champions Pool Applications
+              </h2>
 
-            <p className="text-sm text-gray-500 mt-1">
-              Review, approve and manage selection committee members.
-            </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Review, approve, assign a role, and manage Champions.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {ROLE_FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={() => setRoleFilter(filter.key)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+                    roleFilter === filter.key
+                      ? "bg-[var(--ann-pink)] text-white border-[var(--ann-pink)]"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-[var(--ann-pink)]"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading ? (
             <div className="py-20 text-center text-gray-500">
-              Loading committee members...
+              Loading Champions...
             </div>
           ) : error ? (
             <div className="py-20 text-center text-red-500">
@@ -98,9 +132,11 @@ export default function AllCommitteeMembers() {
 
                   <tr className="text-left text-sm font-semibold text-gray-700">
 
-                    <th className="px-6 py-4">Committee ID</th>
+                    <th className="px-6 py-4">Champion ID</th>
 
                     <th className="px-6 py-4">Name</th>
+
+                    <th className="px-6 py-4">Role</th>
 
                     <th className="px-6 py-4">Institution</th>
 
@@ -118,51 +154,61 @@ export default function AllCommitteeMembers() {
 
                 <tbody>
 
-                  {totalMembers === 0 ? (
+                  {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="py-16 text-center text-gray-500"
                       >
-                        No committee applications found.
+                        No Champions found for this filter.
                       </td>
                     </tr>
                   ) : (
-                    data.map((member) => (
+                    filteredData.map((champion) => (
                       <tr
-                        key={member.id}
+                        key={champion.id}
                         className="border-b hover:bg-gray-50 transition"
                       >
                         <td className="px-6 py-4 font-semibold">
-                          {member.committee_code}
+                          {champion.champion_code}
                         </td>
 
                         <td className="px-6 py-4">
                           <div>
                             <p className="font-medium">
-                              {member.name}
+                              {champion.name}
                             </p>
 
                             <p className="text-xs text-gray-500">
-                              {member.email}
+                              {champion.email}
                             </p>
                           </div>
                         </td>
 
                         <td className="px-6 py-4">
-                          {member.institution}
+                          {champion.role
+                            ? CHAMPION_ROLE_LABELS[champion.role] || champion.role
+                            : (
+                              <span className="text-amber-600 text-xs font-semibold">
+                                Unassigned
+                              </span>
+                            )}
                         </td>
 
                         <td className="px-6 py-4">
-                          {member.registration_status}
+                          {champion.institution}
                         </td>
 
                         <td className="px-6 py-4">
-                          {member.account_status}
+                          {champion.registration_status}
                         </td>
 
                         <td className="px-6 py-4">
-                          {member.member_status}
+                          {champion.account_status}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {champion.member_status}
                         </td>
 
                         <td className="px-6 py-4 text-center">
@@ -170,9 +216,9 @@ export default function AllCommitteeMembers() {
                           <button
                             onClick={() =>
                                 navigate(
-                                ROUTES.selectionCommitteeProfile.replace(
-                                    ":memberId",
-                                    member.id
+                                ROUTES.championProfile.replace(
+                                    ":championId",
+                                    champion.id
                                 )
                                 )
                             }

@@ -2,22 +2,21 @@ import {
   ACCOUNT_STATUS,
   MEMBER_STATUS,
   REGISTRATION_STATUS,
-  SELECTION_COMMITTEE_ROLE,
-} from "../constants/selectionCommittee";
+} from "../constants/champions";
 
-export const createSelectionCommittee = (overrides = {}) => ({
+export const createChampion = (overrides = {}) => ({
   id: "",
 
-  committee_code: "",
+  champion_code: "",
 
   firebase_uid: "",
 
-  role: SELECTION_COMMITTEE_ROLE.MEMBER,
+  role: "",
 
   registration_status: REGISTRATION_STATUS.PENDING,
 
   account_status: ACCOUNT_STATUS.NOT_CREATED,
-  
+
   invitation_sent_at: null,
 
   password_set_at: null,

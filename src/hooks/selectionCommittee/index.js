@@ -1,1 +1,0 @@
-export {useSelectionCommittee} from "./useSelectionCommittee";

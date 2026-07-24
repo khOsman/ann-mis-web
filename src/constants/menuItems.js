@@ -81,8 +81,8 @@ export const ADMIN_MENU_ITEMS = [
       permission: "selection",
         children: [
           {
-            label: "Committee Members",
-            path: ROUTES.selectionCommitteeMembers,
+            label: "Champions Pool",
+            path: ROUTES.champions,
             icon: List,
             permission: "selection",
           },

@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  getSelectionCommitteeMember,
-  getSelectionCommitteeMembers,
-} from "../../services/selectionCommitteeService";
+import { getChampion, getChampions } from "../../services/championsService";
 
-export const useSelectionCommittee = (memberId = null) => {
-  const [data, setData] = useState(memberId ? null : []);
+export const useChampions = (championId = null) => {
+  const [data, setData] = useState(championId ? null : []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -14,9 +11,9 @@ export const useSelectionCommittee = (memberId = null) => {
     setError(null);
 
     try {
-      const result = memberId
-        ? await getSelectionCommitteeMember(memberId)
-        : await getSelectionCommitteeMembers();
+      const result = championId
+        ? await getChampion(championId)
+        : await getChampions();
 
       setData(result);
 
@@ -27,7 +24,7 @@ export const useSelectionCommittee = (memberId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [memberId]);
+  }, [championId]);
 
   useEffect(() => {
     refresh();

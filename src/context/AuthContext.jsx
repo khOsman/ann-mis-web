@@ -10,7 +10,7 @@ import {
 import {
   ACCOUNT_STATUS,
   MEMBER_STATUS,
-} from "../constants/selectionCommittee";
+} from "../constants/champions";
 import { COLLECTIONS } from "../constants/collections";
 import { createUser } from "../entities";
 
@@ -33,22 +33,23 @@ export function AuthProvider({ children }) {
         }
 
         if (!user.email?.endsWith("@brac.net")) {
-          // Not BRAC staff — check whether this is an approved Selection
-          // Committee member (a separate account type, stored outside the
-          // `users` collection) before rejecting the sign-in outright.
-          const memberRef = doc(
+          // Not BRAC staff — check whether this is an approved Champion
+          // (Selection Committee/Facilitator/Co-Facilitator/Mentor/YCN — a
+          // separate account type, stored outside the `users` collection)
+          // before rejecting the sign-in outright.
+          const championRef = doc(
             db,
-            COLLECTIONS.SELECTION_COMMITTEE_MEMBERS,
+            COLLECTIONS.CHAMPIONS_POOL,
             user.uid
           );
-          const memberSnap = await getDoc(memberRef);
+          const championSnap = await getDoc(championRef);
 
-          if (memberSnap.exists()) {
+          if (championSnap.exists()) {
             setFirebaseUser(user);
             setAppUser({
-              id: memberSnap.id,
-              userType: "committee",
-              ...memberSnap.data(),
+              id: championSnap.id,
+              userType: "champion",
+              ...championSnap.data(),
             });
             return;
           }
@@ -111,9 +112,9 @@ export function AuthProvider({ children }) {
     return appUser?.permissions?.[key] === true;
   };
 
-  const isCommitteeMember = appUser?.userType === "committee";
+  const isChampion = appUser?.userType === "champion";
 
-  const isActive = isCommitteeMember
+  const isActive = isChampion
     ? appUser?.member_status === MEMBER_STATUS.ACTIVE &&
       appUser?.account_status === ACCOUNT_STATUS.ACTIVE
     : appUser?.status === USER_STATUSES.ACTIVE;
@@ -133,7 +134,7 @@ export function AuthProvider({ children }) {
         isActive,
         isAdmin,
         isSuperAdmin,
-        isCommitteeMember,
+        isChampion,
         hasPermission,
         logout,
       }}

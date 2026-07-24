@@ -20,11 +20,11 @@ import AccountPending from "./pages/system/AccountPending";
 import AccountInactive from "./pages/system/AccountInactive";
 import AccessDenied from "./pages/system/AccountDenied.jsx";
 
-import CommitteeRegistration from "./pages/selection/committee/CommitteeRegistration";
-import CommitteeActivateAccount from "./pages/selection/committee/CommitteeActivateAccount";
-import CommitteeHome from "./pages/selection/committee/CommitteeHome";
-import CommitteeProfile from "./pages/selection/committee/CommitteeProfile";
-import AllCommitteeMembers from "./pages/selection/committee/AllCommitteeMembers";
+import ChampionRegistration from "./pages/champions/ChampionRegistration";
+import ChampionActivateAccount from "./pages/champions/ChampionActivateAccount";
+import ChampionHome from "./pages/champions/ChampionHome";
+import ChampionProfile from "./pages/champions/ChampionProfile";
+import AllChampions from "./pages/champions/AllChampions";
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
@@ -41,20 +41,20 @@ export default function App() {
         <Routes>
           <Route path={ROUTES.login} element={<Login />} />
           <Route
-            path={ROUTES.selectionCommitteeRegistration}
-            element={<CommitteeRegistration />}
+            path={ROUTES.championRegistration}
+            element={<ChampionRegistration />}
           />
 
           <Route
-            path={ROUTES.selectionCommitteeActivate}
-            element={<CommitteeActivateAccount />}
+            path={ROUTES.championActivate}
+            element={<ChampionActivateAccount />}
           />
 
           <Route
-            path={ROUTES.committeeHome}
+            path={ROUTES.championHome}
             element={
-              <ProtectedRoute committeeOnly>
-                <CommitteeHome />
+              <ProtectedRoute championOnly>
+                <ChampionHome />
               </ProtectedRoute>
             }
           />
@@ -79,19 +79,19 @@ export default function App() {
           />
 
           <Route
-            path={ROUTES.selectionCommitteeProfile}
+            path={ROUTES.championProfile}
             element={
               <ProtectedRoute permission="selection">
-                <CommitteeProfile />
+                <ChampionProfile />
               </ProtectedRoute>
             }
           />
 
           <Route
-            path={ROUTES.selectionCommitteeMembers}
+            path={ROUTES.champions}
             element={
               <ProtectedRoute permission="selection">
-                <AllCommitteeMembers />
+                <AllChampions />
               </ProtectedRoute>
             }
           />

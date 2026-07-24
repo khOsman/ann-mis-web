@@ -1,44 +1,52 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
-import AdminLayout from "../../../layouts/AdminLayout";
-import PageContainer from "../../../layouts/PageContainer";
-import { useAlert } from "../../../context/AlertContext";
-import { useSelectionCommittee } from "../../../hooks";
+import AdminLayout from "../../layouts/AdminLayout";
+import PageContainer from "../../layouts/PageContainer";
+import { useAlert } from "../../context/AlertContext";
+import { useChampions } from "../../hooks";
 import {
   ACCOUNT_STATUS,
+  CHAMPION_ROLE_LABELS,
+  CHAMPION_ROLE_OPTIONS,
   MEMBER_STATUS,
   REGISTRATION_STATUS,
-} from "../../../constants/selectionCommittee";
+} from "../../constants/champions";
 import {
-  activateCommitteeMember,
-  approveSelectionCommitteeMember,
-  createSelectionCommitteeAccount,
-  rejectSelectionCommitteeMember,
-} from "../../../services/selectionCommitteeService";
+  activateChampionMember,
+  approveChampion,
+  createChampionAccount,
+  rejectChampion,
+} from "../../services/championsService";
 
-export default function CommitteeProfile() {
-  const { memberId } = useParams();
+export default function ChampionProfile() {
+  const { championId } = useParams();
   const { showAlert } = useAlert();
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("");
 
   const {
-    data: member,
+    data: champion,
     loading,
     error,
     refresh,
-  } = useSelectionCommittee(memberId);
+  } = useChampions(championId);
 
   const handleApprove = async () => {
+    if (!selectedRole) {
+      showAlert("error", "Select a role before approving.");
+      return;
+    }
+
     setActionLoading(true);
 
     try {
-      await approveSelectionCommitteeMember({ memberId });
+      await approveChampion({ championId, role: selectedRole });
 
-      showAlert("success", "Committee member approved successfully.");
+      showAlert("success", "Champion approved successfully.");
       await refresh();
     } catch (error) {
-      showAlert("error", error.message || "Failed to approve member.");
+      showAlert("error", error.message || "Failed to approve champion.");
     } finally {
       setActionLoading(false);
     }
@@ -51,12 +59,12 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      await rejectSelectionCommitteeMember({ memberId, rejectionReason });
+      await rejectChampion({ championId, rejectionReason });
 
-      showAlert("success", "Committee member rejected.");
+      showAlert("success", "Champion rejected.");
       await refresh();
     } catch (error) {
-      showAlert("error", error.message || "Failed to reject member.");
+      showAlert("error", error.message || "Failed to reject champion.");
     } finally {
       setActionLoading(false);
     }
@@ -66,11 +74,11 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      await createSelectionCommitteeAccount({ memberId });
+      await createChampionAccount({ championId });
 
       showAlert(
         "success",
-        "Invitation email sent. The member can set their password from the link."
+        "Invitation email sent. The Champion can set their password from the link."
       );
 
       await refresh();
@@ -85,12 +93,12 @@ export default function CommitteeProfile() {
     setActionLoading(true);
 
     try {
-      await activateCommitteeMember({ memberId });
+      await activateChampionMember({ championId });
 
-      showAlert("success", "Committee member activated.");
+      showAlert("success", "Champion activated.");
       await refresh();
     } catch (error) {
-      showAlert("error", error.message || "Failed to activate member.");
+      showAlert("error", error.message || "Failed to activate champion.");
     } finally {
       setActionLoading(false);
     }
@@ -98,13 +106,13 @@ export default function CommitteeProfile() {
 
   return (
     <AdminLayout
-      title="Committee Profile"
-      subtitle="Review committee member details and onboarding status"
+      title="Champion Profile"
+      subtitle="Review Champion details, assign a role, and manage onboarding status"
     >
       <PageContainer className="py-6 lg:py-8">
         {loading ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
-            Loading committee member...
+            Loading Champion...
           </div>
         ) : error ? (
           <div className="bg-white rounded-2xl border border-red-200 p-10 text-center text-red-600">
@@ -116,18 +124,36 @@ export default function CommitteeProfile() {
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
                 <div>
                   <h2 className="text-2xl font-bold text-[var(--ann-text-dark)]">
-                    {member.name}
+                    {champion.name}
                   </h2>
 
                   <p className="text-gray-500 mt-1">
-                    {member.committee_code}
+                    {champion.champion_code}
+                    {champion.role && (
+                      <span className="ml-2 text-[var(--ann-purple)] font-semibold">
+                        {CHAMPION_ROLE_LABELS[champion.role] || champion.role}
+                      </span>
+                    )}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  {member.registration_status ===
+                <div className="flex flex-wrap items-center gap-3">
+                  {champion.registration_status ===
                     REGISTRATION_STATUS.PENDING && (
                     <>
+                      <select
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                        className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      >
+                        <option value="">Select role...</option>
+                        {CHAMPION_ROLE_OPTIONS.map((role) => (
+                          <option key={role} value={role}>
+                            {CHAMPION_ROLE_LABELS[role]}
+                          </option>
+                        ))}
+                      </select>
+
                       <button
                         type="button"
                         disabled={actionLoading}
@@ -148,9 +174,9 @@ export default function CommitteeProfile() {
                     </>
                   )}
 
-                  {member.registration_status ===
+                  {champion.registration_status ===
                     REGISTRATION_STATUS.APPROVED &&
-                    member.account_status === ACCOUNT_STATUS.NOT_CREATED && (
+                    champion.account_status === ACCOUNT_STATUS.NOT_CREATED && (
                       <button
                         type="button"
                         disabled={actionLoading}
@@ -161,9 +187,9 @@ export default function CommitteeProfile() {
                       </button>
                     )}
 
-                  {member.registration_status ===
+                  {champion.registration_status ===
                     REGISTRATION_STATUS.APPROVED &&
-                    member.account_status === ACCOUNT_STATUS.INVITATION_SENT && (
+                    champion.account_status === ACCOUNT_STATUS.INVITATION_SENT && (
                       <button
                         type="button"
                         disabled={actionLoading}
@@ -174,15 +200,15 @@ export default function CommitteeProfile() {
                       </button>
                     )}
 
-                  {member.account_status === ACCOUNT_STATUS.PASSWORD_SET &&
-                    member.member_status === MEMBER_STATUS.INACTIVE && (
+                  {champion.account_status === ACCOUNT_STATUS.PASSWORD_SET &&
+                    champion.member_status === MEMBER_STATUS.INACTIVE && (
                       <button
                         type="button"
                         disabled={actionLoading}
                         onClick={handleActivateMember}
                         className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
                       >
-                        Activate Member
+                        Activate Champion
                       </button>
                     )}
                 </div>
@@ -195,11 +221,11 @@ export default function CommitteeProfile() {
               </div>
 
               <div className="grid md:grid-cols-2 gap-6 p-6">
-                <Info label="Email" value={member.email} />
-                <Info label="Phone" value={member.phone} />
-                <Info label="Institution" value={member.institution} />
-                <Info label="Date of Birth" value={member.date_of_birth} />
-                <Info label="Address" value={member.address} />
+                <Info label="Email" value={champion.email} />
+                <Info label="Phone" value={champion.phone} />
+                <Info label="Institution" value={champion.institution} />
+                <Info label="Date of Birth" value={champion.date_of_birth} />
+                <Info label="Address" value={champion.address} />
               </div>
             </div>
 
@@ -210,11 +236,15 @@ export default function CommitteeProfile() {
 
               <div className="grid md:grid-cols-3 gap-6 p-6">
                 <Info
-                  label="Registration"
-                  value={member.registration_status}
+                  label="Role"
+                  value={champion.role ? CHAMPION_ROLE_LABELS[champion.role] : ""}
                 />
-                <Info label="Account" value={member.account_status} />
-                <Info label="Member" value={member.member_status} />
+                <Info
+                  label="Registration"
+                  value={champion.registration_status}
+                />
+                <Info label="Account" value={champion.account_status} />
+                <Info label="Member" value={champion.member_status} />
               </div>
             </div>
           </div>
