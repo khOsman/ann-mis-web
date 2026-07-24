@@ -7,6 +7,7 @@ import EditCohort from "./pages/cohorts/EditCohort";
 import CohortDetails from "./pages/cohorts/CohortDetails";
 import AllForms from "./pages/forms/AllForms";
 import CreateForm from "./pages/forms/CreateForm";
+import EditForm from "./pages/forms/EditForm";
 import FormBuilder from "./pages/forms/FormBuilder";
 import PublicForm from "./pages/public/PublicForm";
 import AllParticipants from "./pages/participants/AllParticipants";
@@ -182,6 +183,15 @@ export default function App() {
             element={
               <ProtectedRoute permission="forms">
                 <FormBuilder />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.editForm}
+            element={
+              <ProtectedRoute permission="forms">
+                <EditForm />
               </ProtectedRoute>
             }
           />

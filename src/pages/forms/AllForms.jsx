@@ -129,8 +129,8 @@ export default function AllForms() {
     try {
       const newFormId = await cloneForm(formId);
 
-      showAlert("success", "Form cloned successfully. Opening the copy for editing.");
-      navigate(`/admin/forms/${newFormId}/builder`);
+      showAlert("success", "Form cloned successfully. Update the copy's information below.");
+      navigate(`/admin/forms/${newFormId}/edit`);
     } catch (error) {
       console.error("Failed to clone form:", error);
       showAlert("error", error.message || "Failed to clone form.");
@@ -282,6 +282,15 @@ export default function AllForms() {
                             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                           >
                             Builder
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              navigate(`/admin/forms/${form.id}/edit`)
+                            }
+                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
+                          >
+                            Edit Info
                           </button>
 
                           <button

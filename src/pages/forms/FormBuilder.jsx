@@ -25,7 +25,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { GripVertical, Trash2 } from "lucide-react";
 import { db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
@@ -87,6 +87,7 @@ function SortableField({ field, index, selectedFieldId, setSelectedFieldId, rend
 
 export default function FormBuilder() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { showAlert } = useAlert();
   const [formMeta, setFormMeta] = useState(null);
   const [fields, setFields] = useState([]);
@@ -412,6 +413,14 @@ const handleCopyLink = async () => {
             </span>
             </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => navigate(`/admin/forms/${id}/edit`)}
+          className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+        >
+          Edit Form Info
+        </button>
 
         {formMeta?.status === "Published" && (
   <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
