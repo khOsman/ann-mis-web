@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
@@ -12,6 +12,12 @@ import {
   getFGDsByCohort,
   regenerateFGDsForCohort,
 } from "../../../services/fgdService";
+import {
+  assignChampionToFGD,
+  getChampions,
+  unassignChampionFromFGD,
+} from "../../../services/championsService";
+import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 
 export default function CohortFGDs() {
   const { cohortId } = useParams();
@@ -28,6 +34,131 @@ export default function CohortFGDs() {
   const [showRegeneratePanel, setShowRegeneratePanel] = useState(false);
   const [regenerateLimit, setRegenerateLimit] = useState(25);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const [activeCommittee, setActiveCommittee] = useState([]);
+  const [loadingCommittee, setLoadingCommittee] = useState(false);
+  const [attachTarget, setAttachTarget] = useState(null);
+  const [attachSearch, setAttachSearch] = useState("");
+  const [selectedChampionIds, setSelectedChampionIds] = useState([]);
+  const [attaching, setAttaching] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removingChampionId, setRemovingChampionId] = useState(null);
+
+  const fetchActiveCommittee = async () => {
+    setLoadingCommittee(true);
+
+    try {
+      const data = await getChampions();
+
+      setActiveCommittee(
+        data.filter(
+          (champion) =>
+            champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+            champion.member_status === MEMBER_STATUS.ACTIVE
+        )
+      );
+    } catch (error) {
+      showAlert("error", error.message || "Failed to load committee members.");
+    } finally {
+      setLoadingCommittee(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActiveCommittee();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const assignedChampionIds = useMemo(
+    () =>
+      new Set((attachTarget?.committee_members || []).map((member) => member.champion_id)),
+    [attachTarget]
+  );
+
+  const assignableCommittee = useMemo(() => {
+    const keyword = attachSearch.trim().toLowerCase();
+
+    return activeCommittee.filter((champion) => {
+      if (assignedChampionIds.has(champion.id)) return false;
+      if (!keyword) return true;
+      return champion.name?.toLowerCase().includes(keyword);
+    });
+  }, [activeCommittee, assignedChampionIds, attachSearch]);
+
+  const openAttachModal = (fgd) => {
+    setAttachTarget(fgd);
+    setAttachSearch("");
+    setSelectedChampionIds([]);
+  };
+
+  const closeAttachModal = () => {
+    setAttachTarget(null);
+  };
+
+  const toggleSelectedChampion = (championId) => {
+    setSelectedChampionIds((prev) =>
+      prev.includes(championId)
+        ? prev.filter((id) => id !== championId)
+        : [...prev, championId]
+    );
+  };
+
+  const handleAttachSelected = async () => {
+    if (selectedChampionIds.length === 0) {
+      showAlert("error", "Select at least one committee member to attach.");
+      return;
+    }
+
+    setAttaching(true);
+
+    try {
+      const results = await Promise.allSettled(
+        selectedChampionIds.map((championId) =>
+          assignChampionToFGD({ championId, fgdId: attachTarget.id })
+        )
+      );
+
+      const failed = results.filter((result) => result.status === "rejected");
+
+      if (failed.length > 0) {
+        showAlert(
+          "error",
+          `${failed.length} of ${selectedChampionIds.length} assignment(s) failed.`
+        );
+      } else {
+        showAlert(
+          "success",
+          `${selectedChampionIds.length} committee member(s) attached. Notification emails sent.`
+        );
+      }
+
+      closeAttachModal();
+      await Promise.all([fetchFGDs(), fetchActiveCommittee()]);
+    } finally {
+      setAttaching(false);
+    }
+  };
+
+  const handleRemoveMember = async (championId) => {
+    setRemovingChampionId(championId);
+
+    try {
+      await unassignChampionFromFGD({ championId, fgdId: removeTarget.id });
+      showAlert("success", "Committee member removed from this FGD.");
+
+      const updatedFgds = await getFGDsByCohort(cohortId);
+      setFgds(updatedFgds);
+
+      const updatedTarget = updatedFgds.find((item) => item.id === removeTarget.id);
+      setRemoveTarget(updatedTarget || null);
+
+      await fetchActiveCommittee();
+    } catch (error) {
+      showAlert("error", error.message || "Failed to remove committee member.");
+    } finally {
+      setRemovingChampionId(null);
+    }
+  };
 
   const fetchFGDs = async () => {
     if (!cohortId) return;
@@ -235,6 +366,7 @@ export default function CohortFGDs() {
                     <th className="text-center px-6 py-4">Present</th>
                     <th className="text-center px-6 py-4">Absent</th>
                     <th className="text-center px-6 py-4">Status</th>
+                    <th className="text-center px-6 py-4">Selection Committee</th>
                     <th className="text-center px-6 py-4">Action</th>
                   </tr>
                 </thead>
@@ -268,20 +400,43 @@ export default function CohortFGDs() {
                       </td>
 
                       <td className="px-6 py-5 text-center">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              ROUTES.selectionFGDDetails.replace(
-                                ":fgdId",
-                                fgd.id
+                        {fgd.committee_members?.length || 0}
+                      </td>
+
+                      <td className="px-6 py-5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openAttachModal(fgd)}
+                            className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                          >
+                            Attach SC
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={!fgd.committee_members?.length}
+                            onClick={() => setRemoveTarget(fgd)}
+                            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            Remove SC
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                ROUTES.selectionFGDDetails.replace(
+                                  ":fgdId",
+                                  fgd.id
+                                )
                               )
-                            )
-                          }
-                          className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90"
-                        >
-                          View
-                        </button>
+                            }
+                            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90"
+                          >
+                            View
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -291,6 +446,130 @@ export default function CohortFGDs() {
           </div>
         )}
       </PageContainer>
+
+      {attachTarget && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+              Attach Selection Committee to {attachTarget.fgd_code}
+            </h3>
+
+            <input
+              type="text"
+              value={attachSearch}
+              onChange={(e) => setAttachSearch(e.target.value)}
+              placeholder="Search by name..."
+              className="mt-4 w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+            />
+
+            {loadingCommittee ? (
+              <p className="text-sm text-gray-500 mt-4">
+                Loading active committee members...
+              </p>
+            ) : assignableCommittee.length === 0 ? (
+              <p className="text-sm text-gray-500 mt-4">
+                No matching active committee members available.
+              </p>
+            ) : (
+              <div className="mt-4 max-h-64 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-100">
+                {assignableCommittee.map((champion) => (
+                  <label
+                    key={champion.id}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedChampionIds.includes(champion.id)}
+                      onChange={() => toggleSelectedChampion(champion.id)}
+                      className="accent-[var(--ann-pink)]"
+                    />
+                    <div>
+                      <p className="font-semibold">{champion.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {champion.champion_code} • {champion.email}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeAttachModal}
+                className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:border-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={attaching || selectedChampionIds.length === 0}
+                onClick={handleAttachSelected}
+                className="px-5 py-2.5 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                {attaching
+                  ? "Attaching..."
+                  : `Attach Selected${
+                      selectedChampionIds.length > 0
+                        ? ` (${selectedChampionIds.length})`
+                        : ""
+                    }`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {removeTarget && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+              Remove Selection Committee from {removeTarget.fgd_code}
+            </h3>
+
+            {removeTarget.committee_members?.length > 0 ? (
+              <div className="mt-4 flex flex-col gap-2">
+                {removeTarget.committee_members.map((member) => (
+                  <div
+                    key={member.champion_id}
+                    className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <p className="font-semibold">{member.name}</p>
+                      <p className="text-xs text-gray-500">{member.email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={removingChampionId === member.champion_id}
+                      onClick={() => handleRemoveMember(member.champion_id)}
+                      className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                    >
+                      {removingChampionId === member.champion_id
+                        ? "Removing..."
+                        : "Remove"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mt-4">
+                No committee members assigned to this FGD.
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setRemoveTarget(null)}
+                className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:border-gray-400"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={showConfirmDialog}
