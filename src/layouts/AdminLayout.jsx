@@ -50,16 +50,16 @@ export default function AdminLayout({ children, title, subtitle }) {
     return item.children?.some(isActive);
   };
 
-  const handleNavigate = (path) => {
-    if (!path) return;
+  const handleNavigate = (item) => {
+    if (item.disabled || !item.path) return;
 
-    navigate(path);
+    navigate(item.path);
     setMobileSidebarOpen(false);
   };
 
   const renderMenuItems = (items, level = 0) => {
     return items.map((item) => {
-      const active = isActive(item);
+      const active = !item.disabled && isActive(item);
       const Icon = item.icon;
       const hasChildren = item.children && item.children.length > 0;
 
@@ -67,22 +67,34 @@ export default function AdminLayout({ children, title, subtitle }) {
         <div key={`${item.label}-${item.path || level}`}>
           <button
             type="button"
-            onClick={() => handleNavigate(item.path)}
-            className={`w-full flex items-center gap-3 text-left rounded-xl cursor-pointer font-medium transition ${
+            disabled={item.disabled}
+            onClick={() => handleNavigate(item)}
+            className={`w-full flex items-center gap-3 text-left rounded-xl font-medium transition ${
               level === 0 ? "px-4 py-3 text-sm" : "px-3 py-2 text-xs"
             } ${
-              active
+              item.disabled
+                ? "text-purple-200/50 cursor-not-allowed"
+                : active
                 ? level === 0
-                  ? "bg-[var(--ann-pink)] text-white shadow-lg"
-                  : "bg-white text-[var(--ann-purple)]"
-                : "text-purple-100 hover:bg-white/10"
+                  ? "bg-[var(--ann-pink)] text-white shadow-lg cursor-pointer"
+                  : "bg-white text-[var(--ann-purple)] cursor-pointer"
+                : "text-purple-100 hover:bg-white/10 cursor-pointer"
             }`}
             style={{
               paddingLeft: level === 0 ? undefined : `${12 + level * 10}px`,
             }}
           >
             {Icon && <Icon size={level === 0 ? 18 : 14} />}
-            {sidebarOpen && <span>{item.label}</span>}
+            {sidebarOpen && (
+              <span className="flex items-center gap-2">
+                {item.label}
+                {item.disabled && (
+                  <span className="text-[10px] uppercase tracking-wide bg-white/10 px-2 py-0.5 rounded-full">
+                    Soon
+                  </span>
+                )}
+              </span>
+            )}
           </button>
 
           {sidebarOpen && hasChildren && active && (

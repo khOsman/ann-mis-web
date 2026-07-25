@@ -94,12 +94,14 @@ export const ADMIN_MENU_ITEMS = [
       path: "/admin/participants/enrollment",
       icon: List,
       permission: "enrollment",
+      disabled: true,
     },
     {
       label: "Graduation",
       path: "/admin/participants/graduation",
       icon: List,
       permission: "graduation",
+      disabled: true,
     },
   ],
   },
@@ -109,6 +111,7 @@ export const ADMIN_MENU_ITEMS = [
     path: ROUTES.projects,
     icon: Rocket,
     permission: "projects",
+    disabled: true,
   },
 
   {
@@ -183,5 +186,6 @@ export const ADMIN_MENU_ITEMS = [
     path: ROUTES.settings,
     icon: Settings,
     permission: "settings",
+    disabled: true,
   },
 ];
