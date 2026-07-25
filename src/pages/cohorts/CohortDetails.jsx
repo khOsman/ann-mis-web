@@ -9,6 +9,7 @@ import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import { useCohort } from "../../hooks";
 import ParticipantImportBox from "../../components/cohorts/ParticipantImportBox";
+import CohortJourney from "../../components/cohorts/CohortJourney";
 import {
   previewCohortDataDeletion,
   deleteAllCohortData,
@@ -225,22 +226,7 @@ export default function CohortDetails() {
           showAlert={showAlert}
         />
 
-        <div className="bg-white rounded-2xl border p-6">
-          <h3 className="text-lg font-bold mb-5">Future Modules</h3>
-
-          <div className="grid md:grid-cols-4 gap-4">
-            {["Registration Forms", "FGDs", "Participants", "Projects"].map(
-              (item) => (
-                <button
-                  key={item}
-                  className="border rounded-xl p-4 text-left hover:border-[var(--ann-pink)]"
-                >
-                  {item}
-                </button>
-              )
-            )}
-          </div>
-        </div>
+        <CohortJourney cohort={cohort} />
 
         {isSuperAdmin && (
           <div className="bg-white rounded-2xl border border-red-200 p-6">
