@@ -64,7 +64,13 @@ export const parseWorkbookFile = (file) => {
           XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" })[0] || [];
         const rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
 
-        const headers = headerRow.map((h) => String(h).trim()).filter(Boolean);
+        // Keep each header's exact original text (not trimmed) — XLSX's
+        // sheet_to_json() uses row 1's raw cell text as every data row's
+        // object keys, and several of this form's real headers carry
+        // leading/trailing whitespace. Trimming here would make row[header]
+        // lookups miss for those columns everywhere downstream, silently
+        // losing that column's data for every row.
+        const headers = headerRow.map((h) => String(h)).filter((h) => h.trim());
 
         if (headers.length === 0 || rows.length === 0) {
           reject(new Error("No data found in the uploaded file."));
@@ -147,6 +153,8 @@ const looksLikeDate = (value) => {
 
 const looksLikeSmallNumber = (value) => /^\d{1,3}$/.test(String(value || "").trim());
 
+const MULTISELECT_ATOMIC_OPTION_CAP = 15;
+
 export const inferFieldType = (header, values) => {
   const nonEmpty = values.map((v) => String(v || "").trim()).filter(Boolean);
 
@@ -155,7 +163,7 @@ export const inferFieldType = (header, values) => {
   const headerLower = header.toLowerCase();
 
   if (/email|ইমেইল/.test(headerLower)) return { field_type: "email", options: [] };
-  if (/phone|mobile|hotline|মোবাইল|ফোন/.test(headerLower)) {
+  if (/phone|mobile|whatsapp|hotline|মোবাইল|ফোন|হোয়াটসআপ/.test(headerLower)) {
     return { field_type: "phone", options: [] };
   }
 
@@ -166,12 +174,36 @@ export const inferFieldType = (header, values) => {
   if (numberRatio >= 0.6) return { field_type: "number", options: [] };
 
   const distinct = Array.from(new Set(nonEmpty));
-  const maxLen = Math.max(...nonEmpty.map((v) => v.length));
 
-  if (distinct.length <= 8 && maxLen <= 60) {
+  // Scanned across the whole file, a handful of distinct answers is already
+  // a reliable single-select signal — option text length doesn't matter
+  // (Google Forms radio/dropdown options can legitimately run long).
+  if (distinct.length <= 8) {
     return { field_type: "radio", options: distinct };
   }
 
+  // Google Forms checkbox (multi-select) questions export selected options
+  // joined with ", " per row, so distinct *combinations* look unbounded even
+  // though the underlying option set is small. Detect this by splitting on
+  // commas and checking the atomic option count instead of the raw values.
+  const anyMultiValue = nonEmpty.some((v) => v.includes(","));
+
+  if (anyMultiValue) {
+    const atomicOptions = new Set();
+    nonEmpty.forEach((v) =>
+      v
+        .split(",")
+        .map((piece) => piece.trim())
+        .filter(Boolean)
+        .forEach((piece) => atomicOptions.add(piece))
+    );
+
+    if (atomicOptions.size <= MULTISELECT_ATOMIC_OPTION_CAP) {
+      return { field_type: "checkbox", options: Array.from(atomicOptions) };
+    }
+  }
+
+  const maxLen = Math.max(...nonEmpty.map((v) => v.length));
   const avgLen = nonEmpty.reduce((sum, v) => sum + v.length, 0) / nonEmpty.length;
 
   if (maxLen > 150 || avgLen > 80) return { field_type: "textarea", options: [] };
@@ -206,6 +238,45 @@ export const analyzeColumns = (headers, rows) => {
         order: index + 1,
       };
     });
+};
+
+// ---------------------------------------------------------------------------
+// Cohort code normalization ("Rajshahi-26" -> "Raj-26")
+// ---------------------------------------------------------------------------
+
+const DIVISION_ABBREVIATIONS = {
+  dhaka: "Dha",
+  chattogram: "Ctg",
+  chittagong: "Ctg",
+  rajshahi: "Raj",
+  khulna: "Khu",
+  barishal: "Bar",
+  barisal: "Bar",
+  sylhet: "Syl",
+  rangpur: "Ran",
+  mymensingh: "Mym",
+};
+
+const abbreviateFallback = (name) => {
+  const letters = name.trim().slice(0, 3);
+  if (!letters) return "GEN";
+  return letters.charAt(0).toUpperCase() + letters.slice(1).toLowerCase();
+};
+
+// Cohort values in the sheet look like "<City>-<YY>" (e.g. "Rajshahi-26").
+// The stored cohort_code uses the short division abbreviation ("Raj-26")
+// while the original sheet value is kept as cohort_name for display.
+export const normalizeCohortCode = (rawValue) => {
+  const value = String(rawValue || "").trim();
+  const match = value.match(/^(.*?)[\s-]+(\d{2,4})$/);
+
+  if (!match) return value;
+
+  const [, namePart, yearPart] = match;
+  const key = namePart.trim().toLowerCase();
+  const abbreviation = DIVISION_ABBREVIATIONS[key] || abbreviateFallback(namePart);
+
+  return `${abbreviation}-${yearPart}`;
 };
 
 // ---------------------------------------------------------------------------
@@ -311,7 +382,8 @@ export const buildImportPreview = async ({ headers, rows }) => {
   const groups = [];
 
   for (const [cohortValue, groupRows] of groupsByCohort.entries()) {
-    const existingCohort = await findCohortByCode(cohortValue);
+    const cohortCode = normalizeCohortCode(cohortValue);
+    const existingCohort = await findCohortByCode(cohortCode);
     const existingEmails = existingCohort
       ? await getExistingParticipantEmails(existingCohort.id)
       : new Set();
@@ -334,6 +406,7 @@ export const buildImportPreview = async ({ headers, rows }) => {
 
     groups.push({
       cohortValue,
+      cohortCode,
       cohortExists: !!existingCohort,
       existingCohort,
       rows: previewRows,
@@ -434,7 +507,7 @@ const findOrCreateCohort = async (group) => {
   const cohortRef = doc(collection(db, COLLECTIONS.COHORTS));
   const cohortData = createCohort({
     id: cohortRef.id,
-    cohort_code: group.cohortValue,
+    cohort_code: group.cohortCode,
     cohort_name: group.cohortValue,
     status: "Active",
     total_registrations: 0,

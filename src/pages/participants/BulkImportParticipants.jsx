@@ -171,7 +171,13 @@ export default function BulkImportParticipants() {
                 <div className="px-6 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[var(--ann-text-dark)]">
-                      {group.cohortValue}{" "}
+                      {group.cohortValue}
+                      {group.cohortCode !== group.cohortValue && (
+                        <span className="text-gray-400 font-normal">
+                          {" "}
+                          → {group.cohortCode}
+                        </span>
+                      )}{" "}
                       <span
                         className={`ml-2 text-xs font-semibold px-2 py-1 rounded-full ${
                           group.cohortExists
