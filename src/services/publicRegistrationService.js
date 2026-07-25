@@ -17,7 +17,7 @@ const normalizeLabel = (answer) => {
   }`.toLowerCase();
 };
 
-const getAnswerValueByKeywords = (responseAnswers, keywords) => {
+export const getAnswerValueByKeywords = (responseAnswers, keywords) => {
   const matchedAnswer = responseAnswers.find((answer) => {
     const label = normalizeLabel(answer);
     return keywords.some((keyword) => label.includes(keyword.toLowerCase()));
@@ -26,7 +26,7 @@ const getAnswerValueByKeywords = (responseAnswers, keywords) => {
   return matchedAnswer?.value || "";
 };
 
-const calculateAge = (dateString) => {
+export const calculateAge = (dateString) => {
   if (!dateString) return "";
 
   const birthDate = new Date(dateString);
@@ -47,7 +47,7 @@ const calculateAge = (dateString) => {
   return age;
 };
 
-const normalizeGender = (value) => {
+export const normalizeGender = (value) => {
   if (!value) return "";
 
   const text = String(value).trim().toLowerCase();

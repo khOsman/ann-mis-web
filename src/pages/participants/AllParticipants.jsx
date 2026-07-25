@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCohorts, useParticipants } from "../../hooks";
+import { useAuth } from "../../context/AuthContext";
 import { COHORT_STATUS } from "../../constants/status";
+import { ROUTES } from "../../constants/routes";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 
@@ -9,6 +11,7 @@ const TABLE_COLUMN_COUNT = 13;
 
 export default function AllParticipants() {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
 
   const { data: participants, loading } = useParticipants();
   const { data: allCohorts } = useCohorts();
@@ -75,6 +78,16 @@ export default function AllParticipants() {
                 Registered participants from public registration forms.
               </p>
             </div>
+
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.bulkImportParticipants)}
+                className="bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 self-start"
+              >
+                Bulk Import Participants
+              </button>
+            )}
           </div>
 
           <div className="mb-5 flex flex-col md:flex-row gap-3">

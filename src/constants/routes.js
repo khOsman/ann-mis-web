@@ -27,6 +27,7 @@ export const ROUTES = {
   selectionFGDDetails: "/admin/participants/selection/fgds/details/:fgdId",
 
   participants: "/admin/participants",
+  bulkImportParticipants: "/admin/participants/bulk-import",
   projects: "/admin/projects",
   reports: "/admin/reports",
   settings: "/admin/settings",

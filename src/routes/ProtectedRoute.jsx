@@ -6,6 +6,7 @@ export default function ProtectedRoute({
   children,
   permission,
   adminOnly = false,
+  superAdminOnly = false,
   championOnly = false,
 }) {
   const {
@@ -57,6 +58,10 @@ export default function ProtectedRoute({
   }
 
   if (adminOnly && !isAdmin) {
+    return <Navigate to="/access-denied" replace />;
+  }
+
+  if (superAdminOnly && !isSuperAdmin) {
     return <Navigate to="/access-denied" replace />;
   }
 

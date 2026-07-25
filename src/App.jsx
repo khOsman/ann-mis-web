@@ -12,6 +12,7 @@ import FormBuilder from "./pages/forms/FormBuilder";
 import PublicForm from "./pages/public/PublicForm";
 import AllParticipants from "./pages/participants/AllParticipants";
 import ParticipantProfile from "./pages/participants/ParticipantProfile";
+import BulkImportParticipants from "./pages/participants/BulkImportParticipants";
 import AllUsers from "./pages/users/AllUsers";
 import UserProfile from "./pages/users/UserProfile";
 import ReportsDashboard from "./pages/reports/ReportsDashboard";
@@ -261,6 +262,15 @@ export default function App() {
             element={
               <ProtectedRoute permission="participants">
                 <AllParticipants />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.bulkImportParticipants}
+            element={
+              <ProtectedRoute superAdminOnly>
+                <BulkImportParticipants />
               </ProtectedRoute>
             }
           />
