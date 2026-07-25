@@ -399,8 +399,22 @@ export default function CohortFGDs() {
                         {fgd.status || "-"}
                       </td>
 
-                      <td className="px-6 py-5 text-center">
-                        {fgd.committee_members?.length || 0}
+                      <td className="px-6 py-5">
+                        {fgd.committee_members?.length > 0 ? (
+                          <div className="flex flex-wrap justify-center gap-1.5 max-w-[220px] mx-auto">
+                            {fgd.committee_members.map((member) => (
+                              <span
+                                key={member.champion_id}
+                                title={member.email}
+                                className="px-2 py-1 rounded-lg bg-purple-50 text-[var(--ann-purple)] text-xs font-semibold whitespace-nowrap"
+                              >
+                                {member.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-xs text-gray-400">Unassigned</p>
+                        )}
                       </td>
 
                       <td className="px-6 py-5 text-center">
