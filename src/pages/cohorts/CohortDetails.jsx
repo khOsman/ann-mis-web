@@ -1,19 +1,33 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../constants/routes";
 import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import { useCohort } from "../../hooks";
 import ParticipantImportBox from "../../components/cohorts/ParticipantImportBox";
+import {
+  previewCohortDataDeletion,
+  deleteAllCohortData,
+} from "../../services/cohortDataDeletionService";
 
 export default function CohortDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isSuperAdmin } = useAuth();
 
-  const { data: cohort, loading, error,refresh } = useCohort(id);
+  const { data: cohort, loading, error } = useCohort(id);
+
+  const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!loading && !cohort) {
@@ -28,6 +42,46 @@ export default function CohortDetails() {
       showAlert("error", error.message || "Failed to load cohort.");
     }
   }, [error, showAlert]);
+
+  const openDangerZone = async () => {
+    setDangerZoneOpen(true);
+    setLoadingPreview(true);
+
+    try {
+      const data = await previewCohortDataDeletion(id);
+      setPreview(data);
+    } catch (err) {
+      showAlert("error", err.message || "Failed to load delete preview.");
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const closeDangerZone = () => {
+    setDangerZoneOpen(false);
+    setConfirmText("");
+    setPreview(null);
+  };
+
+  const handleDelete = async () => {
+    setShowConfirmDialog(false);
+    setDeleting(true);
+
+    try {
+      const result = await deleteAllCohortData(id);
+
+      showAlert(
+        "success",
+        `Deleted ${result.deletedParticipants} participant(s), ${result.deletedResponses} response(s), ${result.deletedFgds} FGD(s), and ${result.deletedForms} form(s).`
+      );
+
+      closeDangerZone();
+    } catch (err) {
+      showAlert("error", err.message || "Failed to delete cohort data.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";
@@ -169,7 +223,6 @@ export default function CohortDetails() {
         <ParticipantImportBox
           cohort={cohort}
           showAlert={showAlert}
-          onImported={refresh}
         />
 
         <div className="bg-white rounded-2xl border p-6">
@@ -188,7 +241,109 @@ export default function CohortDetails() {
             )}
           </div>
         </div>
+
+        {isSuperAdmin && (
+          <div className="bg-white rounded-2xl border border-red-200 p-6">
+            <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Permanently delete every participant, form response, FGD, and
+              form tied to this cohort (super admin only). The cohort record
+              itself stays, with its stats reset to zero. This cannot be
+              undone.
+            </p>
+
+            {!dangerZoneOpen ? (
+              <button
+                type="button"
+                onClick={openDangerZone}
+                className="border border-red-300 text-red-600 px-5 py-2.5 rounded-xl font-semibold hover:bg-red-50"
+              >
+                Show Delete Options
+              </button>
+            ) : (
+              <div className="space-y-4">
+                {loadingPreview ? (
+                  <p className="text-sm text-gray-500">Loading counts...</p>
+                ) : (
+                  preview && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm bg-red-50 rounded-xl p-4">
+                      <div>
+                        <p className="text-gray-500">Participants</p>
+                        <p className="font-bold text-lg text-red-700">
+                          {preview.participantCount}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Form Responses</p>
+                        <p className="font-bold text-lg text-red-700">
+                          {preview.responseCount}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">FGDs</p>
+                        <p className="font-bold text-lg text-red-700">
+                          {preview.fgdCount}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Forms</p>
+                        <p className="font-bold text-lg text-red-700">
+                          {preview.formCount}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                )}
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Type <span className="font-mono text-red-600">{cohort.cohort_code}</span>{" "}
+                    to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder={cohort.cohort_code}
+                    className="w-full max-w-sm border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-400"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeDangerZone}
+                    className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      confirmText !== cohort.cohort_code || deleting || loadingPreview
+                    }
+                    onClick={() => setShowConfirmDialog(true)}
+                    className="bg-red-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {deleting ? "Deleting..." : "Delete All Participant Data"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </PageContainer>
+
+      <ConfirmDialog
+        open={showConfirmDialog}
+        title={`Delete all data for ${cohort.cohort_code}?`}
+        message={`This will permanently delete ${preview?.participantCount || 0} participant(s), ${preview?.responseCount || 0} form response(s), ${preview?.fgdCount || 0} FGD(s), and ${preview?.formCount || 0} form(s). The cohort record stays but its stats reset to zero. This cannot be undone.`}
+        confirmText="Delete Everything"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setShowConfirmDialog(false)}
+      />
     </AdminLayout>
   );
 }

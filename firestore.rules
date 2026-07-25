@@ -124,8 +124,11 @@ service cloud.firestore {
 
     match /participant_evaluations/{evaluationId} {
       allow read: if isAdmin() || isActiveChampion();
-      // Writes only happen via the backend's Admin SDK (requireActiveChampion
-      // verifies the evaluator is actually assigned to the participant's FGD).
+      allow delete: if isAdmin();
+      // Create/update only happen via the backend's Admin SDK
+      // (requireActiveChampion verifies the evaluator is actually assigned
+      // to the participant's FGD). Delete is allowed directly so a super
+      // admin can bulk-purge a cohort's data from the client.
     }
 
     match /fgd_change_requests/{requestId} {
