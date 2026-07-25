@@ -16,6 +16,7 @@ export const ROUTES = {
   championHome: "/champions",
   champions: "/admin/champions",
   championProfile: "/admin/champions/:championId",
+  selectionCommittee: "/admin/champions/selection-committee",
   selectionFGDs: "/admin/participants/selection/fgds",
   selectionCohortFGDs: "/admin/participants/selection/fgds/:cohortId",
   selectionFGDDetails: "/admin/participants/selection/fgds/details/:fgdId",

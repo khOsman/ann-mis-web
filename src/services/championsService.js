@@ -86,3 +86,19 @@ export const updateChampion = async ({ championId, updates }) => {
     authenticated: true,
   });
 };
+
+export const assignChampionToFGD = async ({ championId, fgdId }) => {
+  return apiClient.post(
+    `/api/champions/${championId}/assign-fgd`,
+    { fgdId },
+    { authenticated: true }
+  );
+};
+
+export const unassignChampionFromFGD = async ({ championId, fgdId }) => {
+  return apiClient.post(
+    `/api/champions/${championId}/unassign-fgd`,
+    { fgdId },
+    { authenticated: true }
+  );
+};

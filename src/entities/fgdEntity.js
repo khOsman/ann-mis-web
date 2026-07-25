@@ -22,6 +22,7 @@ export const createFgdEntity = (overrides = {}) => ({
   session_start_time: "",
   session_end_time: "",
   venue: "",
+  meet_link: "",
 
   // Committee
   committee_members: [],

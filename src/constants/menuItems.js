@@ -140,7 +140,7 @@ export const ADMIN_MENU_ITEMS = [
       },
       {
         label: "Selection Committee",
-        path: `${ROUTES.champions}?role=selection_committee`,
+        path: ROUTES.selectionCommittee,
         icon: List,
         permission: "selection",
       },

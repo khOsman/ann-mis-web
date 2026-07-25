@@ -317,3 +317,10 @@ export const updateFGDParticipant = async (participantId, updates) => {
     updated_at: serverTimestamp(),
   });
 };
+
+export const updateFGDSchedule = async (fgdId, updates) => {
+  await updateDoc(doc(db, COLLECTIONS.FGDS, fgdId), {
+    ...updates,
+    updated_at: serverTimestamp(),
+  });
+};
