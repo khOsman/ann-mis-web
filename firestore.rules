@@ -86,7 +86,8 @@ service cloud.firestore {
             "updated_at"
           ]);
 
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /form_fields/{fieldId} {
@@ -97,18 +98,21 @@ service cloud.firestore {
     match /form_responses/{responseId} {
       allow create: if true;
       allow read: if isActiveUser();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /participants/{participantId} {
       allow create: if true;
       allow read: if isSelectionUser();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /fgds/{fgdId} {
       allow read: if isSelectionUser();
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /champions_pool/{championId} {
@@ -124,11 +128,11 @@ service cloud.firestore {
 
     match /participant_evaluations/{evaluationId} {
       allow read: if isAdmin() || isActiveChampion();
-      allow delete: if isAdmin();
+      allow delete: if isSuperAdmin();
       // Create/update only happen via the backend's Admin SDK
       // (requireActiveChampion verifies the evaluator is actually assigned
-      // to the participant's FGD). Delete is allowed directly so a super
-      // admin can bulk-purge a cohort's data from the client.
+      // to the participant's FGD). Delete is super-admin-only so a regular
+      // admin can't bulk-purge a cohort's data from the client.
     }
 
     match /fgd_change_requests/{requestId} {
