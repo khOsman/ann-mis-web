@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getFormResponseById } from "../../services/registrationService";
-import { useParticipant } from "../../hooks";
+import { useParticipant, useParticipantEvaluations } from "../../hooks";
+import {
+  FEEDBACK_OPTIONS,
+  RECOMMENDATION_OPTIONS,
+  REQUIRED_EVALUATIONS,
+} from "../../constants/evaluation";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -13,6 +18,8 @@ export default function ParticipantProfile() {
   const { showAlert } = useAlert();
 
   const { data: participant, loading } = useParticipant(id);
+  const { data: evaluations, loading: loadingEvaluations } =
+    useParticipantEvaluations(id);
   const [response, setResponse] = useState(null);
 
   // The submitted application response is immutable historical data — a
@@ -215,6 +222,88 @@ export default function ParticipantProfile() {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                Selection Committee Evaluations
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Every committee member's individual evaluation of this participant.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1.5 rounded-full bg-purple-50 text-[var(--ann-purple)] text-xs font-semibold whitespace-nowrap">
+                {participant.evaluation_count || 0} / {REQUIRED_EVALUATIONS} evaluated
+              </span>
+              {participant.average_evaluation_score != null && (
+                <span className="px-3 py-1.5 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold whitespace-nowrap">
+                  Avg. {Number(participant.average_evaluation_score).toFixed(1)} / 10
+                </span>
+              )}
+            </div>
+          </div>
+
+          {loadingEvaluations ? (
+            <p className="text-sm text-gray-500">Loading evaluations...</p>
+          ) : evaluations.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No selection committee member has evaluated this participant yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-gray-100">
+              <table className="w-full min-w-[820px] text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="text-left p-3">Evaluator</th>
+                    <th className="text-center p-3">FGD Score</th>
+                    <th className="text-left p-3">Feedback</th>
+                    <th className="text-left p-3">Recommendation</th>
+                    <th className="text-center p-3">Computed Score</th>
+                    <th className="text-left p-3">Notes</th>
+                    <th className="text-left p-3">Evaluated At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluations.map((evaluation) => (
+                    <tr key={evaluation.id} className="border-t border-gray-100">
+                      <td className="p-3 font-semibold text-gray-800">
+                        {evaluation.evaluator_name || "-"}
+                      </td>
+                      <td className="p-3 text-center">
+                        {evaluation.fgd_score ?? "-"}
+                      </td>
+                      <td className="p-3">
+                        {FEEDBACK_OPTIONS[evaluation.feedback_option]?.label ||
+                          evaluation.feedback_option ||
+                          "-"}
+                      </td>
+                      <td className="p-3">
+                        {RECOMMENDATION_OPTIONS[evaluation.recommendation_option]
+                          ?.label ||
+                          evaluation.recommendation_option ||
+                          "-"}
+                      </td>
+                      <td className="p-3 text-center font-semibold text-[var(--ann-purple)]">
+                        {evaluation.computed_score != null
+                          ? Number(evaluation.computed_score).toFixed(1)
+                          : "-"}
+                      </td>
+                      <td className="p-3 text-gray-600 max-w-[220px]">
+                        {evaluation.notes || "-"}
+                      </td>
+                      <td className="p-3 text-gray-500 whitespace-nowrap">
+                        {formatDate(evaluation.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </PageContainer>
     </AdminLayout>
