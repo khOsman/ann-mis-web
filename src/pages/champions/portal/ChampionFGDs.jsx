@@ -16,6 +16,7 @@ import {
   ATTENDANCE_OPTIONS,
 } from "../../../constants/evaluation";
 import { ensureHttpUrl } from "../../../utils/url";
+import { formatTimeRangeBDT } from "../../../utils/time";
 
 function EvaluationModal({ target, onClose, onSaved }) {
   const { showAlert } = useAlert();
@@ -317,9 +318,8 @@ export default function ChampionFGDs() {
                   <div>
                     <p className="text-gray-500">Time</p>
                     <p className="font-semibold">
-                      {fgd.session_start_time && fgd.session_end_time
-                        ? `${fgd.session_start_time} - ${fgd.session_end_time}`
-                        : "Not set"}
+                      {formatTimeRangeBDT(fgd.session_start_time, fgd.session_end_time) ||
+                        "Not set"}
                     </p>
                   </div>
                   <div>

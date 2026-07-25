@@ -13,6 +13,7 @@ import {
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 import { ensureHttpUrl } from "../../../utils/url";
+import { formatTimeRangeBDT } from "../../../utils/time";
 
 
 export default function FGDDetails() {
@@ -341,9 +342,8 @@ export default function FGDDetails() {
               <div>
                 <p className="text-gray-500">Time</p>
                 <p className="font-semibold">
-                  {fgd.session_start_time && fgd.session_end_time
-                    ? `${fgd.session_start_time} - ${fgd.session_end_time}`
-                    : "Not set"}
+                  {formatTimeRangeBDT(fgd.session_start_time, fgd.session_end_time) ||
+                    "Not set"}
                 </p>
               </div>
 
