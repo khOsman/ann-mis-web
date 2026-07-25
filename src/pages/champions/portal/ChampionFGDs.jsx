@@ -15,6 +15,7 @@ import {
   RECOMMENDATION_OPTIONS,
   ATTENDANCE_OPTIONS,
 } from "../../../constants/evaluation";
+import { ensureHttpUrl } from "../../../utils/url";
 
 function EvaluationModal({ target, onClose, onSaved }) {
   const { showAlert } = useAlert();
@@ -329,9 +330,9 @@ export default function ChampionFGDs() {
                     <p className="text-gray-500">Google Meet</p>
                     {fgd.meet_link ? (
                       <a
-                        href={fgd.meet_link}
+                        href={ensureHttpUrl(fgd.meet_link)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="font-semibold text-[var(--ann-pink)] hover:underline break-all"
                       >
                         Join Meet

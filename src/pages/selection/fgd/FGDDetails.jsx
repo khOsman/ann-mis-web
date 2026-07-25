@@ -12,6 +12,7 @@ import {
 } from "../../../services/championsService";
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
+import { ensureHttpUrl } from "../../../utils/url";
 
 
 export default function FGDDetails() {
@@ -355,9 +356,9 @@ export default function FGDDetails() {
                 <p className="text-gray-500">Google Meet Link</p>
                 {fgd.meet_link ? (
                   <a
-                    href={fgd.meet_link}
+                    href={ensureHttpUrl(fgd.meet_link)}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="font-semibold text-[var(--ann-pink)] hover:underline break-all"
                   >
                     {fgd.meet_link}
