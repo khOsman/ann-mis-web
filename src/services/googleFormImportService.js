@@ -35,14 +35,28 @@ export const parseWorkbookFile = (file) => {
       return;
     }
 
+    const isCsv = /\.csv$/i.test(file.name) || file.type === "text/csv";
     const reader = new FileReader();
 
     reader.onerror = () => reject(new Error("Failed to read the file."));
 
     reader.onload = (event) => {
       try {
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
+        let workbook;
+
+        if (isCsv) {
+          // A raw CSV carries no charset metadata the way XLSX's internal
+          // XML does — letting XLSX guess the byte encoding of the array
+          // buffer mangles non-Latin scripts (Bengali becomes "à¦...à¦"
+          // mojibake). Decode explicitly as UTF-8 text first instead.
+          let text = new TextDecoder("utf-8").decode(event.target.result);
+          if (text.charCodeAt(0) === 0xfeff) text = text.slice(1); // strip BOM if present
+          workbook = XLSX.read(text, { type: "string" });
+        } else {
+          const data = new Uint8Array(event.target.result);
+          workbook = XLSX.read(data, { type: "array" });
+        }
+
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
