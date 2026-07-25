@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCohorts, useParticipants } from "../../hooks";
 import { useAuth } from "../../context/AuthContext";
@@ -8,6 +8,7 @@ import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 
 const TABLE_COLUMN_COUNT = 13;
+const PAGE_SIZE = 50;
 
 export default function AllParticipants() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function AllParticipants() {
 
   const [search, setSearch] = useState("");
   const [cohortFilter, setCohortFilter] = useState("");
+  const [page, setPage] = useState(1);
 
   const filteredParticipants = useMemo(() => {
     const keyword = search.toLowerCase();
@@ -42,6 +44,18 @@ export default function AllParticipants() {
       );
     });
   }, [participants, search, cohortFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, cohortFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredParticipants.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const paginatedParticipants = filteredParticipants.slice(
+    pageStart,
+    pageStart + PAGE_SIZE
+  );
 
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";
@@ -152,12 +166,12 @@ export default function AllParticipants() {
                     </td>
                   </tr>
                 ) : (
-                  filteredParticipants.map((participant, index) => (
+                  paginatedParticipants.map((participant, index) => (
                     <tr
                       key={participant.id}
                       className="border-t border-gray-100"
                     >
-                      <td className="p-4 text-gray-500">{index + 1}</td>
+                      <td className="p-4 text-gray-500">{pageStart + index + 1}</td>
 
                       <td className="p-4">
                         <span className="font-mono text-xs font-bold text-[var(--ann-purple)]">
@@ -223,6 +237,40 @@ export default function AllParticipants() {
               </tbody>
             </table>
           </div>
+
+          {!loading && filteredParticipants.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+              <p className="text-sm text-gray-500">
+                Showing {pageStart + 1}–
+                {Math.min(pageStart + PAGE_SIZE, filteredParticipants.length)} of{" "}
+                {filteredParticipants.length}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-700"
+                >
+                  Previous
+                </button>
+
+                <span className="text-sm text-gray-500 px-2">
+                  Page {safePage} of {pageCount}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={safePage >= pageCount}
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-700"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </PageContainer>
     </AdminLayout>
