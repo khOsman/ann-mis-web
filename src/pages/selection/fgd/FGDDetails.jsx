@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
 import { useFGD } from "../../../hooks";
 import { updateFGDSchedule } from "../../../services/fgdService";
+import {
+  assignChampionToFGD,
+  getChampions,
+  unassignChampionFromFGD,
+} from "../../../services/championsService";
+import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 
 
@@ -16,7 +22,107 @@ export default function FGDDetails() {
   const [scheduleForm, setScheduleForm] = useState(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
 
+  const [activeCommittee, setActiveCommittee] = useState([]);
+  const [loadingCommittee, setLoadingCommittee] = useState(false);
+  const [committeeSearch, setCommitteeSearch] = useState("");
+  const [selectedChampionIds, setSelectedChampionIds] = useState([]);
+  const [assigningMembers, setAssigningMembers] = useState(false);
+
   const { fgd, participants, loading, error, refresh } = useFGD(fgdId);
+
+  const fetchActiveCommittee = async () => {
+    setLoadingCommittee(true);
+
+    try {
+      const data = await getChampions();
+
+      setActiveCommittee(
+        data.filter(
+          (champion) =>
+            champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+            champion.member_status === MEMBER_STATUS.ACTIVE
+        )
+      );
+    } catch (err) {
+      showAlert("error", err.message || "Failed to load committee members.");
+    } finally {
+      setLoadingCommittee(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActiveCommittee();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const assignedChampionIds = useMemo(
+    () => new Set((fgd?.committee_members || []).map((member) => member.champion_id)),
+    [fgd]
+  );
+
+  const assignableCommittee = useMemo(() => {
+    const keyword = committeeSearch.trim().toLowerCase();
+
+    return activeCommittee.filter((champion) => {
+      if (assignedChampionIds.has(champion.id)) return false;
+      if (!keyword) return true;
+      return champion.name?.toLowerCase().includes(keyword);
+    });
+  }, [activeCommittee, assignedChampionIds, committeeSearch]);
+
+  const toggleSelected = (championId) => {
+    setSelectedChampionIds((prev) =>
+      prev.includes(championId)
+        ? prev.filter((id) => id !== championId)
+        : [...prev, championId]
+    );
+  };
+
+  const handleAssignSelected = async () => {
+    if (selectedChampionIds.length === 0) {
+      showAlert("error", "Select at least one committee member to assign.");
+      return;
+    }
+
+    setAssigningMembers(true);
+
+    try {
+      const results = await Promise.allSettled(
+        selectedChampionIds.map((championId) =>
+          assignChampionToFGD({ championId, fgdId })
+        )
+      );
+
+      const failed = results.filter((result) => result.status === "rejected");
+
+      if (failed.length > 0) {
+        showAlert(
+          "error",
+          `${failed.length} of ${selectedChampionIds.length} assignment(s) failed.`
+        );
+      } else {
+        showAlert(
+          "success",
+          `${selectedChampionIds.length} committee member(s) assigned. Notification emails sent.`
+        );
+      }
+
+      setSelectedChampionIds([]);
+      await Promise.all([refresh(), fetchActiveCommittee()]);
+    } finally {
+      setAssigningMembers(false);
+    }
+  };
+
+  const handleRemoveMember = async (championId) => {
+    try {
+      await unassignChampionFromFGD({ championId, fgdId });
+      showAlert("success", "Committee member removed from this FGD.");
+      await Promise.all([refresh(), fetchActiveCommittee()]);
+    } catch (err) {
+      showAlert("error", err.message || "Failed to remove committee member.");
+    }
+  };
 
   const startEditSchedule = () => {
     setScheduleForm({
@@ -293,21 +399,24 @@ export default function FGDDetails() {
             Selection Committee Members
           </h3>
 
-          <p className="text-sm text-gray-500 mt-1">
-            Assign committee members from the{" "}
-            <span className="font-semibold">Champions → Selection Committee</span>{" "}
-            page.
-          </p>
-
           {fgd.committee_members?.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-3">
               {fgd.committee_members.map((member) => (
                 <div
                   key={member.champion_id}
-                  className="border border-gray-200 rounded-xl px-4 py-2 text-sm"
+                  className="border border-gray-200 rounded-xl px-4 py-2 text-sm flex items-center gap-3"
                 >
-                  <p className="font-semibold">{member.name}</p>
-                  <p className="text-xs text-gray-500">{member.email}</p>
+                  <div>
+                    <p className="font-semibold">{member.name}</p>
+                    <p className="text-xs text-gray-500">{member.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveMember(member.champion_id)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Remove
+                  </button>
                 </div>
               ))}
             </div>
@@ -316,6 +425,67 @@ export default function FGDDetails() {
               No committee members assigned yet.
             </p>
           )}
+
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <h4 className="text-sm font-bold text-gray-700">
+              Assign Active Committee Members
+            </h4>
+
+            <input
+              type="text"
+              value={committeeSearch}
+              onChange={(e) => setCommitteeSearch(e.target.value)}
+              placeholder="Search by name..."
+              className="mt-3 w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+            />
+
+            {loadingCommittee ? (
+              <p className="text-sm text-gray-500 mt-4">
+                Loading active committee members...
+              </p>
+            ) : assignableCommittee.length === 0 ? (
+              <p className="text-sm text-gray-500 mt-4">
+                No matching active committee members available.
+              </p>
+            ) : (
+              <div className="mt-4 max-h-64 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-100">
+                {assignableCommittee.map((champion) => (
+                  <label
+                    key={champion.id}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedChampionIds.includes(champion.id)}
+                      onChange={() => toggleSelected(champion.id)}
+                      className="accent-[var(--ann-pink)]"
+                    />
+                    <div>
+                      <p className="font-semibold">{champion.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {champion.champion_code} • {champion.email}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={assigningMembers || selectedChampionIds.length === 0}
+              onClick={handleAssignSelected}
+              className="mt-4 bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-50"
+            >
+              {assigningMembers
+                ? "Assigning..."
+                : `Assign Selected${
+                    selectedChampionIds.length > 0
+                      ? ` (${selectedChampionIds.length})`
+                      : ""
+                  }`}
+            </button>
+          </div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
