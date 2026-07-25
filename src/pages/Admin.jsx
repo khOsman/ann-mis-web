@@ -138,6 +138,8 @@ export default function Admin() {
                     <th className="text-left p-4">Cohort</th>
                     <th className="text-left p-4">Registrations</th>
                     <th className="text-left p-4">Selected</th>
+                    <th className="text-left p-4">Enrolled</th>
+                    <th className="text-left p-4">Graduated</th>
                     <th className="text-left p-4">Status</th>
                   </tr>
                 </thead>
@@ -145,7 +147,7 @@ export default function Admin() {
                 <tbody>
                   {activeCohorts.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="p-6 text-center text-gray-500">
+                      <td colSpan="6" className="p-6 text-center text-gray-500">
                         No active cohort found.
                       </td>
                     </tr>
@@ -164,6 +166,8 @@ export default function Admin() {
                         </td>
                         <td className="p-4 text-gray-600">{cohort.total_registrations || 0}</td>
                         <td className="p-4 text-gray-600">{cohort.total_selected || 0}</td>
+                        <td className="p-4 text-gray-600">{cohort.total_enrolled || 0}</td>
+                        <td className="p-4 text-gray-600">{cohort.total_graduated || 0}</td>
                         <td className="p-4">
                           <span className="px-3 py-1 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold">
                             {cohort.status || "Draft"}
