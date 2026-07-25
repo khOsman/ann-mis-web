@@ -9,6 +9,7 @@ import {
   buildImportPreview,
   runImport,
 } from "../../services/googleFormImportService";
+import { formatBDPhone } from "../../utils/phone";
 
 export default function BulkImportParticipants() {
   const navigate = useNavigate();
@@ -219,7 +220,7 @@ export default function BulkImportParticipants() {
                         >
                           <td className="p-3 font-semibold">{row.name || "-"}</td>
                           <td className="p-3">{row.email || "-"}</td>
-                          <td className="p-3">{row.phone || "-"}</td>
+                          <td className="p-3">{formatBDPhone(row.phone) || "-"}</td>
                           <td className="p-3">{row.gender || "-"}</td>
                           <td className="p-3">{row.institution || "-"}</td>
                           <td className="p-3">

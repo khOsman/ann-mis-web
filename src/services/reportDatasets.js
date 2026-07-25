@@ -1,5 +1,6 @@
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
+import { formatBDPhone } from "../utils/phone";
 
 const formatTimestamp = (value) => {
   if (!value?.toDate) return value || "";
@@ -68,7 +69,7 @@ export const getParticipantMasterDataset = async () => {
 
       participant_code: participant.participant_code || "",
       name: participant.name || "",
-      phone: participant.phone || "",
+      phone: formatBDPhone(participant.phone),
       email: participant.email || "",
       gender: participant.gender || "",
       date_of_birth: participant.date_of_birth || "",

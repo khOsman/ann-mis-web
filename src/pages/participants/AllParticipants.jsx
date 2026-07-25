@@ -6,6 +6,7 @@ import { COHORT_STATUS } from "../../constants/status";
 import { ROUTES } from "../../constants/routes";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
+import { formatBDPhone } from "../../utils/phone";
 
 const TABLE_COLUMN_COUNT = 13;
 const PAGE_SIZE = 50;
@@ -191,7 +192,7 @@ export default function AllParticipants() {
                       </td>
 
                       <td className="p-4 text-gray-600">
-                        {participant.phone || "-"}
+                        {formatBDPhone(participant.phone) || "-"}
                       </td>
 
                       <td className="p-4 text-gray-600">

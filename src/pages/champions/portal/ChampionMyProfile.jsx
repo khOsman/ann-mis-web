@@ -6,6 +6,7 @@ import { useAlert } from "../../../context/AlertContext";
 import { useChampions } from "../../../hooks";
 import { updateMyProfile } from "../../../services/championPortalService";
 import { GENDER_OPTIONS, EDUCATION_LEVEL_OPTIONS } from "../../../constants/champions";
+import { formatBDPhone } from "../../../utils/phone";
 
 const PERSONAL_FIELDS = [
   ["name", "Full Name", "text"],
@@ -200,7 +201,7 @@ export default function ChampionMyProfile() {
               ) : (
                 <div className="grid md:grid-cols-3 gap-6 p-6">
                   <Info label="Full Name" value={champion?.name} />
-                  <Info label="Phone" value={champion?.phone} />
+                  <Info label="Phone" value={formatBDPhone(champion?.phone)} />
                   <Info label="Date of Birth" value={champion?.date_of_birth} />
                   <Info label="Gender" value={champion?.gender} />
                   <Info label="Address" value={champion?.address} />

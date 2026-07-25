@@ -13,6 +13,7 @@ import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
+import { formatBDPhone } from "../../../utils/phone";
 
 
 export default function FGDDetails() {
@@ -508,7 +509,7 @@ export default function FGDDetails() {
                       <td className="p-4 font-semibold">
                         {participant.name || "-"}
                       </td>
-                      <td className="p-4">0{participant.phone || "-"}</td>
+                      <td className="p-4">{formatBDPhone(participant.phone) || "-"}</td>
                       <td className="p-4">
                         {participant.institution || "-"}
                       </td>

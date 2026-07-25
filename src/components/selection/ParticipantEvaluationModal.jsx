@@ -3,6 +3,7 @@ import { auth } from "../../firebase";
 import { useAlert } from "../../context/AlertContext";
 import { updateFGDParticipant } from "../../services/fgdService";
 import { FGD_ATTENDANCE_STATUS } from "../../constants/fgd";
+import { formatBDPhone } from "../../utils/phone";
 
 export default function ParticipantEvaluationModal({
   open,
@@ -133,7 +134,7 @@ export default function ParticipantEvaluationModal({
             <div>
               <p className="text-xs text-gray-500">Phone</p>
               <p className="font-semibold">
-                {participant.phone || "-"}
+                {formatBDPhone(participant.phone) || "-"}
               </p>
             </div>
 

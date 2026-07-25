@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useChampions } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
 import { formatTimeRangeBDT } from "../../utils/time";
+import { formatBDPhone } from "../../utils/phone";
 import {
   ACCOUNT_STATUS,
   ACCOUNT_STATUS_OPTIONS,
@@ -423,7 +424,7 @@ export default function ChampionProfile() {
 
                 <div className="grid md:grid-cols-2 gap-6 p-6">
                   <Info label="Email" value={champion.email} />
-                  <Info label="Phone" value={champion.phone} />
+                  <Info label="Phone" value={formatBDPhone(champion.phone)} />
                   <Info label="Institution" value={champion.institution} />
                   <Info label="Date of Birth" value={champion.date_of_birth} />
                   <Info label="Address" value={champion.address} />

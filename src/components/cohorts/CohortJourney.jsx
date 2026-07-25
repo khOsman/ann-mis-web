@@ -4,6 +4,7 @@ import { useForms, useFormFields, useFGDsByCohort, useParticipants } from "../..
 import { ROUTES } from "../../constants/routes";
 import { ENROLLMENT_STATUS, GRADUATION_STATUS } from "../../constants/status";
 import { exportCSV, exportExcel, exportFormFieldsPDF } from "../../services/exportService";
+import { formatBDPhone } from "../../utils/phone";
 
 const PARTICIPANT_COLUMNS = [
   { key: "participant_code", label: "Participant Code" },
@@ -14,11 +15,17 @@ const PARTICIPANT_COLUMNS = [
   { key: "institution", label: "Institution" },
 ];
 
-const ParticipantTable = ({ participants, loading, sourceLabel }) => (
+const ParticipantTable = ({ participants, loading, sourceLabel }) => {
+  const displayParticipants = useMemo(
+    () => participants.map((p) => ({ ...p, phone: formatBDPhone(p.phone) })),
+    [participants]
+  );
+
+  return (
   <div>
     {loading ? (
       <p className="text-sm text-gray-500 py-4">Loading participants...</p>
-    ) : participants.length === 0 ? (
+    ) : displayParticipants.length === 0 ? (
       <p className="text-sm text-gray-500 py-4">No participants found.</p>
     ) : (
       <>
@@ -26,7 +33,7 @@ const ParticipantTable = ({ participants, loading, sourceLabel }) => (
           <button
             type="button"
             onClick={() =>
-              exportCSV({ rows: participants, columns: PARTICIPANT_COLUMNS, sourceLabel })
+              exportCSV({ rows: displayParticipants, columns: PARTICIPANT_COLUMNS, sourceLabel })
             }
             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
           >
@@ -35,7 +42,7 @@ const ParticipantTable = ({ participants, loading, sourceLabel }) => (
           <button
             type="button"
             onClick={() =>
-              exportExcel({ rows: participants, columns: PARTICIPANT_COLUMNS, sourceLabel })
+              exportExcel({ rows: displayParticipants, columns: PARTICIPANT_COLUMNS, sourceLabel })
             }
             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
           >
@@ -55,7 +62,7 @@ const ParticipantTable = ({ participants, loading, sourceLabel }) => (
               </tr>
             </thead>
             <tbody>
-              {participants.map((participant) => (
+              {displayParticipants.map((participant) => (
                 <tr key={participant.id} className="border-t border-gray-100">
                   {PARTICIPANT_COLUMNS.map((col) => (
                     <td key={col.key} className="p-3 text-gray-700">
@@ -70,7 +77,8 @@ const ParticipantTable = ({ participants, loading, sourceLabel }) => (
       </>
     )}
   </div>
-);
+  );
+};
 
 const RegistrationFormSection = ({ cohort }) => {
   const { data: allForms, loading: loadingForms } = useForms();

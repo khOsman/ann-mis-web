@@ -5,6 +5,7 @@ import { useParticipant } from "../../hooks";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { formatBDPhone } from "../../utils/phone";
 
 export default function ParticipantProfile() {
   const { id } = useParams();
@@ -144,7 +145,7 @@ export default function ParticipantProfile() {
               <div>
                 <p className="text-gray-500">Phone</p>
                 <p className="font-semibold text-gray-800">
-                  {participant.phone || "-"}
+                  {formatBDPhone(participant.phone) || "-"}
                 </p>
               </div>
 
