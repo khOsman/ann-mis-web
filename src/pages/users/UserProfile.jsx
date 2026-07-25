@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
-import { getUserById, updateUser } from "../../services/userService";
+import { updateUser } from "../../services/userService";
+import { useUser } from "../../hooks";
 import {
   getPermissionsByRole,
   USER_ROLES,
@@ -15,42 +16,36 @@ export default function UserProfile() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
-  const [loading, setLoading] = useState(true);
+  const { data: userData, loading } = useUser(userId);
   const [saving, setSaving] = useState(false);
 
-  const [userData, setUserData] = useState(null);
   const [form, setForm] = useState({
     role: "",
     status: "",
     permissions: {},
   });
 
+  // Seed the editable form once when the doc first loads (or when
+  // navigating to a different user) — not on every subsequent live update,
+  // so an admin's in-progress edits aren't clobbered by someone else's write.
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const data = await getUserById(userId);
+    if (!userData) return;
 
-        if (!data) {
-          showAlert("error", "User not found.");
-          navigate("/admin/users");
-          return;
-        }
+    setForm({
+      role: userData.role || USER_ROLES.PENDING,
+      status: userData.status || USER_STATUSES.PENDING,
+      permissions: userData.permissions || getPermissionsByRole(userData.role),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.id]);
 
-        setUserData(data);
-        setForm({
-          role: data.role || USER_ROLES.PENDING,
-          status: data.status || USER_STATUSES.PENDING,
-          permissions: data.permissions || getPermissionsByRole(data.role),
-        });
-      } catch (error) {
-        showAlert("error", error.message || "Failed to load user.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [userId]);
+  useEffect(() => {
+    if (!loading && !userData) {
+      showAlert("error", "User not found.");
+      navigate("/admin/users");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, userData]);
 
   const handleRoleChange = (role) => {
     setForm((prev) => ({

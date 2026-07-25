@@ -18,12 +18,8 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
-  query,
   serverTimestamp,
   updateDoc,
-  where,
 } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
 import { GripVertical, Trash2 } from "lucide-react";
@@ -34,6 +30,7 @@ import { useAlert } from "../../context/AlertContext";
 import { FIELD_TYPES } from "../../constants/fieldTypes";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { isSlugAvailable } from "../../services/formService";
+import { useForm as useFormDoc, useFormFields } from "../../hooks";
 
 function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -89,8 +86,20 @@ export default function FormBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const [formMeta, setFormMeta] = useState(null);
+
+  const { data: formMeta } = useFormDoc(id);
+  const { data: liveFields } = useFormFields(id);
+
+  // Local mirror of the live fields, kept in sync via the effect below.
+  // Kept local (rather than rendering `liveFields` directly) so drag reorder
+  // and text-input edits can update instantly without waiting on a Firestore
+  // round-trip + listener echo — the live data reconciles it moments later.
   const [fields, setFields] = useState([]);
+
+  useEffect(() => {
+    setFields(liveFields);
+  }, [liveFields]);
+
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -101,37 +110,6 @@ export default function FormBuilder() {
     () => fields.find((field) => field.id === selectedFieldId),
     [fields, selectedFieldId]
   );
-
-  const fetchFormMeta = async () => {
-  const formRef = doc(db, "forms", id);
-  const formSnap = await getDoc(formRef);
-
-    if (formSnap.exists()) {
-        setFormMeta({
-        id: formSnap.id,
-        ...formSnap.data(),
-        });
-    }
-    };
-
-  const fetchFields = async () => {
-    const q = query(collection(db, "form_fields"), where("form_id", "==", id));
-    const snapshot = await getDocs(q);
-
-    const data = snapshot.docs
-      .map((item) => ({
-        id: item.id,
-        ...item.data(),
-      }))
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    setFields(data);
-  };
-
-  useEffect(() => {
-    fetchFormMeta();
-    fetchFields();
-    }, [id]);
 
   const handleAddField = async (fieldType) => {
     setSaving(true);
@@ -167,7 +145,8 @@ export default function FormBuilder() {
       });
 
       showAlert("success", `${fieldType.label} field added.`);
-      await fetchFields();
+      // No manual refetch — the live listener picks up the new field
+      // automatically, briefly rendering "Select a field..." until it does.
       setSelectedFieldId(docRef.id);
     } catch (error) {
       showAlert("error", error.message || "Failed to add field.");
@@ -194,7 +173,7 @@ export default function FormBuilder() {
       await deleteDoc(doc(db, "form_fields", fieldId));
       showAlert("success", "Field removed successfully.");
       setSelectedFieldId(null);
-      fetchFields();
+      // No manual refetch needed — the live listener updates `fields` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to delete field.");
     }
@@ -230,7 +209,7 @@ export default function FormBuilder() {
       showAlert("success", "Field order updated.");
     } catch (error) {
       showAlert("error", error.message || "Failed to update field order.");
-      fetchFields();
+      setFields(liveFields); // roll back the optimistic reorder to the live truth
     }
   };
 
@@ -327,15 +306,24 @@ export default function FormBuilder() {
         updated_at: serverTimestamp(),
         });
 
-        setFormMeta((prev) => ({
-        ...prev,
-        status: nextStatus,
-        }));
-
         showAlert("success", `Form status updated to ${nextStatus}.`);
     } catch (error) {
         showAlert("error", error.message || "Failed to update form status.");
     }
+    };
+
+    // Was called by the Description editors below but never defined —
+    // editing a form's description in the Builder threw a ReferenceError.
+    // Matches the sibling handlers' pattern (direct write, live doc reflects it).
+    const handleUpdateForm = async (updates) => {
+      try {
+        await updateDoc(doc(db, "forms", id), {
+          ...updates,
+          updated_at: serverTimestamp(),
+        });
+      } catch (error) {
+        showAlert("error", error.message || "Failed to update form.");
+      }
     };
 
     const handleUseDefaultBanner = async () => {
@@ -346,13 +334,6 @@ export default function FormBuilder() {
       banner_file_name: "",
       updated_at: serverTimestamp(),
     });
-
-    setFormMeta((prev) => ({
-      ...prev,
-      banner_type: "default",
-      banner_url: "/default-form-banner.png",
-      banner_file_name: "",
-    }));
 
     showAlert("success", "Default banner applied.");
   } catch (error) {
@@ -368,13 +349,6 @@ const handleBannerUrlChange = async (url) => {
       banner_file_name: "",
       updated_at: serverTimestamp(),
     });
-
-    setFormMeta((prev) => ({
-      ...prev,
-      banner_type: "custom",
-      banner_url: url,
-      banner_file_name: "",
-    }));
 
     showAlert("success", "Custom banner URL saved.");
   } catch (error) {

@@ -26,13 +26,15 @@ export const createCohortRecord = async (payload) => {
   return ref.id;
 };
 
-export const getCohorts = async () => {
-  const q = query(
-    collection(db, COLLECTIONS.COHORTS),
-    orderBy("created_at", "desc")
-  );
+// Query-builder — the query shape lives here once, shared by the one-time
+// getter below and the live-updating useCohorts() hook.
+export const cohortsQuery = () =>
+  query(collection(db, COLLECTIONS.COHORTS), orderBy("created_at", "desc"));
 
-  const snapshot = await getDocs(q);
+export const cohortDocRef = (cohortId) => doc(db, COLLECTIONS.COHORTS, cohortId);
+
+export const getCohorts = async () => {
+  const snapshot = await getDocs(cohortsQuery());
 
   return snapshot.docs.map((item) => ({
     id: item.id,

@@ -48,7 +48,6 @@ export default function ChampionProfile() {
     data: champion,
     loading,
     error,
-    refresh,
   } = useChampions(championId);
 
   const handleApprove = async () => {
@@ -63,7 +62,7 @@ export default function ChampionProfile() {
       await approveChampion({ championId, role: selectedRole });
 
       showAlert("success", "Champion approved successfully.");
-      await refresh();
+      // No manual refetch needed — the live listener updates `champion` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to approve champion.");
     } finally {
@@ -81,7 +80,7 @@ export default function ChampionProfile() {
       await rejectChampion({ championId, rejectionReason });
 
       showAlert("success", "Champion rejected.");
-      await refresh();
+      // No manual refetch needed — the live listener updates `champion` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to reject champion.");
     } finally {
@@ -99,8 +98,7 @@ export default function ChampionProfile() {
         "success",
         "Invitation email sent. The Champion can set their password from the link."
       );
-
-      await refresh();
+      // No manual refetch needed — the live listener updates `champion` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to send invitation.");
     } finally {
@@ -115,7 +113,7 @@ export default function ChampionProfile() {
       await activateChampionMember({ championId });
 
       showAlert("success", "Champion activated.");
-      await refresh();
+      // No manual refetch needed — the live listener updates `champion` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to activate champion.");
     } finally {
@@ -152,7 +150,7 @@ export default function ChampionProfile() {
 
       showAlert("success", "Champion updated successfully.");
       setEditing(false);
-      await refresh();
+      // No manual refetch needed — the live listener updates `champion` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to update champion.");
     } finally {

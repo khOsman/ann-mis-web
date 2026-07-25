@@ -56,14 +56,17 @@ export const distributeParticipantsIntoFGDGroups = (participants, limit) => {
   return groups;
 };
 
-export const getFGDsByCohort = async (cohortId) => {
-  const q = query(
+export const fgdsByCohortQuery = (cohortId) =>
+  query(
     collection(db, COLLECTIONS.FGDS),
     where("cohort_id", "==", cohortId),
     orderBy("sequence_no", "asc")
   );
 
-  const snapshot = await getDocs(q);
+export const fgdDocRef = (fgdId) => doc(db, COLLECTIONS.FGDS, fgdId);
+
+export const getFGDsByCohort = async (cohortId) => {
+  const snapshot = await getDocs(fgdsByCohortQuery(cohortId));
 
   return snapshot.docs.map((item) => ({
     id: item.id,
@@ -72,7 +75,7 @@ export const getFGDsByCohort = async (cohortId) => {
 };
 
 export const getFGDById = async (fgdId) => {
-  const snapshot = await getDoc(doc(db, COLLECTIONS.FGDS, fgdId));
+  const snapshot = await getDoc(fgdDocRef(fgdId));
 
   if (!snapshot.exists()) {
     throw new Error("FGD not found.");
@@ -295,13 +298,14 @@ export const regenerateFGDsForCohort = async ({
   });
 };
 
-export const getParticipantsByFGD = async (fgdId) => {
-  const q = query(
-    collection(db, COLLECTIONS.PARTICIPANTS),
-    where("fgd_id", "==", fgdId)
-  );
+// No orderBy here — combining orderBy(field) with where() filters makes
+// Firestore silently drop any document missing that field entirely. Sorted
+// client-side instead (see generateFGDsForCohort for the same reasoning).
+export const participantsByFGDQuery = (fgdId) =>
+  query(collection(db, COLLECTIONS.PARTICIPANTS), where("fgd_id", "==", fgdId));
 
-  const snapshot = await getDocs(q);
+export const getParticipantsByFGD = async (fgdId) => {
+  const snapshot = await getDocs(participantsByFGDQuery(fgdId));
 
   return snapshot.docs
     .map((item) => ({

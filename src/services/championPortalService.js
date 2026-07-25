@@ -3,13 +3,14 @@ import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { apiClient } from "./apiClient";
 
-export const getPendingFGDChangeRequests = async () => {
-  const q = query(
+export const pendingFGDChangeRequestsQuery = () =>
+  query(
     collection(db, COLLECTIONS.FGD_CHANGE_REQUESTS),
     where("status", "==", "Pending")
   );
 
-  const snapshot = await getDocs(q);
+export const getPendingFGDChangeRequests = async () => {
+  const snapshot = await getDocs(pendingFGDChangeRequestsQuery());
 
   return snapshot.docs
     .map((item) => ({ id: item.id, ...item.data() }))

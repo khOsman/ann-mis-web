@@ -11,13 +11,13 @@ import {
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 
-export const getUsers = async () => {
-  const q = query(
-    collection(db, COLLECTIONS.USERS),
-    orderBy("created_at", "desc")
-  );
+export const usersQuery = () =>
+  query(collection(db, COLLECTIONS.USERS), orderBy("created_at", "desc"));
 
-  const snapshot = await getDocs(q);
+export const userDocRef = (userId) => doc(db, COLLECTIONS.USERS, userId);
+
+export const getUsers = async () => {
+  const snapshot = await getDocs(usersQuery());
 
   return snapshot.docs.map((item) => ({
     id: item.id,

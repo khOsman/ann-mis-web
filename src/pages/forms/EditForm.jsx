@@ -1,18 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { useAlert } from "../../context/AlertContext";
+import { useCohorts, useForm as useFormDoc } from "../../hooks";
 import { isSlugAvailable, normalizeSlug } from "../../services/formService";
 
 export default function EditForm() {
@@ -20,8 +14,13 @@ export default function EditForm() {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
 
-  const [cohorts, setCohorts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: allCohorts } = useCohorts();
+  const cohorts = useMemo(
+    () => allCohorts.filter((item) => item.status === "Active"),
+    [allCohorts]
+  );
+
+  const { data: formDoc, loading } = useFormDoc(id);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
@@ -37,55 +36,34 @@ export default function EditForm() {
     banner_file_name: "",
   });
 
+  // Seed the editable draft once when the doc first loads (or when
+  // navigating to a different form) — not on every subsequent live update,
+  // so in-progress edits aren't clobbered by someone else's write.
   useEffect(() => {
-    const fetchCohorts = async () => {
-      const snapshot = await getDocs(collection(db, "cohorts"));
+    if (!formDoc) return;
 
-      const data = snapshot.docs
-        .map((item) => ({ id: item.id, ...item.data() }))
-        .filter((item) => item.is_deleted !== true && item.status === "Active");
-
-      setCohorts(data);
-    };
-
-    const fetchForm = async () => {
-      setLoading(true);
-
-      try {
-        const snap = await getDoc(doc(db, "forms", id));
-
-        if (!snap.exists()) {
-          showAlert("error", "Form not found.");
-          navigate("/admin/forms");
-          return;
-        }
-
-        const data = snap.data();
-
-        setForm({
-          form_title: data.form_title || "",
-          description_en: data.description_en || "",
-          description_bn: data.description_bn || "",
-          cohort_id: data.cohort_id || "",
-          form_type: data.form_type || "registration",
-          status: data.status || "Draft",
-          public_slug: data.public_slug || "",
-          banner_type: data.banner_type || "default",
-          banner_url: data.banner_url || "/default-form-banner.png",
-          banner_file_name: data.banner_file_name || "",
-        });
-      } catch (error) {
-        console.error("Failed to load form:", error);
-        showAlert("error", error.message || "Failed to load form.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCohorts();
-    fetchForm();
+    setForm({
+      form_title: formDoc.form_title || "",
+      description_en: formDoc.description_en || "",
+      description_bn: formDoc.description_bn || "",
+      cohort_id: formDoc.cohort_id || "",
+      form_type: formDoc.form_type || "registration",
+      status: formDoc.status || "Draft",
+      public_slug: formDoc.public_slug || "",
+      banner_type: formDoc.banner_type || "default",
+      banner_url: formDoc.banner_url || "/default-form-banner.png",
+      banner_file_name: formDoc.banner_file_name || "",
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [formDoc?.id]);
+
+  useEffect(() => {
+    if (!loading && !formDoc) {
+      showAlert("error", "Form not found.");
+      navigate("/admin/forms");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, formDoc]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

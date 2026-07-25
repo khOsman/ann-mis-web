@@ -11,8 +11,14 @@ import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { apiClient } from "./apiClient";
 
+export const championsQuery = () =>
+  query(collection(db, COLLECTIONS.CHAMPIONS_POOL), orderBy("created_at", "desc"));
+
+export const championDocRef = (championId) =>
+  doc(db, COLLECTIONS.CHAMPIONS_POOL, championId);
+
 export const getChampion = async (championId) => {
-  const snapshot = await getDoc(doc(db, COLLECTIONS.CHAMPIONS_POOL, championId));
+  const snapshot = await getDoc(championDocRef(championId));
 
   if (!snapshot.exists()) {
     throw new Error("Champion not found.");
@@ -25,9 +31,7 @@ export const getChampion = async (championId) => {
 };
 
 export const getChampions = async () => {
-  const snapshot = await getDocs(
-    query(collection(db, COLLECTIONS.CHAMPIONS_POOL), orderBy("created_at", "desc"))
-  );
+  const snapshot = await getDocs(championsQuery());
 
   return snapshot.docs.map((item) => ({
     id: item.id,

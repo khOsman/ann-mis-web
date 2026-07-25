@@ -1,41 +1,16 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
-import { useAlert } from "../../../context/AlertContext";
-import { getChampion } from "../../../services/championsService";
+import { useChampions } from "../../../hooks";
 import { ROUTES } from "../../../constants/routes";
 import { formatTimeRangeBDT } from "../../../utils/time";
 
 export default function ChampionFGDs() {
   const { appUser } = useAuth();
-  const { showAlert } = useAlert();
   const navigate = useNavigate();
 
-  const [champion, setChampion] = useState(appUser);
-  const [loading, setLoading] = useState(true);
-
-  const refreshChampion = async () => {
-    if (!appUser?.id) return;
-
-    setLoading(true);
-
-    try {
-      const data = await getChampion(appUser.id);
-      setChampion(data);
-    } catch (err) {
-      showAlert("error", err.message || "Failed to load your profile.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshChampion();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appUser?.id]);
-
+  const { data: champion, loading } = useChampions(appUser?.id);
   const assignedFgds = champion?.assigned_fgds || [];
 
   return (

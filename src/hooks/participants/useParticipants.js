@@ -1,36 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
-import { getParticipants } from "../../services/participantService";
+import { useLiveCollection } from "../../realtime/useLive";
+import { participantsQuery } from "../../services/participantService";
+
+const mapParticipantDoc = (doc) => ({ id: doc.id, ...doc.data() });
 
 export const useParticipants = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const participants = await getParticipants();
-      setData(participants);
-      return participants;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const { data, loading, error } = useLiveCollection(
+    "participants:all",
+    participantsQuery,
+    mapParticipantDoc,
+    []
+  );
 
   return {
     data,
     loading,
     error,
-    refresh,
+    refresh: () => {}, // kept as a no-op for backward compatibility; data is always live now
 
     create: null,
     update: null,

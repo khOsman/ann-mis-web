@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
 import { useAlert } from "../../../context/AlertContext";
-import { getChampion } from "../../../services/championsService";
+import { useChampions } from "../../../hooks";
 import { updateMyProfile } from "../../../services/championPortalService";
 import { GENDER_OPTIONS, EDUCATION_LEVEL_OPTIONS } from "../../../constants/champions";
 
@@ -47,31 +47,10 @@ export default function ChampionMyProfile() {
   const { appUser } = useAuth();
   const { showAlert } = useAlert();
 
-  const [champion, setChampion] = useState(appUser);
-  const [loading, setLoading] = useState(true);
+  const { data: champion, loading } = useChampions(appUser?.id);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-
-  const refresh = async () => {
-    if (!appUser?.id) return;
-
-    setLoading(true);
-
-    try {
-      const data = await getChampion(appUser.id);
-      setChampion(data);
-    } catch (err) {
-      showAlert("error", err.message || "Failed to load your profile.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appUser?.id]);
 
   const startEditing = () => {
     setForm({
@@ -105,7 +84,7 @@ export default function ChampionMyProfile() {
       await updateMyProfile(form);
       showAlert("success", "Profile updated successfully.");
       setEditing(false);
-      await refresh();
+      // No manual refetch needed — the live listener updates the profile automatically.
     } catch (err) {
       showAlert("error", err.message || "Failed to update profile.");
     } finally {

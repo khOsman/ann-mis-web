@@ -1,45 +1,37 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  getFGDById,
-  getParticipantsByFGD,
-} from "../../services/fgdService";
+import { useMemo } from "react";
+import { useLiveCollection, useLiveDocument } from "../../realtime/useLive";
+import { fgdDocRef, participantsByFGDQuery } from "../../services/fgdService";
+
+const mapParticipantDoc = (doc) => ({ id: doc.id, ...doc.data() });
 
 export const useFGD = (fgdId) => {
-  const [fgd, setFGD] = useState(null);
-  const [participants, setParticipants] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const fgdResult = useLiveDocument(
+    fgdId ? `fgds:${fgdId}` : null,
+    () => fgdDocRef(fgdId),
+    [fgdId]
+  );
 
-  const refresh = useCallback(async () => {
-    if (!fgdId) return;
+  const participantsResult = useLiveCollection(
+    fgdId ? `participants:fgd:${fgdId}` : null,
+    () => participantsByFGDQuery(fgdId),
+    mapParticipantDoc,
+    [fgdId]
+  );
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [fgdData, participantData] = await Promise.all([
-        getFGDById(fgdId),
-        getParticipantsByFGD(fgdId),
-      ]);
-
-      setFGD(fgdData);
-      setParticipants(participantData);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [fgdId]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  // No orderBy in the query itself (see fgdService.js) — sorted client-side.
+  const sortedParticipants = useMemo(
+    () =>
+      [...participantsResult.data].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "")
+      ),
+    [participantsResult.data]
+  );
 
   return {
-    fgd,
-    participants,
-    loading,
-    error,
-    refresh,
+    fgd: fgdResult.data,
+    participants: sortedParticipants,
+    loading: fgdResult.loading || participantsResult.loading,
+    error: fgdResult.error || participantsResult.error,
+    refresh: () => {}, // kept as a no-op for backward compatibility; data is always live now
   };
 };

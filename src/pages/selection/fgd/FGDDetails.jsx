@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
-import { useFGD } from "../../../hooks";
+import { useChampions, useFGD } from "../../../hooks";
 import { updateFGDSchedule } from "../../../services/fgdService";
 import {
   assignChampionToFGD,
-  getChampions,
   unassignChampionFromFGD,
 } from "../../../services/championsService";
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
@@ -24,38 +23,22 @@ export default function FGDDetails() {
   const [scheduleForm, setScheduleForm] = useState(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
 
-  const [activeCommittee, setActiveCommittee] = useState([]);
-  const [loadingCommittee, setLoadingCommittee] = useState(false);
   const [committeeSearch, setCommitteeSearch] = useState("");
   const [selectedChampionIds, setSelectedChampionIds] = useState([]);
   const [assigningMembers, setAssigningMembers] = useState(false);
 
-  const { fgd, participants, loading, error, refresh } = useFGD(fgdId);
+  const { fgd, participants, loading, error } = useFGD(fgdId);
 
-  const fetchActiveCommittee = async () => {
-    setLoadingCommittee(true);
-
-    try {
-      const data = await getChampions();
-
-      setActiveCommittee(
-        data.filter(
-          (champion) =>
-            champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
-            champion.member_status === MEMBER_STATUS.ACTIVE
-        )
-      );
-    } catch (err) {
-      showAlert("error", err.message || "Failed to load committee members.");
-    } finally {
-      setLoadingCommittee(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActiveCommittee();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data: allChampions, loading: loadingCommittee } = useChampions();
+  const activeCommittee = useMemo(
+    () =>
+      allChampions.filter(
+        (champion) =>
+          champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+          champion.member_status === MEMBER_STATUS.ACTIVE
+      ),
+    [allChampions]
+  );
 
   const assignedChampionIds = useMemo(
     () => new Set((fgd?.committee_members || []).map((member) => member.champion_id)),
@@ -110,7 +93,7 @@ export default function FGDDetails() {
       }
 
       setSelectedChampionIds([]);
-      await Promise.all([refresh(), fetchActiveCommittee()]);
+      // No manual refetch needed — both live listeners (FGD, Champions) pick up the change.
     } finally {
       setAssigningMembers(false);
     }
@@ -120,7 +103,7 @@ export default function FGDDetails() {
     try {
       await unassignChampionFromFGD({ championId, fgdId });
       showAlert("success", "Committee member removed from this FGD.");
-      await Promise.all([refresh(), fetchActiveCommittee()]);
+      // No manual refetch needed — the live listener updates the FGD doc automatically.
     } catch (err) {
       showAlert("error", err.message || "Failed to remove committee member.");
     }
@@ -149,7 +132,7 @@ export default function FGDDetails() {
       await updateFGDSchedule(fgdId, scheduleForm);
       showAlert("success", "FGD schedule updated successfully.");
       setEditingSchedule(false);
-      await refresh();
+      // No manual refetch needed — the live listener updates the FGD doc automatically.
     } catch (err) {
       showAlert("error", err.message || "Failed to update schedule.");
     } finally {
@@ -560,7 +543,6 @@ export default function FGDDetails() {
         open={!!evaluationTarget}
         participant={evaluationTarget}
         onClose={() => setEvaluationTarget(null)}
-        onSaved={refresh}
       />
     </AdminLayout>
   );

@@ -1,39 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
-import { getChampion, getChampions } from "../../services/championsService";
+import { useLiveCollection, useLiveDocument } from "../../realtime/useLive";
+import { championDocRef, championsQuery } from "../../services/championsService";
+
+const mapChampionDoc = (doc) => ({ id: doc.id, ...doc.data() });
 
 export const useChampions = (championId = null) => {
-  const [data, setData] = useState(championId ? null : []);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Both hooks are always called (rules-of-hooks), but only one is ever
+  // actually subscribed — the other gets a null cacheKey and stays idle.
+  const listResult = useLiveCollection(
+    championId ? null : "champions_pool:all",
+    championsQuery,
+    mapChampionDoc,
+    [championId]
+  );
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const docResult = useLiveDocument(
+    championId ? `champions_pool:${championId}` : null,
+    () => championDocRef(championId),
+    [championId]
+  );
 
-    try {
-      const result = championId
-        ? await getChampion(championId)
-        : await getChampions();
-
-      setData(result);
-
-      return result;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [championId]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const active = championId ? docResult : listResult;
 
   return {
-    data,
-    loading,
-    error,
-    refresh,
+    data: active.data,
+    loading: active.loading,
+    error: active.error,
+    refresh: () => {}, // kept as a no-op for backward compatibility; data is always live now
   };
 };

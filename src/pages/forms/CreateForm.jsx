@@ -1,22 +1,23 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  addDoc,
-  collection,
-  getDocs,
-  serverTimestamp,
-} from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { useAlert } from "../../context/AlertContext";
+import { useCohorts } from "../../hooks";
 import { isSlugAvailable, normalizeSlug } from "../../services/formService";
 
 export default function CreateForm() {
   const { showAlert } = useAlert();
 
-  const [cohorts, setCohorts] = useState([]);
+  const { data: allCohorts } = useCohorts();
+  const cohorts = useMemo(
+    () => allCohorts.filter((item) => item.status === "Active"),
+    [allCohorts]
+  );
+
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
@@ -32,23 +33,6 @@ export default function CreateForm() {
     banner_url: "/default-form-banner.png",
     banner_file_name: "",
   });
-
-  useEffect(() => {
-    const fetchCohorts = async () => {
-      const snapshot = await getDocs(collection(db, "cohorts"));
-
-      const data = snapshot.docs
-        .map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }))
-        .filter((item) => item.is_deleted !== true && item.status === "Active" );
-
-      setCohorts(data);
-    };
-
-    fetchCohorts();
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

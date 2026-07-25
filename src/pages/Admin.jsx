@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDashboardData } from "../services/dashboardService";
+import { useCohorts } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import AdminLayout from "../layouts/AdminLayout";
 import PageContainer from "../layouts/PageContainer";
@@ -11,46 +11,63 @@ export default function Admin() {
   const navigate = useNavigate();
   const { authLoading, appUser, isActive } = useAuth();
 
-  const [pageLoading, setPageLoading] = useState(true);
-  const [activeCohorts, setActiveCohorts] = useState([]);
-
-  const [dashboardStats, setDashboardStats] = useState({
-    activeCohorts: 0,
-    totalRegistrations: 0,
-    totalSelected: 0,
-    totalEnrolled: 0,
-    totalGraduated: 0,
-    totalProjects: 0,
-  });
-
-  const fetchDashboardData = async () => {
-    const data = await getDashboardData();
-
-    setDashboardStats(data.stats);
-    setActiveCohorts(data.activeCohorts);
-  };
+  // Same live "cohorts:all" subscription AllCohorts.jsx uses — one shared
+  // Firestore listener instead of each page fetching the collection itself.
+  const { data: cohorts, loading: cohortsLoading } = useCohorts();
 
   useEffect(() => {
-    const loadDashboard = async () => {
-      if (authLoading) return;
+    if (authLoading) return;
 
-      if (!appUser || !isActive) {
-        navigate("/");
-        return;
-      }
+    if (!appUser || !isActive) {
+      navigate("/");
+    }
+  }, [authLoading, appUser, isActive, navigate]);
 
-      try {
-        setPageLoading(true);
-        await fetchDashboardData();
-      } finally {
-        setPageLoading(false);
-      }
-    };
+  const activeCohortsAll = useMemo(
+    () => cohorts.filter((item) => item.status === "Active"),
+    [cohorts]
+  );
 
-    loadDashboard();
-  }, [authLoading, appUser, isActive]);
+  const dashboardStats = useMemo(
+    () => ({
+      activeCohorts: activeCohortsAll.length,
+      totalRegistrations: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_registrations || 0),
+        0
+      ),
+      totalSelected: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_selected || 0),
+        0
+      ),
+      totalEnrolled: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_enrolled || 0),
+        0
+      ),
+      totalGraduated: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_graduated || 0),
+        0
+      ),
+      totalProjects: cohorts.reduce(
+        (sum, item) => sum + Number(item.total_projects || 0),
+        0
+      ),
+    }),
+    [cohorts, activeCohortsAll]
+  );
 
-  if (authLoading || pageLoading) {
+  const activeCohorts = useMemo(
+    () =>
+      [...activeCohortsAll]
+        .sort((a, b) => {
+          const aTime = a.created_at?.toDate?.()?.getTime?.() || 0;
+          const bTime = b.created_at?.toDate?.()?.getTime?.() || 0;
+          return bTime - aTime;
+        })
+        .slice(0, 3),
+    [activeCohortsAll]
+  );
+
+  if (authLoading || cohortsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--ann-bg)]">
         <p className="text-[var(--ann-purple)] font-medium">

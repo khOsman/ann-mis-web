@@ -1,52 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getParticipants } from "../../services/participantService";
-import { getCohorts } from "../../services/cohortService";
+import { useCohorts, useParticipants } from "../../hooks";
 import { COHORT_STATUS } from "../../constants/status";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
-import { useAlert } from "../../context/AlertContext";
 
 const TABLE_COLUMN_COUNT = 13;
 
 export default function AllParticipants() {
   const navigate = useNavigate();
-  const { showAlert } = useAlert();
 
-  const [participants, setParticipants] = useState([]);
-  const [cohorts, setCohorts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: participants, loading } = useParticipants();
+  const { data: allCohorts } = useCohorts();
+  const cohorts = useMemo(
+    () => allCohorts.filter((cohort) => cohort.status === COHORT_STATUS.ACTIVE),
+    [allCohorts]
+  );
+
   const [search, setSearch] = useState("");
   const [cohortFilter, setCohortFilter] = useState("");
-
-  const fetchData = async () => {
-    setLoading(true);
-
-    try {
-      const [participantData, cohortData] = await Promise.all([
-        getParticipants(),
-        getCohorts(),
-      ]);
-
-      setParticipants(participantData);
-      setCohorts(
-        cohortData.filter(
-          (cohort) =>
-            cohort.is_deleted !== true && cohort.status === COHORT_STATUS.ACTIVE
-        )
-      );
-    } catch (error) {
-      console.error("Failed to fetch participants:", error);
-      showAlert("error", error.message || "Failed to load participants.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const filteredParticipants = useMemo(() => {
     const keyword = search.toLowerCase();

@@ -1,57 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
+import { useMemo, useState } from "react";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { ROUTES } from "../../constants/routes";
 import { useAlert } from "../../context/AlertContext";
+import { useForms } from "../../hooks";
 import { cloneForm } from "../../services/formService";
 
 export default function AllForms() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
-  const [forms, setForms] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: forms, loading } = useForms();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [cloningId, setCloningId] = useState(null);
-
-  const fetchForms = async () => {
-    setLoading(true);
-
-    try {
-      const q = query(collection(db, "forms"), orderBy("created_at", "desc"));
-      const snapshot = await getDocs(q);
-
-      const data = snapshot.docs
-        .map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }))
-        .filter((item) => item.is_deleted !== true);
-
-      setForms(data);
-    } catch (error) {
-      console.error("Failed to fetch forms:", error);
-      showAlert("error", error.message || "Failed to load forms.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchForms();
-  }, []);
 
   const filteredForms = useMemo(() => {
     return forms.filter((form) => {
@@ -116,7 +81,7 @@ export default function AllForms() {
     });
 
     showAlert("success", "Form deleted successfully.");
-    fetchForms();
+    // No manual refetch needed — the live listener updates the list automatically.
   } catch (error) {
     console.error("Failed to delete form:", error);
     showAlert("error", error.message || "Failed to delete form.");

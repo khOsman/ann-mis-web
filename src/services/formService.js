@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
   where,
@@ -12,20 +13,13 @@ import {
 import { auth, db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 
-export const getFGDsByCohort = async (cohortId) => {
-  const q = query(
-    collection(db, COLLECTIONS.FGDS),
-    where("cohort_id", "==", cohortId),
-    orderBy("fgd_code", "asc")
-  );
+export const formsQuery = () =>
+  query(collection(db, COLLECTIONS.FORMS), orderBy("created_at", "desc"));
 
-  const snapshot = await getDocs(q);
+export const formDocRef = (formId) => doc(db, COLLECTIONS.FORMS, formId);
 
-  return snapshot.docs.map((item) => ({
-    id: item.id,
-    ...item.data(),
-  }));
-};
+export const formFieldsQuery = (formId) =>
+  query(collection(db, COLLECTIONS.FORM_FIELDS), where("form_id", "==", formId));
 
 export const normalizeSlug = (slug) => {
   return String(slug || "")
@@ -105,9 +99,7 @@ export const cloneForm = async (formId) => {
     updated_by_name: user?.displayName || "",
   });
 
-  const fieldsSnap = await getDocs(
-    query(collection(db, COLLECTIONS.FORM_FIELDS), where("form_id", "==", formId))
-  );
+  const fieldsSnap = await getDocs(formFieldsQuery(formId));
 
   if (!fieldsSnap.empty) {
     const batch = writeBatch(db);

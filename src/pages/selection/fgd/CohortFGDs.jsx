@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
@@ -6,15 +6,13 @@ import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { ROUTES } from "../../../constants/routes";
-import { useCohort } from "../../../hooks";
+import { useChampions, useCohort, useFGDsByCohort } from "../../../hooks";
 import {
   generateFGDsForCohort,
-  getFGDsByCohort,
   regenerateFGDsForCohort,
 } from "../../../services/fgdService";
 import {
   assignChampionToFGD,
-  getChampions,
   unassignChampionFromFGD,
 } from "../../../services/championsService";
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
@@ -25,9 +23,8 @@ export default function CohortFGDs() {
   const { showAlert } = useAlert();
 
   const { data: cohort, loading: cohortLoading } = useCohort(cohortId);
+  const { data: fgds, loading: loadingFgds } = useFGDsByCohort(cohortId);
 
-  const [fgds, setFgds] = useState([]);
-  const [loadingFgds, setLoadingFgds] = useState(true);
   const [participantLimit, setParticipantLimit] = useState(25);
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -35,39 +32,34 @@ export default function CohortFGDs() {
   const [regenerateLimit, setRegenerateLimit] = useState(25);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const [activeCommittee, setActiveCommittee] = useState([]);
-  const [loadingCommittee, setLoadingCommittee] = useState(false);
-  const [attachTarget, setAttachTarget] = useState(null);
+  const { data: allChampions, loading: loadingCommittee } = useChampions();
+  const activeCommittee = useMemo(
+    () =>
+      allChampions.filter(
+        (champion) =>
+          champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+          champion.member_status === MEMBER_STATUS.ACTIVE
+      ),
+    [allChampions]
+  );
+
+  const [attachTargetId, setAttachTargetId] = useState(null);
   const [attachSearch, setAttachSearch] = useState("");
   const [selectedChampionIds, setSelectedChampionIds] = useState([]);
   const [attaching, setAttaching] = useState(false);
-  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removeTargetId, setRemoveTargetId] = useState(null);
   const [removingChampionId, setRemovingChampionId] = useState(null);
 
-  const fetchActiveCommittee = async () => {
-    setLoadingCommittee(true);
-
-    try {
-      const data = await getChampions();
-
-      setActiveCommittee(
-        data.filter(
-          (champion) =>
-            champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
-            champion.member_status === MEMBER_STATUS.ACTIVE
-        )
-      );
-    } catch (error) {
-      showAlert("error", error.message || "Failed to load committee members.");
-    } finally {
-      setLoadingCommittee(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActiveCommittee();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Derived from the live `fgds` list (not a snapshot captured at click
+  // time) so the modal reflects any change made elsewhere while it's open.
+  const attachTarget = useMemo(
+    () => fgds.find((item) => item.id === attachTargetId) || null,
+    [fgds, attachTargetId]
+  );
+  const removeTarget = useMemo(
+    () => fgds.find((item) => item.id === removeTargetId) || null,
+    [fgds, removeTargetId]
+  );
 
   const assignedChampionIds = useMemo(
     () =>
@@ -86,13 +78,13 @@ export default function CohortFGDs() {
   }, [activeCommittee, assignedChampionIds, attachSearch]);
 
   const openAttachModal = (fgd) => {
-    setAttachTarget(fgd);
+    setAttachTargetId(fgd.id);
     setAttachSearch("");
     setSelectedChampionIds([]);
   };
 
   const closeAttachModal = () => {
-    setAttachTarget(null);
+    setAttachTargetId(null);
   };
 
   const toggleSelectedChampion = (championId) => {
@@ -133,7 +125,7 @@ export default function CohortFGDs() {
       }
 
       closeAttachModal();
-      await Promise.all([fetchFGDs(), fetchActiveCommittee()]);
+      // No manual refetch needed — both live listeners (FGDs, Champions) pick up the change.
     } finally {
       setAttaching(false);
     }
@@ -145,40 +137,13 @@ export default function CohortFGDs() {
     try {
       await unassignChampionFromFGD({ championId, fgdId: removeTarget.id });
       showAlert("success", "Committee member removed from this FGD.");
-
-      const updatedFgds = await getFGDsByCohort(cohortId);
-      setFgds(updatedFgds);
-
-      const updatedTarget = updatedFgds.find((item) => item.id === removeTarget.id);
-      setRemoveTarget(updatedTarget || null);
-
-      await fetchActiveCommittee();
+      // No manual refetch needed — `removeTarget` is derived from the live FGDs list.
     } catch (error) {
       showAlert("error", error.message || "Failed to remove committee member.");
     } finally {
       setRemovingChampionId(null);
     }
   };
-
-  const fetchFGDs = async () => {
-    if (!cohortId) return;
-
-    setLoadingFgds(true);
-
-    try {
-      const data = await getFGDsByCohort(cohortId);
-      setFgds(data);
-    } catch (error) {
-      console.error("Failed to load FGDs:", error);
-      showAlert("error", error.message || "Failed to load FGDs.");
-    } finally {
-      setLoadingFgds(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFGDs();
-  }, [cohortId]);
 
   const handleGenerateFGDs = async () => {
     if (!cohort) return;
@@ -199,8 +164,7 @@ export default function CohortFGDs() {
         "success",
         `${result.totalFGDs} FGDs generated for ${result.totalParticipants} participants.`
       );
-
-      await fetchFGDs();
+      // No manual refetch needed — the live listener picks up the new FGDs.
     } catch (error) {
       console.error("FGD generation failed:", error);
       showAlert("error", error.message || "Failed to generate FGDs.");
@@ -235,7 +199,7 @@ export default function CohortFGDs() {
       );
 
       setShowRegeneratePanel(false);
-      await fetchFGDs();
+      // No manual refetch needed — the live listener picks up the regenerated FGDs.
     } catch (error) {
       console.error("FGD regeneration failed:", error);
       showAlert("error", error.message || "Failed to regenerate FGDs.");
@@ -430,7 +394,7 @@ export default function CohortFGDs() {
                           <button
                             type="button"
                             disabled={!fgd.committee_members?.length}
-                            onClick={() => setRemoveTarget(fgd)}
+                            onClick={() => setRemoveTargetId(fgd.id)}
                             className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Remove SC
@@ -575,7 +539,7 @@ export default function CohortFGDs() {
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                onClick={() => setRemoveTarget(null)}
+                onClick={() => setRemoveTargetId(null)}
                 className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:border-gray-400"
               >
                 Close

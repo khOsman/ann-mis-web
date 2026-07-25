@@ -1,41 +1,26 @@
-import { useCallback, useEffect, useState } from "react";
-import { getUsers, updateUser } from "../../services/userService";
+import { useLiveCollection } from "../../realtime/useLive";
+import { updateUser, usersQuery } from "../../services/userService";
+
+const mapUserDoc = (doc) => ({ id: doc.id, ...doc.data() });
 
 export const useUsers = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const users = await getUsers();
-      setData(users);
-      return users;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const { data, loading, error } = useLiveCollection(
+    "users:all",
+    usersQuery,
+    mapUserDoc,
+    []
+  );
 
   const update = async (userId, updates) => {
     await updateUser(userId, updates);
-    await refresh();
+    // No manual refresh needed — the live listener updates `data` automatically.
   };
 
   return {
     data,
     loading,
     error,
-    refresh,
+    refresh: () => {}, // kept as a no-op for backward compatibility; data is always live now
 
     create: null,
     update,

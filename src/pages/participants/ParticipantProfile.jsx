@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getParticipantById } from "../../services/participantService";
 import { getFormResponseById } from "../../services/registrationService";
+import { useParticipant } from "../../hooks";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -11,40 +11,31 @@ export default function ParticipantProfile() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
-  const [loading, setLoading] = useState(true);
-  const [participant, setParticipant] = useState(null);
+  const { data: participant, loading } = useParticipant(id);
   const [response, setResponse] = useState(null);
 
+  // The submitted application response is immutable historical data — a
+  // one-time fetch, unlike the participant doc itself (which live-updates
+  // e.g. when evaluated from FGDDetails.jsx while this profile stays open).
   useEffect(() => {
-    const fetchParticipant = async () => {
-      try {
-       const participantData = await getParticipantById(id);
+    if (!participant?.response_id) return;
 
-        if (!participantData) {
-          showAlert("error", "Participant not found.");
-          navigate("/admin/participants");
-          return;
-        }
+    getFormResponseById(participant.response_id)
+      .then((data) => {
+        if (data) setResponse(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load application response:", error);
+      });
+  }, [participant?.response_id]);
 
-        setParticipant(participantData);
-
-        if (participantData.response_id) {
-          const responseData = await getFormResponseById(participantData.response_id);
-
-          if (responseData) {
-            setResponse(responseData);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load participant:", error);
-        showAlert("error", error.message || "Failed to load participant.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchParticipant();
-  }, [id]);
+  useEffect(() => {
+    if (!loading && !participant) {
+      showAlert("error", "Participant not found.");
+      navigate("/admin/participants");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, participant]);
 
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";

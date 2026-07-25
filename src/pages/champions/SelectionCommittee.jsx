@@ -3,24 +3,21 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
-import { useChampions } from "../../hooks";
+import { useChampions, useFGDChangeRequests } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
 import { CHAMPION_ROLES, REGISTRATION_STATUS } from "../../constants/champions";
 import {
   assignChampionToFGD,
   unassignChampionFromFGD,
 } from "../../services/championsService";
-import {
-  getPendingFGDChangeRequests,
-  resolveFGDChangeRequest,
-} from "../../services/championPortalService";
+import { resolveFGDChangeRequest } from "../../services/championPortalService";
 import { getCohorts } from "../../services/cohortService";
 import { getFGDsByCohort } from "../../services/fgdService";
 
 export default function SelectionCommittee() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { data: champions, loading, error, refresh } = useChampions();
+  const { data: champions, loading, error } = useChampions();
 
   const [assignTarget, setAssignTarget] = useState(null);
   const [cohorts, setCohorts] = useState([]);
@@ -30,27 +27,8 @@ export default function SelectionCommittee() {
   const [selectedFgdId, setSelectedFgdId] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  const [changeRequests, setChangeRequests] = useState([]);
-  const [loadingChangeRequests, setLoadingChangeRequests] = useState(true);
+  const { data: changeRequests, loading: loadingChangeRequests } = useFGDChangeRequests();
   const [resolvingRequestId, setResolvingRequestId] = useState(null);
-
-  const refreshChangeRequests = async () => {
-    setLoadingChangeRequests(true);
-
-    try {
-      const data = await getPendingFGDChangeRequests();
-      setChangeRequests(data);
-    } catch (err) {
-      showAlert("error", err.message || "Failed to load change requests.");
-    } finally {
-      setLoadingChangeRequests(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshChangeRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleResolveRequest = async (requestId, status) => {
     setResolvingRequestId(requestId);
@@ -58,7 +36,7 @@ export default function SelectionCommittee() {
     try {
       await resolveFGDChangeRequest({ requestId, status });
       showAlert("success", `Request ${status.toLowerCase()}.`);
-      await refreshChangeRequests();
+      // No manual refetch needed — the live listener updates the queue automatically.
     } catch (err) {
       showAlert("error", err.message || "Failed to resolve request.");
     } finally {
@@ -127,7 +105,7 @@ export default function SelectionCommittee() {
 
       showAlert("success", "Committee member assigned. Notification email sent.");
       closeAssignModal();
-      await refresh();
+      // No manual refetch needed — the live listener updates `champions` automatically.
     } catch (err) {
       showAlert("error", err.message || "Failed to assign FGD.");
     } finally {
@@ -139,7 +117,7 @@ export default function SelectionCommittee() {
     try {
       await unassignChampionFromFGD({ championId, fgdId });
       showAlert("success", "FGD assignment removed.");
-      await refresh();
+      // No manual refetch needed — the live listener updates `champions` automatically.
     } catch (err) {
       showAlert("error", err.message || "Failed to remove assignment.");
     }

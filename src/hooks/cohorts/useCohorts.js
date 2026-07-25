@@ -1,49 +1,31 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  archiveCohort,
-  getActiveCohorts,
-} from "../../services/cohortService";
+import { useMemo } from "react";
+import { useLiveCollection } from "../../realtime/useLive";
+import { archiveCohort, cohortsQuery } from "../../services/cohortService";
+
+const mapCohortDoc = (doc) => ({ id: doc.id, ...doc.data() });
 
 export const useCohorts = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    data: allCohorts,
+    loading,
+    error,
+  } = useLiveCollection("cohorts:all", cohortsQuery, mapCohortDoc, []);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const cohorts = await getActiveCohorts();
-      setData(cohorts);
-      return cohorts;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const data = useMemo(
+    () => allCohorts.filter((item) => item.is_deleted !== true),
+    [allCohorts]
+  );
 
   const remove = async ({ cohortId, updatedByEmail, updatedByName }) => {
-    await archiveCohort({
-      cohortId,
-      updatedByEmail,
-      updatedByName,
-    });
-
-    await refresh();
+    await archiveCohort({ cohortId, updatedByEmail, updatedByName });
+    // No manual refresh needed — the live listener updates `data` automatically.
   };
 
   return {
     data,
     loading,
     error,
-    refresh,
+    refresh: () => {}, // kept as a no-op for backward compatibility; data is always live now
 
     create: null,
     update: null,

@@ -4,8 +4,7 @@ import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
 import { useAlert } from "../../../context/AlertContext";
-import { getChampion } from "../../../services/championsService";
-import { getParticipantsByFGD } from "../../../services/fgdService";
+import { useChampions, useParticipantsByFGD } from "../../../hooks";
 import {
   requestFGDChange,
   markAttendance,
@@ -184,50 +183,13 @@ export default function ChampionFGDDetail() {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
 
-  const [champion, setChampion] = useState(appUser);
-  const [loadingChampion, setLoadingChampion] = useState(true);
-  const [participants, setParticipants] = useState([]);
-  const [loadingParticipants, setLoadingParticipants] = useState(true);
   const [changeReason, setChangeReason] = useState("");
   const [showChangeModal, setShowChangeModal] = useState(false);
   const [submittingChangeRequest, setSubmittingChangeRequest] = useState(false);
   const [evaluationTarget, setEvaluationTarget] = useState(null);
 
-  const refreshChampion = async () => {
-    if (!appUser?.id) return;
-
-    setLoadingChampion(true);
-
-    try {
-      const data = await getChampion(appUser.id);
-      setChampion(data);
-    } catch (err) {
-      showAlert("error", err.message || "Failed to load your profile.");
-    } finally {
-      setLoadingChampion(false);
-    }
-  };
-
-  const loadParticipants = async () => {
-    if (!fgdId) return;
-
-    setLoadingParticipants(true);
-
-    try {
-      const data = await getParticipantsByFGD(fgdId);
-      setParticipants(data);
-    } catch (err) {
-      showAlert("error", err.message || "Failed to load participants.");
-    } finally {
-      setLoadingParticipants(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshChampion();
-    loadParticipants();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appUser?.id, fgdId]);
+  const { data: champion, loading: loadingChampion } = useChampions(appUser?.id);
+  const { data: participants, loading: loadingParticipants } = useParticipantsByFGD(fgdId);
 
   const fgd = (champion?.assigned_fgds || []).find((item) => item.fgd_id === fgdId);
 
@@ -262,13 +224,7 @@ export default function ChampionFGDDetail() {
   const handleAttendanceChange = async (participantId, status) => {
     try {
       await markAttendance({ participantId, status });
-
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.id === participantId ? { ...p, fgd_attendance_status: status } : p
-        )
-      );
-
+      // No manual local update needed — the live listener reflects it in ~1s.
       showAlert("success", "Attendance updated.");
     } catch (err) {
       showAlert("error", err.message || "Failed to update attendance.");
@@ -462,7 +418,6 @@ export default function ChampionFGDDetail() {
       <EvaluationModal
         target={evaluationTarget}
         onClose={() => setEvaluationTarget(null)}
-        onSaved={loadParticipants}
       />
     </ChampionLayout>
   );
