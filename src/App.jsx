@@ -27,6 +27,9 @@ import ChampionHome from "./pages/champions/ChampionHome";
 import ChampionProfile from "./pages/champions/ChampionProfile";
 import AllChampions from "./pages/champions/AllChampions";
 import SelectionCommittee from "./pages/champions/SelectionCommittee";
+import ChampionFGDs from "./pages/champions/portal/ChampionFGDs";
+import ChampionClassroom from "./pages/champions/portal/ChampionClassroom";
+import ChampionProjects from "./pages/champions/portal/ChampionProjects";
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
@@ -57,6 +60,33 @@ export default function App() {
             element={
               <ProtectedRoute championOnly>
                 <ChampionHome />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.championFGDs}
+            element={
+              <ProtectedRoute championOnly>
+                <ChampionFGDs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.championClassroom}
+            element={
+              <ProtectedRoute championOnly>
+                <ChampionClassroom />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.championProjects}
+            element={
+              <ProtectedRoute championOnly>
+                <ChampionProjects />
               </ProtectedRoute>
             }
           />

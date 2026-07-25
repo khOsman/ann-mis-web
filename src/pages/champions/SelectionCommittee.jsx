@@ -10,6 +10,10 @@ import {
   assignChampionToFGD,
   unassignChampionFromFGD,
 } from "../../services/championsService";
+import {
+  getPendingFGDChangeRequests,
+  resolveFGDChangeRequest,
+} from "../../services/championPortalService";
 import { getCohorts } from "../../services/cohortService";
 import { getFGDsByCohort } from "../../services/fgdService";
 
@@ -25,6 +29,42 @@ export default function SelectionCommittee() {
   const [loadingFgds, setLoadingFgds] = useState(false);
   const [selectedFgdId, setSelectedFgdId] = useState("");
   const [assigning, setAssigning] = useState(false);
+
+  const [changeRequests, setChangeRequests] = useState([]);
+  const [loadingChangeRequests, setLoadingChangeRequests] = useState(true);
+  const [resolvingRequestId, setResolvingRequestId] = useState(null);
+
+  const refreshChangeRequests = async () => {
+    setLoadingChangeRequests(true);
+
+    try {
+      const data = await getPendingFGDChangeRequests();
+      setChangeRequests(data);
+    } catch (err) {
+      showAlert("error", err.message || "Failed to load change requests.");
+    } finally {
+      setLoadingChangeRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshChangeRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleResolveRequest = async (requestId, status) => {
+    setResolvingRequestId(requestId);
+
+    try {
+      await resolveFGDChangeRequest({ requestId, status });
+      showAlert("success", `Request ${status.toLowerCase()}.`);
+      await refreshChangeRequests();
+    } catch (err) {
+      showAlert("error", err.message || "Failed to resolve request.");
+    } finally {
+      setResolvingRequestId(null);
+    }
+  };
 
   const approvedCommitteeMembers = useMemo(
     () =>
@@ -110,7 +150,66 @@ export default function SelectionCommittee() {
       title="Selection Committee"
       subtitle="Assign approved Selection Committee members to FGD groups"
     >
-      <PageContainer className="py-6 lg:py-8">
+      <PageContainer className="py-6 lg:py-8 space-y-6">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+              Pending FGD Change Requests
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Committee members requesting a different FGD assignment. Approving
+              here does not auto-reassign — use "Assign / Change FGD" below to
+              act on it.
+            </p>
+          </div>
+
+          {loadingChangeRequests ? (
+            <div className="py-10 text-center text-gray-500">Loading...</div>
+          ) : changeRequests.length === 0 ? (
+            <div className="py-10 text-center text-gray-500">
+              No pending change requests.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {changeRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                >
+                  <div>
+                    <p className="font-semibold text-sm">
+                      {request.champion_name}{" "}
+                      <span className="text-gray-400 font-normal">
+                        wants to change {request.fgd_code}
+                      </span>
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{request.reason}</p>
+                  </div>
+
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      disabled={resolvingRequestId === request.id}
+                      onClick={() => handleResolveRequest(request.id, "Approved")}
+                      className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resolvingRequestId === request.id}
+                      onClick={() => handleResolveRequest(request.id, "Dismissed")}
+                      className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-gray-400 disabled:opacity-50"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
           <div className="px-6 py-5 border-b border-gray-200">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
