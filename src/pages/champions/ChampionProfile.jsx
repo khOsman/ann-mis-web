@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 import { useChampions } from "../../hooks";
+import { ROUTES } from "../../constants/routes";
+import { formatTimeRangeBDT } from "../../utils/time";
 import {
   ACCOUNT_STATUS,
   ACCOUNT_STATUS_OPTIONS,
@@ -34,6 +36,7 @@ const EDIT_FIELDS = [
 
 export default function ChampionProfile() {
   const { championId } = useParams();
+  const navigate = useNavigate();
   const { showAlert } = useAlert();
   const { isSuperAdmin } = useAuth();
   const [actionLoading, setActionLoading] = useState(false);
@@ -448,6 +451,68 @@ export default function ChampionProfile() {
                   <Info label="Account" value={champion.account_status} />
                   <Info label="Member" value={champion.member_status} />
                 </div>
+              </div>
+            )}
+
+            {!editing && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <div className="border-b px-6 py-4">
+                  <h3 className="font-bold text-lg">Assigned FGDs</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    A committee member can be assigned to more than one FGD.
+                  </p>
+                </div>
+
+                {champion.assigned_fgds?.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {champion.assigned_fgds.map((assignment) => (
+                      <div
+                        key={assignment.fgd_id}
+                        className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                      >
+                        <div>
+                          <p className="font-semibold">
+                            {assignment.fgd_code}{" "}
+                            <span className="text-gray-400 font-normal">
+                              {assignment.fgd_name}
+                            </span>
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {assignment.cohort_name || "-"} •{" "}
+                            {assignment.session_date || "Date not set"}
+                            {formatTimeRangeBDT(
+                              assignment.session_start_time,
+                              assignment.session_end_time
+                            ) &&
+                              ` • ${formatTimeRangeBDT(
+                                assignment.session_start_time,
+                                assignment.session_end_time
+                              )}`}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              ROUTES.selectionFGDDetails.replace(
+                                ":fgdId",
+                                assignment.fgd_id
+                              )
+                            )
+                          }
+                          className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 self-start sm:self-center"
+                        >
+                          View FGD
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 px-6 py-6">
+                    Not assigned to any FGD yet.
+                  </p>
+                )}
               </div>
             )}
           </div>
