@@ -30,12 +30,25 @@ export const createChampion = (overrides = {}) => ({
   phone: "",
 
   date_of_birth: "",
+  gender: "",
 
   institution: "",
 
   address: "",
 
   photo_url: "",
+
+  // Educational Info
+  education_level: "",
+  education_institution: "",
+  field_of_study: "",
+  graduation_year: "",
+
+  // Professional Info
+  current_organization: "",
+  designation: "",
+  years_of_experience: "",
+  linkedin_url: "",
 
   joined_at: null,
   last_login_at: null,

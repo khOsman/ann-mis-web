@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import {
   LayoutDashboard,
+  UserCircle,
   Users,
   GraduationCap,
   Rocket,
@@ -18,6 +19,7 @@ import { CHAMPION_ROLES, CHAMPION_ROLE_LABELS } from "../constants/champions";
 function buildMenuItems(role) {
   const items = [
     { label: "Dashboard", path: ROUTES.championHome, icon: LayoutDashboard },
+    { label: "Profile", path: ROUTES.championMyProfile, icon: UserCircle },
   ];
 
   if (role === CHAMPION_ROLES.SELECTION_COMMITTEE) {

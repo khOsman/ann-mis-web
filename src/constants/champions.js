@@ -40,3 +40,14 @@ export const REGISTRATION_STATUS_OPTIONS = Object.values(REGISTRATION_STATUS);
 export const ACCOUNT_STATUS_OPTIONS = Object.values(ACCOUNT_STATUS);
 
 export const MEMBER_STATUS_OPTIONS = Object.values(MEMBER_STATUS);
+
+export const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
+
+export const EDUCATION_LEVEL_OPTIONS = [
+  "Secondary (SSC)",
+  "Higher Secondary (HSC)",
+  "Bachelor's",
+  "Master's",
+  "PhD",
+  "Other",
+];

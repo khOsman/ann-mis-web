@@ -14,6 +14,7 @@ export const ROUTES = {
   championRegistration: "/champions/register",
   championActivate: "/champions/activate",
   championHome: "/champions",
+  championMyProfile: "/champions/profile",
   championFGDs: "/champions/fgds",
   championClassroom: "/champions/classroom",
   championProjects: "/champions/projects",

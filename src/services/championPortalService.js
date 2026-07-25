@@ -46,6 +46,10 @@ export const submitEvaluation = async ({
   );
 };
 
+export const updateMyProfile = async (updates) => {
+  return apiClient.patch("/api/me/profile", updates, { authenticated: true });
+};
+
 export const resolveFGDChangeRequest = async ({ requestId, status }) => {
   return apiClient.post(
     `/api/champions/fgd-change-requests/${requestId}/resolve`,
