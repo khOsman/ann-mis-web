@@ -13,6 +13,7 @@ import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { COHORT_STATUS } from "../constants/status";
 import { createCohort } from "../entities";
+import { batchUpdateWhere } from "../utils/firestoreBatch";
 
 export const createCohortRecord = async (payload) => {
   const cohortData = createCohort({
@@ -59,11 +60,44 @@ export const getCohortById = async (cohortId) => {
   };
 };
 
+// cohort_name/cohort_code are denormalized onto participants, form_responses,
+// forms, and fgds at creation time (no Firestore triggers exist here to keep
+// those in sync automatically) — so an edit that actually changes either
+// field fans out to every document that copied it, scoped to this cohort.
 export const updateCohortRecord = async (cohortId, updates) => {
-  await updateDoc(doc(db, COLLECTIONS.COHORTS, cohortId), {
+  const cohortRef = doc(db, COLLECTIONS.COHORTS, cohortId);
+
+  let changedDenormalizedFields = null;
+
+  if (updates.cohort_name !== undefined || updates.cohort_code !== undefined) {
+    const currentSnap = await getDoc(cohortRef);
+    const current = currentSnap.data() || {};
+    const changed = {};
+
+    if (updates.cohort_name !== undefined && updates.cohort_name !== current.cohort_name) {
+      changed.cohort_name = updates.cohort_name;
+    }
+
+    if (updates.cohort_code !== undefined && updates.cohort_code !== current.cohort_code) {
+      changed.cohort_code = updates.cohort_code;
+    }
+
+    if (Object.keys(changed).length > 0) changedDenormalizedFields = changed;
+  }
+
+  await updateDoc(cohortRef, {
     ...updates,
     updated_at: serverTimestamp(),
   });
+
+  if (changedDenormalizedFields) {
+    await Promise.all([
+      batchUpdateWhere(COLLECTIONS.PARTICIPANTS, "cohort_id", cohortId, changedDenormalizedFields),
+      batchUpdateWhere(COLLECTIONS.FORM_RESPONSES, "cohort_id", cohortId, changedDenormalizedFields),
+      batchUpdateWhere(COLLECTIONS.FORMS, "cohort_id", cohortId, changedDenormalizedFields),
+      batchUpdateWhere(COLLECTIONS.FGDS, "cohort_id", cohortId, changedDenormalizedFields),
+    ]);
+  }
 };
 
 export const archiveCohort = async ({

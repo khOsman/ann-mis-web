@@ -7,11 +7,13 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
+import { batchUpdateWhere } from "../utils/firestoreBatch";
 
 export const formsQuery = () =>
   query(collection(db, COLLECTIONS.FORMS), orderBy("created_at", "desc"));
@@ -20,6 +22,34 @@ export const formDocRef = (formId) => doc(db, COLLECTIONS.FORMS, formId);
 
 export const formFieldsQuery = (formId) =>
   query(collection(db, COLLECTIONS.FORM_FIELDS), where("form_id", "==", formId));
+
+// form_title is denormalized onto every participant/form_response created
+// through this form — no Firestore triggers exist here to keep those in
+// sync, so an edit that actually changes the title fans out to them.
+export const updateFormRecord = async (formId, updates) => {
+  const formRef = doc(db, COLLECTIONS.FORMS, formId);
+
+  let titleChanged = false;
+
+  if (updates.form_title !== undefined) {
+    const currentSnap = await getDoc(formRef);
+    titleChanged = updates.form_title !== (currentSnap.data() || {}).form_title;
+  }
+
+  await updateDoc(formRef, {
+    ...updates,
+    updated_at: serverTimestamp(),
+  });
+
+  if (titleChanged) {
+    const titleUpdate = { form_title: updates.form_title };
+
+    await Promise.all([
+      batchUpdateWhere(COLLECTIONS.PARTICIPANTS, "form_id", formId, titleUpdate),
+      batchUpdateWhere(COLLECTIONS.FORM_RESPONSES, "form_id", formId, titleUpdate),
+    ]);
+  }
+};
 
 export const normalizeSlug = (slug) => {
   return String(slug || "")

@@ -15,6 +15,7 @@ import {
 } from "../../../services/championsService";
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 import { FGD_STATUS_OPTIONS } from "../../../constants/fgd";
+import { REQUIRED_EVALUATIONS } from "../../../constants/evaluation";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
@@ -36,6 +37,26 @@ export default function FGDDetails() {
   const [savingStatus, setSavingStatus] = useState(false);
 
   const { fgd, participants, loading, error } = useFGD(fgdId);
+
+  // Present/Absent/Pending Feedback were previously read from fgd.total_present
+  // etc. — fields nothing in the app ever actually writes, so they always
+  // showed 0. Deriving them from the already-loaded participants array (like
+  // the Participants card already does) means they can't go stale.
+  const attendanceStats = useMemo(() => {
+    let present = 0;
+    let absent = 0;
+    let pendingFeedback = 0;
+
+    participants.forEach((participant) => {
+      if (participant.fgd_attendance_status === "Present") present += 1;
+      if (participant.fgd_attendance_status === "Absent") absent += 1;
+      if ((participant.evaluation_count || 0) < REQUIRED_EVALUATIONS) {
+        pendingFeedback += 1;
+      }
+    });
+
+    return { present, absent, pendingFeedback };
+  }, [participants]);
 
   // Opportunistic reconciliation — no scheduled job flips a passed FGD to
   // Completed on its own, so check whenever this page loads/updates.
@@ -425,18 +446,18 @@ export default function FGDDetails() {
 
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <p className="text-gray-500 text-sm">Present</p>
-            <h3 className="text-2xl font-bold">{fgd.total_present || 0}</h3>
+            <h3 className="text-2xl font-bold">{attendanceStats.present}</h3>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <p className="text-gray-500 text-sm">Absent</p>
-            <h3 className="text-2xl font-bold">{fgd.total_absent || 0}</h3>
+            <h3 className="text-2xl font-bold">{attendanceStats.absent}</h3>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <p className="text-gray-500 text-sm">Pending Feedback</p>
             <h3 className="text-2xl font-bold">
-              {fgd.total_pending_feedback || 0}
+              {attendanceStats.pendingFeedback}
             </h3>
           </div>
         </div>

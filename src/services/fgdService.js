@@ -316,17 +316,87 @@ export const getParticipantsByFGD = async (fgdId) => {
 };
 
 export const updateFGDParticipant = async (participantId, updates) => {
-  await updateDoc(doc(db, COLLECTIONS.PARTICIPANTS, participantId), {
+  const participantRef = doc(db, COLLECTIONS.PARTICIPANTS, participantId);
+
+  await updateDoc(participantRef, {
     ...updates,
     updated_at: serverTimestamp(),
   });
+
+  // cohort.total_selected has no Firestore trigger keeping it in sync —
+  // recomputed from a count query (not incremented/decremented) since
+  // selection_status can move between Selected/Waitlisted/Rejected in
+  // either direction depending on how an evaluation is edited.
+  if (updates.selection_status !== undefined) {
+    const participantSnap = await getDoc(participantRef);
+    const cohortId = participantSnap.data()?.cohort_id;
+
+    if (cohortId) {
+      const selectedSnap = await getDocs(
+        query(
+          collection(db, COLLECTIONS.PARTICIPANTS),
+          where("cohort_id", "==", cohortId),
+          where("selection_status", "==", SELECTION_STATUS.SELECTED)
+        )
+      );
+
+      await updateDoc(doc(db, COLLECTIONS.COHORTS, cohortId), {
+        total_selected: selectedSnap.size,
+        updated_at: serverTimestamp(),
+      });
+    }
+  }
 };
 
+// Schedule/venue/meet_link are denormalized onto every assigned champion's
+// assigned_fgds[] entry at assignment time (see fgdAssignment.js on the
+// backend) — no Firestore triggers exist here to keep those copies in sync,
+// so an edit here has to explicitly fan out to each committee member.
 export const updateFGDSchedule = async (fgdId, updates) => {
-  await updateDoc(doc(db, COLLECTIONS.FGDS, fgdId), {
+  const fgdRef = doc(db, COLLECTIONS.FGDS, fgdId);
+
+  await updateDoc(fgdRef, {
     ...updates,
     updated_at: serverTimestamp(),
   });
+
+  const fgdSnap = await getDoc(fgdRef);
+  if (!fgdSnap.exists()) return;
+
+  const fgd = fgdSnap.data();
+  const committeeMembers = fgd.committee_members || [];
+
+  if (committeeMembers.length === 0) return;
+
+  const scheduleFields = {
+    fgd_code: fgd.fgd_code || "",
+    fgd_name: fgd.fgd_name || "",
+    cohort_name: fgd.cohort_name || "",
+    session_date: fgd.session_date || "",
+    session_start_time: fgd.session_start_time || "",
+    session_end_time: fgd.session_end_time || "",
+    venue: fgd.venue || "",
+    meet_link: fgd.meet_link || "",
+  };
+
+  await Promise.all(
+    committeeMembers.map(async (member) => {
+      const championRef = doc(db, COLLECTIONS.CHAMPIONS_POOL, member.champion_id);
+      const championSnap = await getDoc(championRef);
+
+      if (!championSnap.exists()) return;
+
+      const champion = championSnap.data();
+      const assignedFgds = (champion.assigned_fgds || []).map((entry) =>
+        entry.fgd_id === fgdId ? { ...entry, ...scheduleFields } : entry
+      );
+
+      await updateDoc(championRef, {
+        assigned_fgds: assignedFgds,
+        updated_at: serverTimestamp(),
+      });
+    })
+  );
 };
 
 export const updateFGDStatus = async (fgdId, status) => {

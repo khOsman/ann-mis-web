@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../../firebase";
+import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { useAlert } from "../../context/AlertContext";
 import { ROUTES } from "../../constants/routes";
 import { useCohorts, useForm as useFormDoc } from "../../hooks";
-import { isSlugAvailable, normalizeSlug } from "../../services/formService";
+import {
+  isSlugAvailable,
+  normalizeSlug,
+  updateFormRecord,
+} from "../../services/formService";
 
 export default function EditForm() {
   const { id } = useParams();
@@ -130,7 +133,7 @@ export default function EditForm() {
         return;
       }
 
-      await updateDoc(doc(db, "forms", id), {
+      await updateFormRecord(id, {
         form_title: form.form_title.trim(),
         cohort_id: form.cohort_id,
         cohort_name: selectedCohort?.cohort_name || "",
@@ -147,7 +150,6 @@ export default function EditForm() {
             : form.banner_url,
         banner_file_name: form.banner_file_name,
 
-        updated_at: serverTimestamp(),
         updated_by_email: user?.email || "",
         updated_by_name: user?.displayName || "",
       });
