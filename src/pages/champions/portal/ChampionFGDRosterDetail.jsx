@@ -69,26 +69,27 @@ export default function ChampionFGDRosterDetail() {
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-                {cohort?.cohort_name} ({cohort?.cohort_code})
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                FGD Roster Sheet • {sortedFgds.length} FGD(s) with a schedule set
-              </p>
+            <div className="bg-[var(--ann-purple)] text-center py-3 font-bold text-lg text-white">
+              Amra Notun Network &quot;Changemakers&quot; Training
+            </div>
+            <div className="bg-[var(--ann-pink)] text-center py-2 font-semibold text-white">
+              {cohort?.cohort_name} ({cohort?.cohort_code})
+            </div>
+            <div className="bg-white text-center py-2 font-semibold text-[var(--ann-text-dark)] border-b border-gray-300">
+              FGD Roster Sheet
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <tbody>
                   <tr>
-                    <th className="border border-gray-100 bg-gray-50 text-gray-500 px-3 py-3 text-left sticky left-0 z-10">
+                    <th className="border border-gray-300 bg-gray-50 px-3 py-2 text-left sticky left-0 z-10">
                       Session
                     </th>
                     {sortedFgds.map((fgd) => (
                       <th
                         key={fgd.id}
-                        className="border border-gray-100 bg-[var(--ann-purple)] text-white px-4 py-3 whitespace-nowrap font-semibold"
+                        className="border border-gray-300 bg-[var(--ann-pink)] text-white px-4 py-2 whitespace-nowrap"
                       >
                         {fgd.fgd_code}
                       </th>
@@ -96,13 +97,13 @@ export default function ChampionFGDRosterDetail() {
                   </tr>
 
                   <tr>
-                    <th className="border border-gray-100 bg-gray-50 text-gray-500 px-3 py-2 text-left sticky left-0 z-10">
+                    <th className="border border-gray-300 bg-gray-50 px-3 py-2 text-left sticky left-0 z-10">
                       Date
                     </th>
                     {sortedFgds.map((fgd) => (
                       <td
                         key={fgd.id}
-                        className="border border-gray-100 px-4 py-2 text-center whitespace-nowrap text-gray-700"
+                        className="border border-gray-300 px-4 py-2 text-center whitespace-nowrap"
                       >
                         {fgd.session_date || "Not set"}
                       </td>
@@ -110,13 +111,13 @@ export default function ChampionFGDRosterDetail() {
                   </tr>
 
                   <tr>
-                    <th className="border border-gray-100 bg-gray-50 text-gray-500 px-3 py-2 text-left sticky left-0 z-10">
+                    <th className="border border-gray-300 bg-gray-50 px-3 py-2 text-left sticky left-0 z-10">
                       Time
                     </th>
                     {sortedFgds.map((fgd) => (
                       <td
                         key={fgd.id}
-                        className="border border-gray-100 px-4 py-2 text-center whitespace-nowrap text-gray-700"
+                        className="border border-gray-300 px-4 py-2 text-center whitespace-nowrap"
                       >
                         {formatTimeRangeBDT(
                           fgd.session_start_time,
@@ -131,7 +132,7 @@ export default function ChampionFGDRosterDetail() {
                       {slotIndex === 0 && (
                         <th
                           rowSpan={ROSTER_CAP}
-                          className="border border-gray-100 bg-gray-50 text-gray-500 px-3 py-2 text-left align-top sticky left-0 z-10"
+                          className="border border-gray-300 bg-gray-50 px-3 py-2 text-left align-top sticky left-0 z-10"
                         >
                           Name
                         </th>
@@ -151,16 +152,10 @@ export default function ChampionFGDRosterDetail() {
                         return (
                           <td
                             key={fgd.id}
-                            className="border border-gray-100 px-4 py-2 text-center whitespace-nowrap"
+                            className="border border-gray-300 px-4 py-2 text-center whitespace-nowrap"
                           >
                             {member ? (
-                              <span
-                                className={
-                                  isMe
-                                    ? "font-bold text-[var(--ann-pink)]"
-                                    : "text-gray-700"
-                                }
-                              >
+                              <span className={isMe ? "font-bold text-[var(--ann-pink)]" : ""}>
                                 {member.name}
                                 {isMe && " (You)"}
                               </span>
@@ -169,7 +164,7 @@ export default function ChampionFGDRosterDetail() {
                                 type="button"
                                 disabled={bookingFgdId === fgd.id}
                                 onClick={() => handleBook(fgd.id)}
-                                className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg bg-[var(--ann-purple)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
                               >
                                 {bookingFgdId === fgd.id ? "Booking..." : "Book This Slot"}
                               </button>
