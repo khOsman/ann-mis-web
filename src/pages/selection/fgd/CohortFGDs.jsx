@@ -4,6 +4,7 @@ import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
+import { useAuth } from "../../../context/AuthContext";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { ROUTES } from "../../../constants/routes";
 import { useChampions, useCohort, useFGDsByCohort } from "../../../hooks";
@@ -22,6 +23,7 @@ export default function CohortFGDs() {
   const { cohortId } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isViewer } = useAuth();
 
   const { data: cohort, loading: cohortLoading } = useCohort(cohortId);
   const { data: fgds, loading: loadingFgds } = useFGDsByCohort(cohortId);
@@ -279,6 +281,10 @@ export default function CohortFGDs() {
                 No participants have registered for this cohort yet. FGDs can be
                 generated once participants have registered.
               </p>
+            ) : isViewer ? (
+              <p className="text-sm text-gray-500 mt-2">
+                No FGDs have been generated for this cohort yet.
+              </p>
             ) : (
               <>
                 <p className="text-sm text-gray-500 mt-2">
@@ -323,16 +329,18 @@ export default function CohortFGDs() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowRegeneratePanel((prev) => !prev)}
-                className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold"
-              >
-                {showRegeneratePanel ? "Cancel" : "Regenerate FGDs"}
-              </button>
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={() => setShowRegeneratePanel((prev) => !prev)}
+                  className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold"
+                >
+                  {showRegeneratePanel ? "Cancel" : "Regenerate FGDs"}
+                </button>
+              )}
             </div>
 
-            {showRegeneratePanel && (
+            {showRegeneratePanel && !isViewer && (
               <div className="px-6 py-5 border-b border-gray-200 bg-red-50/50">
                 <p className="text-sm text-red-700 font-semibold">
                   Warning: regenerating permanently deletes all {fgds.length} existing
@@ -429,22 +437,26 @@ export default function CohortFGDs() {
 
                       <td className="px-6 py-5 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openAttachModal(fgd)}
-                            className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
-                          >
-                            Attach SC
-                          </button>
+                          {!isViewer && (
+                            <button
+                              type="button"
+                              onClick={() => openAttachModal(fgd)}
+                              className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                            >
+                              Attach SC
+                            </button>
+                          )}
 
-                          <button
-                            type="button"
-                            disabled={!fgd.committee_members?.length}
-                            onClick={() => setRemoveTargetId(fgd.id)}
-                            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            Remove SC
-                          </button>
+                          {!isViewer && (
+                            <button
+                              type="button"
+                              disabled={!fgd.committee_members?.length}
+                              onClick={() => setRemoveTargetId(fgd.id)}
+                              className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Remove SC
+                            </button>
+                          )}
 
                           <button
                             type="button"

@@ -6,6 +6,7 @@ import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { ROUTES } from "../../constants/routes";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 import { useForms } from "../../hooks";
 import { cloneForm } from "../../services/formService";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
@@ -13,6 +14,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 export default function AllForms() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isViewer } = useAuth();
 
   const { data: forms, loading } = useForms();
   const [search, setSearch] = useState("");
@@ -119,12 +121,14 @@ export default function AllForms() {
               </p>
             </div>
 
-            <button
-              onClick={() => navigate(ROUTES.createForm)}
-              className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
-            >
-              + Create Form
-            </button>
+            {!isViewer && (
+              <button
+                onClick={() => navigate(ROUTES.createForm)}
+                className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+              >
+                + Create Form
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
@@ -241,23 +245,27 @@ export default function AllForms() {
 
                       <td className="p-4">
                         <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() =>
-                              navigate(`/admin/forms/${form.id}/builder`)
-                            }
-                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
-                          >
-                            Builder
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() =>
+                                navigate(`/admin/forms/${form.id}/builder`)
+                              }
+                              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
+                            >
+                              Builder
+                            </button>
+                          )}
 
-                          <button
-                            onClick={() =>
-                              navigate(`/admin/forms/${form.id}/edit`)
-                            }
-                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
-                          >
-                            Edit Info
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() =>
+                                navigate(`/admin/forms/${form.id}/edit`)
+                              }
+                              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
+                            >
+                              Edit Info
+                            </button>
+                          )}
 
                           <button
                             onClick={() =>
@@ -268,20 +276,24 @@ export default function AllForms() {
                             Preview
                           </button>
 
-                          <button
-                            onClick={() => handleCloneForm(form.id)}
-                            disabled={cloningId === form.id}
-                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold disabled:opacity-50"
-                          >
-                            {cloningId === form.id ? "Cloning..." : "Clone"}
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() => handleCloneForm(form.id)}
+                              disabled={cloningId === form.id}
+                              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold disabled:opacity-50"
+                            >
+                              {cloningId === form.id ? "Cloning..." : "Clone"}
+                            </button>
+                          )}
 
-                          <button
-                                onClick={() => setDeleteTargetId(form.id)}
-                                className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
-                                >
-                                Delete
-                          </button>
+                          {!isViewer && (
+                            <button
+                                  onClick={() => setDeleteTargetId(form.id)}
+                                  className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
+                                  >
+                                  Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

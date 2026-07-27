@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
-import { updateUser } from "../../services/userService";
+import { updateUser, notifyUserAccessUpdate } from "../../services/userService";
 import { useUser } from "../../hooks";
 import {
   getPermissionsByRole,
@@ -75,7 +75,17 @@ export default function UserProfile() {
         permissions: form.permissions,
       });
 
-      showAlert("success", "User access updated successfully.");
+      try {
+        await notifyUserAccessUpdate(userId);
+        showAlert("success", "User access updated and notification email sent.");
+      } catch (emailError) {
+        console.error("Failed to send access update email:", emailError);
+        showAlert(
+          "success",
+          "User access updated, but the notification email failed to send."
+        );
+      }
+
       navigate("/admin/users");
     } catch (error) {
       showAlert("error", error.message || "Failed to update user.");

@@ -23,7 +23,7 @@ const STATUS_FILTER_ALL = "All";
 export default function AllCohorts() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isViewer } = useAuth();
 
   const {
     data: cohorts,
@@ -146,12 +146,14 @@ export default function AllCohorts() {
               </p>
             </div>
 
-            <button
-              onClick={() => navigate(ROUTES.createCohort)}
-              className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
-            >
-              + Create Cohort
-            </button>
+            {!isViewer && (
+              <button
+                onClick={() => navigate(ROUTES.createCohort)}
+                className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+              >
+                + Create Cohort
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
@@ -292,21 +294,25 @@ export default function AllCohorts() {
                             View
                           </button>
 
-                          <button
-                            onClick={() =>
-                              navigate(`/admin/cohorts/${cohort.id}/edit`)
-                            }
-                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
-                          >
-                            Edit
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() =>
+                                navigate(`/admin/cohorts/${cohort.id}/edit`)
+                              }
+                              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
+                            >
+                              Edit
+                            </button>
+                          )}
 
-                          <button
-                            onClick={() => setArchiveTarget(cohort)}
-                            className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
-                          >
-                            Archive
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() => setArchiveTarget(cohort)}
+                              className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
+                            >
+                              Archive
+                            </button>
+                          )}
 
                           {isSuperAdmin && (
                             <button

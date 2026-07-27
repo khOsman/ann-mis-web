@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 import { useChampions, useFGDChangeRequests } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
 import { CHAMPION_ROLES, REGISTRATION_STATUS } from "../../constants/champions";
@@ -17,6 +18,7 @@ import { getFGDsByCohort } from "../../services/fgdService";
 export default function SelectionCommittee() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isViewer } = useAuth();
   const { data: champions, loading, error } = useChampions();
 
   const [assignTarget, setAssignTarget] = useState(null);
@@ -164,24 +166,26 @@ export default function SelectionCommittee() {
                     <p className="text-sm text-gray-600 mt-1">{request.reason}</p>
                   </div>
 
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      type="button"
-                      disabled={resolvingRequestId === request.id}
-                      onClick={() => handleResolveRequest(request.id, "Approved")}
-                      className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      disabled={resolvingRequestId === request.id}
-                      onClick={() => handleResolveRequest(request.id, "Dismissed")}
-                      className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-gray-400 disabled:opacity-50"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={resolvingRequestId === request.id}
+                        onClick={() => handleResolveRequest(request.id, "Approved")}
+                        className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={resolvingRequestId === request.id}
+                        onClick={() => handleResolveRequest(request.id, "Dismissed")}
+                        className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-gray-400 disabled:opacity-50"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -245,15 +249,17 @@ export default function SelectionCommittee() {
                                   <span className="px-2 py-1 rounded-lg bg-purple-50 text-[var(--ann-purple)] text-xs font-semibold">
                                     {assignment.fgd_code}
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleUnassign(champion.id, assignment.fgd_id)
-                                    }
-                                    className="text-xs text-red-500 hover:underline"
-                                  >
-                                    Remove
-                                  </button>
+                                  {!isViewer && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleUnassign(champion.id, assignment.fgd_id)
+                                      }
+                                      className="text-xs text-red-500 hover:underline"
+                                    >
+                                      Remove
+                                    </button>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -278,13 +284,15 @@ export default function SelectionCommittee() {
                             >
                               View Profile
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => openAssignModal(champion)}
-                              className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
-                            >
-                              Assign / Change FGD
-                            </button>
+                            {!isViewer && (
+                              <button
+                                type="button"
+                                onClick={() => openAssignModal(champion)}
+                                className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+                              >
+                                Assign / Change FGD
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

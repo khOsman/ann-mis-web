@@ -217,7 +217,7 @@ export default function App() {
           <Route
             path={ROUTES.createCohort}
             element={
-              <ProtectedRoute permission="cohorts">
+              <ProtectedRoute permission="cohorts" adminOnly>
                 <CreateCohort />
               </ProtectedRoute>
             }
@@ -226,7 +226,7 @@ export default function App() {
           <Route
             path={ROUTES.editCohort}
             element={
-              <ProtectedRoute permission="cohorts">
+              <ProtectedRoute permission="cohorts" adminOnly>
                 <EditCohort />
               </ProtectedRoute>
             }
@@ -253,7 +253,7 @@ export default function App() {
           <Route
             path={ROUTES.createForm}
             element={
-              <ProtectedRoute permission="forms">
+              <ProtectedRoute permission="forms" adminOnly>
                 <CreateForm />
               </ProtectedRoute>
             }
@@ -262,7 +262,7 @@ export default function App() {
           <Route
             path="/admin/forms/:id/builder"
             element={
-              <ProtectedRoute permission="forms">
+              <ProtectedRoute permission="forms" adminOnly>
                 <FormBuilder />
               </ProtectedRoute>
             }
@@ -271,7 +271,7 @@ export default function App() {
           <Route
             path={ROUTES.editForm}
             element={
-              <ProtectedRoute permission="forms">
+              <ProtectedRoute permission="forms" adminOnly>
                 <EditForm />
               </ProtectedRoute>
             }

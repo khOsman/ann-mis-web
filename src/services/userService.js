@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
+import { apiClient } from "./apiClient";
 
 export const usersQuery = () =>
   query(collection(db, COLLECTIONS.USERS), orderBy("created_at", "desc"));
@@ -40,5 +41,11 @@ export const updateUser = async (userId, updates) => {
   await updateDoc(doc(db, COLLECTIONS.USERS, userId), {
     ...updates,
     updated_at: serverTimestamp(),
+  });
+};
+
+export const notifyUserAccessUpdate = async (userId) => {
+  return apiClient.post(`/api/users/${userId}/notify-access`, undefined, {
+    authenticated: true,
   });
 };

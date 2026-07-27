@@ -125,6 +125,8 @@ export function AuthProvider({ children }) {
 
   const isSuperAdmin = appUser?.role === USER_ROLES.SUPER_ADMIN;
 
+  const isViewer = appUser?.role === USER_ROLES.VIEWER;
+
   return (
     <AuthContext.Provider
       value={{
@@ -134,6 +136,7 @@ export function AuthProvider({ children }) {
         isActive,
         isAdmin,
         isSuperAdmin,
+        isViewer,
         isChampion,
         hasPermission,
         logout,

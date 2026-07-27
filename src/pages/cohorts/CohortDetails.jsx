@@ -19,7 +19,7 @@ export default function CohortDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isViewer } = useAuth();
 
   const { data: cohort, loading, error } = useCohort(id);
 
@@ -234,10 +234,12 @@ export default function CohortDetails() {
           </div>
         </div>
 
-        <ParticipantImportBox
-          cohort={cohort}
-          showAlert={showAlert}
-        />
+        {!isViewer && (
+          <ParticipantImportBox
+            cohort={cohort}
+            showAlert={showAlert}
+          />
+        )}
 
         <CohortJourney cohort={cohort} />
 

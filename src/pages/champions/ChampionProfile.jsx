@@ -41,7 +41,7 @@ export default function ChampionProfile() {
   const { championId } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isViewer } = useAuth();
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const [editing, setEditing] = useState(false);
@@ -232,7 +232,7 @@ export default function ChampionProfile() {
 
                 <div className="flex flex-wrap items-center gap-3">
                   {champion.registration_status ===
-                    REGISTRATION_STATUS.PENDING && (
+                    REGISTRATION_STATUS.PENDING && !isViewer && (
                     <>
                       <select
                         value={selectedRole}
@@ -267,7 +267,7 @@ export default function ChampionProfile() {
                     </>
                   )}
 
-                  {showRegularInviteButton && (
+                  {showRegularInviteButton && !isViewer && (
                     <button
                       type="button"
                       disabled={actionLoading}
@@ -280,7 +280,7 @@ export default function ChampionProfile() {
                     </button>
                   )}
 
-                  {showSuperAdminResend && (
+                  {showSuperAdminResend && !isViewer && (
                     <button
                       type="button"
                       disabled={actionLoading}
@@ -292,7 +292,8 @@ export default function ChampionProfile() {
                   )}
 
                   {champion.account_status === ACCOUNT_STATUS.PASSWORD_SET &&
-                    champion.member_status === MEMBER_STATUS.INACTIVE && (
+                    champion.member_status === MEMBER_STATUS.INACTIVE &&
+                    !isViewer && (
                       <button
                         type="button"
                         disabled={actionLoading}

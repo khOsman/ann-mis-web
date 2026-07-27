@@ -28,7 +28,7 @@ const ROLE_FILTERS = [
   ...Object.entries(CHAMPION_ROLE_LABELS).map(([key, label]) => ({ key, label })),
 ];
 
-function ChampionRowActions({ champion, isSuperAdmin }) {
+function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
@@ -130,7 +130,7 @@ function ChampionRowActions({ champion, isSuperAdmin }) {
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
-      {isPending && (
+      {isPending && !isViewer && (
         <>
           <select
             value={selectedRole}
@@ -165,7 +165,7 @@ function ChampionRowActions({ champion, isSuperAdmin }) {
         </>
       )}
 
-      {showRegularInviteButton && (
+      {showRegularInviteButton && !isViewer && (
         <button
           type="button"
           disabled={actionLoading}
@@ -178,7 +178,7 @@ function ChampionRowActions({ champion, isSuperAdmin }) {
         </button>
       )}
 
-      {showSuperAdminResend && (
+      {showSuperAdminResend && !isViewer && (
         <button
           type="button"
           disabled={actionLoading}
@@ -189,7 +189,7 @@ function ChampionRowActions({ champion, isSuperAdmin }) {
         </button>
       )}
 
-      {showActivate && (
+      {showActivate && !isViewer && (
         <button
           type="button"
           disabled={actionLoading}
@@ -236,7 +236,7 @@ function ChampionRowActions({ champion, isSuperAdmin }) {
 
 export default function AllChampions() {
   const { data, loading, error } = useChampions();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isViewer } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const roleFilter = searchParams.get("role") || "all";
 
@@ -442,6 +442,7 @@ export default function AllChampions() {
                           <ChampionRowActions
                             champion={champion}
                             isSuperAdmin={isSuperAdmin}
+                            isViewer={isViewer}
                           />
                         </td>
 

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
+import { useAuth } from "../../../context/AuthContext";
 import { useChampions, useFGD } from "../../../hooks";
 import {
   updateFGDSchedule,
@@ -26,6 +27,7 @@ export default function FGDDetails() {
   const { fgdId } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isViewer } = useAuth();
   const [evaluationTarget, setEvaluationTarget] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleForm, setScheduleForm] = useState(null);
@@ -264,7 +266,7 @@ export default function FGDDetails() {
               <p className="text-gray-500">Status</p>
               <select
                 value={fgd.status || ""}
-                disabled={savingStatus}
+                disabled={savingStatus || isViewer}
                 onChange={handleStatusChange}
                 className="mt-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-[var(--ann-pink)] disabled:opacity-50"
               >
@@ -299,7 +301,7 @@ export default function FGDDetails() {
               Schedule
             </h3>
 
-            {!editingSchedule && (
+            {!editingSchedule && !isViewer && (
               <button
                 type="button"
                 onClick={startEditSchedule}
@@ -478,13 +480,15 @@ export default function FGDDetails() {
                     <p className="font-semibold">{member.name}</p>
                     <p className="text-xs text-gray-500">{member.email}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveMember(member.champion_id)}
-                    className="text-xs text-red-500 hover:underline"
-                  >
-                    Remove
-                  </button>
+                  {!isViewer && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.champion_id)}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -494,6 +498,7 @@ export default function FGDDetails() {
             </p>
           )}
 
+          {!isViewer && (
           <div className="mt-6 pt-6 border-t border-gray-100">
             <h4 className="text-sm font-bold text-gray-700">
               Assign Active Committee Members
@@ -554,6 +559,7 @@ export default function FGDDetails() {
                   }`}
             </button>
           </div>
+          )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -607,13 +613,15 @@ export default function FGDDetails() {
                         {participant.selection_status || "-"}
                       </td>
                       <td className="p-4">
-                        <button
-                          type="button"
-                          onClick={() => setEvaluationTarget(participant)}
-                          className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
-                        >
-                          Evaluate
-                        </button>
+                        {!isViewer && (
+                          <button
+                            type="button"
+                            onClick={() => setEvaluationTarget(participant)}
+                            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+                          >
+                            Evaluate
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
