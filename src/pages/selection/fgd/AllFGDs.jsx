@@ -10,8 +10,12 @@ export default function AllFGDs() {
 
   const { data: cohorts, loading } = useCohorts();
 
+  // A cohort with nobody registered has nothing to select from yet — keep
+  // it out of the FGD management list until it actually has participants.
   const activeCohorts = cohorts.filter(
-    (cohort) => cohort.status === COHORT_STATUS.ACTIVE
+    (cohort) =>
+      cohort.status === COHORT_STATUS.ACTIVE &&
+      (cohort.total_registrations || 0) > 0
   );
 
   return (
@@ -69,7 +73,7 @@ export default function AllFGDs() {
             </div>
           ) : activeCohorts.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No active cohorts found.
+              No active cohorts with registered participants yet.
             </div>
           ) : (
             <div className="overflow-x-auto">
