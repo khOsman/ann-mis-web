@@ -1,15 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
 import { useChampions, useFGD } from "../../../hooks";
-import { updateFGDSchedule } from "../../../services/fgdService";
+import {
+  updateFGDSchedule,
+  updateFGDStatus,
+  syncFGDStatusIfEnded,
+} from "../../../services/fgdService";
 import {
   assignChampionToFGD,
   unassignChampionFromFGD,
 } from "../../../services/championsService";
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
+import { FGD_STATUS_OPTIONS } from "../../../constants/fgd";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
@@ -28,8 +33,34 @@ export default function FGDDetails() {
   const [committeeSearch, setCommitteeSearch] = useState("");
   const [selectedChampionIds, setSelectedChampionIds] = useState([]);
   const [assigningMembers, setAssigningMembers] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
 
   const { fgd, participants, loading, error } = useFGD(fgdId);
+
+  // Opportunistic reconciliation — no scheduled job flips a passed FGD to
+  // Completed on its own, so check whenever this page loads/updates.
+  useEffect(() => {
+    if (!fgd) return;
+
+    syncFGDStatusIfEnded(fgd).catch((err) =>
+      console.error(`Failed to sync status for ${fgd.id}:`, err)
+    );
+  }, [fgd]);
+
+  const handleStatusChange = async (e) => {
+    const nextStatus = e.target.value;
+    setSavingStatus(true);
+
+    try {
+      await updateFGDStatus(fgdId, nextStatus);
+      showAlert("success", `Status updated to ${nextStatus}.`);
+      // No manual refetch needed — the live listener updates the FGD doc automatically.
+    } catch (err) {
+      showAlert("error", err.message || "Failed to update status.");
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
   const { data: allChampions, loading: loadingCommittee } = useChampions();
   const activeCommittee = useMemo(
@@ -210,7 +241,18 @@ export default function FGDDetails() {
 
             <div>
               <p className="text-gray-500">Status</p>
-              <p className="font-semibold">{fgd.status || "-"}</p>
+              <select
+                value={fgd.status || ""}
+                disabled={savingStatus}
+                onChange={handleStatusChange}
+                className="mt-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-[var(--ann-pink)] disabled:opacity-50"
+              >
+                {FGD_STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

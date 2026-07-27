@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { auth } from "../../../firebase";
 import AdminLayout from "../../../layouts/AdminLayout";
@@ -10,6 +10,7 @@ import { useChampions, useCohort, useFGDsByCohort } from "../../../hooks";
 import {
   generateFGDsForCohort,
   regenerateFGDsForCohort,
+  syncFGDStatusIfEnded,
 } from "../../../services/fgdService";
 import {
   assignChampionToFGD,
@@ -24,6 +25,16 @@ export default function CohortFGDs() {
 
   const { data: cohort, loading: cohortLoading } = useCohort(cohortId);
   const { data: fgds, loading: loadingFgds } = useFGDsByCohort(cohortId);
+
+  // Opportunistic reconciliation — no scheduled job flips a passed FGD to
+  // Completed on its own, so check whenever this list loads/updates.
+  useEffect(() => {
+    fgds.forEach((fgd) => {
+      syncFGDStatusIfEnded(fgd).catch((err) =>
+        console.error(`Failed to sync status for ${fgd.id}:`, err)
+      );
+    });
+  }, [fgds]);
 
   const [participantLimit, setParticipantLimit] = useState(25);
   const [generating, setGenerating] = useState(false);

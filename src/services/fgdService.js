@@ -328,3 +328,33 @@ export const updateFGDSchedule = async (fgdId, updates) => {
     updated_at: serverTimestamp(),
   });
 };
+
+export const updateFGDStatus = async (fgdId, status) => {
+  await updateDoc(doc(db, COLLECTIONS.FGDS, fgdId), {
+    status,
+    updated_at: serverTimestamp(),
+  });
+};
+
+// session_date/session_start_time/session_end_time come from plain
+// <input type="date"> / <input type="time"> fields, so they're always
+// "YYYY-MM-DD" / "HH:MM" — safe to concatenate into an ISO-ish datetime
+// string and compare against wall-clock time in the browser's own timezone.
+export const hasFGDScheduleEnded = (fgd) => {
+  if (!fgd?.session_date || !fgd?.session_end_time) return false;
+
+  const end = new Date(`${fgd.session_date}T${fgd.session_end_time}`);
+  return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
+};
+
+// No scheduled-job infrastructure exists to flip FGDs to Completed the
+// moment their session ends, so this reconciles opportunistically instead —
+// called whenever an FGD's live data is loaded in the admin UI. Once status
+// is Completed this is a no-op, so it can't loop or fight a manual edit
+// back to Draft/Active before the schedule has passed.
+export const syncFGDStatusIfEnded = async (fgd) => {
+  if (!fgd || fgd.status === FGD_STATUS.COMPLETED) return;
+  if (!hasFGDScheduleEnded(fgd)) return;
+
+  await updateFGDStatus(fgd.id, FGD_STATUS.COMPLETED);
+};

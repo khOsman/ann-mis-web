@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForms, useFormFields, useFGDsByCohort, useParticipants } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
 import { ENROLLMENT_STATUS, GRADUATION_STATUS } from "../../constants/status";
 import { exportCSV, exportExcel, exportFormFieldsPDF } from "../../services/exportService";
+import { syncFGDStatusIfEnded } from "../../services/fgdService";
 import { formatBDPhone } from "../../utils/phone";
 
 const PARTICIPANT_COLUMNS = [
@@ -197,6 +198,16 @@ const FormRow = ({ form, cohort, expanded, onToggle }) => {
 const FGDsSection = ({ cohort }) => {
   const navigate = useNavigate();
   const { data: fgds, loading } = useFGDsByCohort(cohort.id);
+
+  // Opportunistic reconciliation — no scheduled job flips a passed FGD to
+  // Completed on its own, so check whenever this panel loads/updates.
+  useEffect(() => {
+    fgds.forEach((fgd) => {
+      syncFGDStatusIfEnded(fgd).catch((err) =>
+        console.error(`Failed to sync status for ${fgd.id}:`, err)
+      );
+    });
+  }, [fgds]);
 
   if (loading) {
     return <p className="text-sm text-gray-500 py-4">Loading FGDs...</p>;
