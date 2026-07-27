@@ -2,6 +2,7 @@ import { useState } from "react";
 import annLogo from "../../assets/ann-logo.png";
 import { registerChampionRequest } from "../../services/championsService";
 import { useAlert } from "../../context/AlertContext";
+import { GENDER_OPTIONS } from "../../constants/champions";
 
 export default function ChampionRegistration() {
   const { showAlert } = useAlert();
@@ -12,6 +13,7 @@ export default function ChampionRegistration() {
     email: "",
     phone: "",
     date_of_birth: "",
+    gender: "",
     institution: "",
     address: "",
   });
@@ -32,6 +34,7 @@ export default function ChampionRegistration() {
           name: form.name.trim(),
           phone: form.phone.trim(),
           date_of_birth: form.date_of_birth,
+          gender: form.gender,
           institution: form.institution.trim(),
           address: form.address.trim(),
         },
@@ -44,6 +47,7 @@ export default function ChampionRegistration() {
         email: "",
         phone: "",
         date_of_birth: "",
+        gender: "",
         institution: "",
         address: "",
       });
@@ -119,6 +123,28 @@ export default function ChampionRegistration() {
                 />
               </div>
             ))}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Gender
+              </label>
+              <select
+                name="gender"
+                value={form.gender}
+                onChange={handleChange}
+                required
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
+              >
+                <option value="" disabled>
+                  Select gender
+                </option>
+                {GENDER_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
