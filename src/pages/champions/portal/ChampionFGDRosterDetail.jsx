@@ -22,7 +22,13 @@ export default function ChampionFGDRosterDetail() {
   const [bookingFgdId, setBookingFgdId] = useState(null);
 
   const sortedFgds = useMemo(
-    () => [...fgds].sort((a, b) => (a.sequence_no || 0) - (b.sequence_no || 0)),
+    () =>
+      fgds
+        .filter(
+          (fgd) =>
+            fgd.session_date && fgd.session_start_time && fgd.session_end_time
+        )
+        .sort((a, b) => (a.sequence_no || 0) - (b.sequence_no || 0)),
     [fgds]
   );
 
@@ -59,7 +65,7 @@ export default function ChampionFGDRosterDetail() {
           <p className="text-gray-500">Loading roster...</p>
         ) : sortedFgds.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center text-gray-500">
-            No FGDs have been generated for this cohort yet.
+            No FGDs with a schedule set (date and time) yet.
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">

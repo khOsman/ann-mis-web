@@ -11,7 +11,11 @@ export default function ChampionFGDRosters() {
   const { data: cohorts, loading } = useCohorts();
 
   const activeCohorts = useMemo(
-    () => cohorts.filter((cohort) => cohort.status === COHORT_STATUS.ACTIVE),
+    () =>
+      cohorts.filter(
+        (cohort) =>
+          cohort.status === COHORT_STATUS.ACTIVE && (cohort.total_fgds || 0) > 0
+      ),
     [cohorts]
   );
 
@@ -25,7 +29,7 @@ export default function ChampionFGDRosters() {
           <p className="text-gray-500">Loading cohorts...</p>
         ) : activeCohorts.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center text-gray-500">
-            No active cohorts right now.
+            No active cohorts have generated FGDs yet.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -52,13 +56,12 @@ export default function ChampionFGDRosters() {
 
                 <button
                   type="button"
-                  disabled={!cohort.total_fgds}
                   onClick={() =>
                     navigate(
                       ROUTES.championFGDRosterDetail.replace(":cohortId", cohort.id)
                     )
                   }
-                  className="mt-5 bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="mt-5 bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90"
                 >
                   View Roster
                 </button>
