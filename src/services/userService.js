@@ -49,3 +49,7 @@ export const notifyUserAccessUpdate = async (userId) => {
     authenticated: true,
   });
 };
+
+export const deleteUser = async (userId) => {
+  return apiClient.delete(`/api/users/${userId}`, { authenticated: true });
+};

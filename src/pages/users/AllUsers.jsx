@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUsers } from "../../services/userService";
+import { getUsers, deleteUser } from "../../services/userService";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 export default function AllUsers() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isSuperAdmin, appUser } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -55,6 +60,26 @@ export default function AllUsers() {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+
+    try {
+      await deleteUser(deleteTarget.id);
+      showAlert(
+        "success",
+        `${deleteTarget.name || deleteTarget.email} deleted. Their login account, if any, was removed too.`
+      );
+      setDeleteTarget(null);
+      await fetchUsers();
+    } catch (error) {
+      showAlert("error", error.message || "Failed to delete user.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const statusClass = (status) => {
@@ -162,14 +187,25 @@ export default function AllUsers() {
                       </td>
 
                       <td className="p-4">
-                        <button
-                          onClick={() =>
-                            navigate(`/admin/users/${user.uid}`)
-                          }
-                          className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
-                        >
-                          View Profile
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              navigate(`/admin/users/${user.uid}`)
+                            }
+                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
+                          >
+                            View Profile
+                          </button>
+
+                          {isSuperAdmin && user.id !== appUser?.id && (
+                            <button
+                              onClick={() => setDeleteTarget(user)}
+                              className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -179,6 +215,17 @@ export default function AllUsers() {
           </div>
         </div>
       </PageContainer>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Delete ${deleteTarget?.name || deleteTarget?.email || "this user"}?`}
+        message="This permanently deletes their MIS user record and, if they've ever signed in, removes their login from Firebase Authentication too. This cannot be undone."
+        confirmText={deleting ? "Deleting..." : "Delete Permanently"}
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteUser}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </AdminLayout>
   );
 }

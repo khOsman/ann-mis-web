@@ -3,21 +3,26 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
-import { updateUser, notifyUserAccessUpdate } from "../../services/userService";
+import { useAuth } from "../../context/AuthContext";
+import { updateUser, notifyUserAccessUpdate, deleteUser } from "../../services/userService";
 import { useUser } from "../../hooks";
 import {
   getPermissionsByRole,
   USER_ROLES,
   USER_STATUSES,
 } from "../../constants/roles";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 export default function UserProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isSuperAdmin, appUser } = useAuth();
 
   const { data: userData, loading } = useUser(userId);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     role: "",
@@ -91,6 +96,24 @@ export default function UserProfile() {
       showAlert("error", error.message || "Failed to update user.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    setShowDeleteConfirm(false);
+    setDeleting(true);
+
+    try {
+      await deleteUser(userId);
+      showAlert(
+        "success",
+        `${userData.name || userData.email} deleted. Their login account, if any, was removed too.`
+      );
+      navigate("/admin/users");
+    } catch (error) {
+      showAlert("error", error.message || "Failed to delete user.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -183,6 +206,17 @@ export default function UserProfile() {
                 </p>
               </div>
             </div>
+
+            {isSuperAdmin && userData.id !== appUser?.id && (
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(true)}
+                className="mt-6 w-full border border-red-300 text-red-600 px-5 py-2.5 rounded-xl font-semibold hover:bg-red-50 disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete User"}
+              </button>
+            )}
           </div>
 
           <div className="xl:col-span-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -265,6 +299,17 @@ export default function UserProfile() {
           </div>
         </div>
       </PageContainer>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`Delete ${userData.name || userData.email}?`}
+        message="This permanently deletes their MIS user record and, if they've ever signed in, removes their login from Firebase Authentication too. This cannot be undone."
+        confirmText="Delete Permanently"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteUser}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </AdminLayout>
   );
 }
