@@ -63,7 +63,7 @@ service cloud.firestore {
     }
 
     match /cohorts/{cohortId} {
-      allow read: if isActiveUser();
+      allow read: if isSelectionUser();
       allow create, update: if isAdmin();
 
       allow update: if request.auth == null

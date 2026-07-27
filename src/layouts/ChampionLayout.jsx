@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   UserCircle,
   Users,
+  List,
   GraduationCap,
   Rocket,
   BarChart3,
@@ -23,7 +24,14 @@ function buildMenuItems(role) {
   ];
 
   if (role === CHAMPION_ROLES.SELECTION_COMMITTEE) {
-    items.push({ label: "FGDs", path: ROUTES.championFGDs, icon: Users });
+    items.push({
+      label: "FGDs",
+      icon: Users,
+      children: [
+        { label: "FGD Rosters", path: ROUTES.championFGDRosters, icon: List },
+        { label: "Assigned FGDs", path: ROUTES.championFGDs, icon: List },
+      ],
+    });
   } else if (
     role === CHAMPION_ROLES.FACILITATOR ||
     role === CHAMPION_ROLES.CO_FACILITATOR
@@ -61,6 +69,26 @@ export default function ChampionLayout({ children, title, subtitle }) {
     setMobileSidebarOpen(false);
   };
 
+  const renderChildItems = (children) =>
+    children.map((child) => {
+      const childActive = isActive(child);
+
+      return (
+        <button
+          key={child.label}
+          type="button"
+          onClick={() => handleNavigate(child)}
+          className={`w-full flex items-center gap-3 text-left rounded-xl px-3 py-2 text-xs font-medium transition ${
+            childActive
+              ? "bg-white text-[var(--ann-purple)]"
+              : "text-purple-100 hover:bg-white/10 cursor-pointer"
+          }`}
+        >
+          {child.label}
+        </button>
+      );
+    });
+
   const handleLogout = async () => {
     await logout();
     navigate("/");
@@ -70,33 +98,43 @@ export default function ChampionLayout({ children, title, subtitle }) {
     menuItems.map((item) => {
       const Icon = item.icon;
       const active = isActive(item);
+      const hasChildren = item.children && item.children.length > 0;
 
       return (
-        <button
-          key={item.label}
-          type="button"
-          disabled={item.disabled}
-          onClick={() => handleNavigate(item)}
-          className={`w-full flex items-center gap-3 text-left rounded-xl px-4 py-3 text-sm font-medium transition ${
-            item.disabled
-              ? "text-purple-200/50 cursor-not-allowed"
-              : active
-              ? "bg-[var(--ann-pink)] text-white shadow-lg cursor-pointer"
-              : "text-purple-100 hover:bg-white/10 cursor-pointer"
-          }`}
-        >
-          {Icon && <Icon size={18} />}
-          {sidebarOpen && (
-            <span className="flex items-center gap-2">
-              {item.label}
-              {item.disabled && (
-                <span className="text-[10px] uppercase tracking-wide bg-white/10 px-2 py-0.5 rounded-full">
-                  Soon
-                </span>
-              )}
-            </span>
+        <div key={item.label}>
+          <button
+            type="button"
+            disabled={item.disabled}
+            onClick={() => handleNavigate(item)}
+            className={`w-full flex items-center gap-3 text-left rounded-xl px-4 py-3 text-sm font-medium transition ${
+              item.disabled
+                ? "text-purple-200/50 cursor-not-allowed"
+                : active
+                ? "bg-[var(--ann-pink)] text-white shadow-lg cursor-pointer"
+                : hasChildren
+                ? "text-purple-100 cursor-default"
+                : "text-purple-100 hover:bg-white/10 cursor-pointer"
+            }`}
+          >
+            {Icon && <Icon size={18} />}
+            {sidebarOpen && (
+              <span className="flex items-center gap-2">
+                {item.label}
+                {item.disabled && (
+                  <span className="text-[10px] uppercase tracking-wide bg-white/10 px-2 py-0.5 rounded-full">
+                    Soon
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
+
+          {sidebarOpen && hasChildren && (
+            <div className="ml-4 mt-2 space-y-1 border-l border-white/20 pl-3">
+              {renderChildItems(item.children)}
+            </div>
           )}
-        </button>
+        </div>
       );
     });
 

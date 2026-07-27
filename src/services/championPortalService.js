@@ -25,6 +25,14 @@ export const requestFGDChange = async ({ fgdId, reason }) => {
   );
 };
 
+export const bookFGDSlot = async ({ fgdId }) => {
+  return apiClient.post(
+    `/api/me/fgds/${fgdId}/book`,
+    {},
+    { authenticated: true }
+  );
+};
+
 export const markAttendance = async ({ participantId, status }) => {
   return apiClient.post(
     `/api/me/participants/${participantId}/attendance`,

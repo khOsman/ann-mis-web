@@ -14,7 +14,7 @@ export default function ChampionFGDs() {
   const assignedFgds = champion?.assigned_fgds || [];
 
   return (
-    <ChampionLayout title="FGDs" subtitle="Your assigned Focused Group Discussions">
+    <ChampionLayout title="Assigned FGDs" subtitle="Your assigned Focused Group Discussions">
       <PageContainer className="py-6 lg:py-8">
         {loading ? (
           <p className="text-gray-500">Loading your assigned FGDs...</p>
