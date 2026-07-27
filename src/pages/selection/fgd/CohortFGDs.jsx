@@ -88,7 +88,18 @@ export default function CohortFGDs() {
     });
   }, [activeCommittee, assignedChampionIds, attachSearch]);
 
+  const hasProperSchedule = (fgd) =>
+    Boolean(fgd.session_date && fgd.session_start_time && fgd.session_end_time);
+
   const openAttachModal = (fgd) => {
+    if (!hasProperSchedule(fgd)) {
+      showAlert(
+        "error",
+        `Set ${fgd.fgd_code}'s schedule (date, start time, and end time) before assigning Selection Committee members.`
+      );
+      return;
+    }
+
     setAttachTargetId(fgd.id);
     setAttachSearch("");
     setSelectedChampionIds([]);
@@ -158,6 +169,14 @@ export default function CohortFGDs() {
 
   const handleGenerateFGDs = async () => {
     if (!cohort) return;
+
+    if (!cohort.total_registrations || cohort.total_registrations === 0) {
+      showAlert(
+        "error",
+        "This cohort has no registered participants yet. FGDs cannot be generated until participants have registered."
+      );
+      return;
+    }
 
     setGenerating(true);
 
@@ -255,32 +274,41 @@ export default function CohortFGDs() {
               Generate FGDs
             </h3>
 
-            <p className="text-sm text-gray-500 mt-2">
-              No FGDs have been generated for this cohort yet.
-            </p>
+            {!cohort?.total_registrations ? (
+              <p className="text-sm text-gray-500 mt-2">
+                No participants have registered for this cohort yet. FGDs can be
+                generated once participants have registered.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mt-2">
+                  No FGDs have been generated for this cohort yet.
+                </p>
 
-            <div className="mt-5 max-w-sm">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Participants per FGD
-              </label>
+                <div className="mt-5 max-w-sm">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Participants per FGD
+                  </label>
 
-              <input
-                type="number"
-                min="1"
-                value={participantLimit}
-                onChange={(e) => setParticipantLimit(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
-              />
-            </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={participantLimit}
+                    onChange={(e) => setParticipantLimit(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
+                  />
+                </div>
 
-            <button
-              type="button"
-              disabled={generating}
-              onClick={handleGenerateFGDs}
-              className="mt-5 bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
-            >
-              {generating ? "Generating..." : "Generate FGDs"}
-            </button>
+                <button
+                  type="button"
+                  disabled={generating}
+                  onClick={handleGenerateFGDs}
+                  className="mt-5 bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                >
+                  {generating ? "Generating..." : "Generate FGDs"}
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">

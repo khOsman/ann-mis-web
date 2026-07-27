@@ -8,6 +8,7 @@ import { ROUTES } from "../../constants/routes";
 import { useAlert } from "../../context/AlertContext";
 import { useForms } from "../../hooks";
 import { cloneForm } from "../../services/formService";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 export default function AllForms() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function AllForms() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [cloningId, setCloningId] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   const filteredForms = useMemo(() => {
     return forms.filter((form) => {
@@ -60,33 +62,32 @@ export default function AllForms() {
     }
   };
 
-  const handleDeleteForm = async (formId) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this form? It will be removed from active lists but kept for audit history."
-  );
+  const closeDeleteTarget = () => setDeleteTargetId(null);
 
-  if (!confirmDelete) return;
+  const handleDeleteForm = async () => {
+    const formId = deleteTargetId;
+    closeDeleteTarget();
 
-  try {
-    const user = auth.currentUser;
+    try {
+      const user = auth.currentUser;
 
-    await updateDoc(doc(db, "forms", formId), {
-      is_deleted: true,
-      deleted_at: serverTimestamp(),
-      deleted_by_email: user?.email || "",
-      deleted_by_name: user?.displayName || "",
-      updated_at: serverTimestamp(),
-      updated_by_email: user?.email || "",
-      updated_by_name: user?.displayName || "",
-    });
+      await updateDoc(doc(db, "forms", formId), {
+        is_deleted: true,
+        deleted_at: serverTimestamp(),
+        deleted_by_email: user?.email || "",
+        deleted_by_name: user?.displayName || "",
+        updated_at: serverTimestamp(),
+        updated_by_email: user?.email || "",
+        updated_by_name: user?.displayName || "",
+      });
 
-    showAlert("success", "Form deleted successfully.");
-    // No manual refetch needed — the live listener updates the list automatically.
-  } catch (error) {
-    console.error("Failed to delete form:", error);
-    showAlert("error", error.message || "Failed to delete form.");
-  }
-};
+      showAlert("success", "Form deleted successfully.");
+      // No manual refetch needed — the live listener updates the list automatically.
+    } catch (error) {
+      console.error("Failed to delete form:", error);
+      showAlert("error", error.message || "Failed to delete form.");
+    }
+  };
 
   const handleCloneForm = async (formId) => {
     setCloningId(formId);
@@ -276,7 +277,7 @@ export default function AllForms() {
                           </button>
 
                           <button
-                                onClick={() => handleDeleteForm(form.id)}
+                                onClick={() => setDeleteTargetId(form.id)}
                                 className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"
                                 >
                                 Delete
@@ -291,6 +292,17 @@ export default function AllForms() {
           </div>
         </div>
       </PageContainer>
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        title="Delete Form?"
+        message="Are you sure you want to delete this form? It will be removed from active lists but kept for audit history."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteForm}
+        onCancel={closeDeleteTarget}
+      />
     </AdminLayout>
   );
 }

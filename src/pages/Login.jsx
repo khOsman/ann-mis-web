@@ -2,9 +2,11 @@ import { useState } from "react";
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
 import annLogo from "../assets/ann-logo.png";
+import { useAlert } from "../context/AlertContext";
 
 
 export default function Login() {
+  const { showAlert } = useAlert();
   const [championEmail, setChampionEmail] = useState("");
   const [championPassword, setChampionPassword] = useState("");
   const [championLoggingIn, setChampionLoggingIn] = useState(false);
@@ -17,13 +19,13 @@ export default function Login() {
 
       if (!email.endsWith("@brac.net")) {
         await signOut(auth);
-        alert("Only BRAC official email accounts are allowed.");
+        showAlert("error", "Only BRAC official email accounts are allowed.");
         return;
       }
 
       window.location.href = "/admin";
     } catch (error) {
-      alert(error.message);
+      showAlert("error", error.message || "Failed to sign in.");
     }
   };
 

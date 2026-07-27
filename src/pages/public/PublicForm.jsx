@@ -3,9 +3,11 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { useParams } from "react-router-dom";
 import { db } from "../../firebase";
 import { submitPublicRegistration } from "../../services/publicRegistrationService";
+import { useAlert } from "../../context/AlertContext";
 
 export default function PublicForm() {
   const { slug } = useParams();
+  const { showAlert } = useAlert();
 
   const [language, setLanguage] = useState("en");
   const [loading, setLoading] = useState(true);
@@ -234,7 +236,8 @@ export default function PublicForm() {
       setSubmitted(true);
     } catch (error) {
       console.error("Failed to submit form:", error);
-      alert(
+      showAlert(
+        "error",
         language === "bn"
           ? "ফর্ম জমা দেওয়া যায়নি। আবার চেষ্টা করুন।"
           : "Failed to submit form. Please try again."

@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDocs,
   query,
@@ -76,12 +77,12 @@ export const previewCohortDataDeletion = async (cohortId) => {
   };
 };
 
-// Deletes every participant, form response, FGD, and form tied to this
-// cohort (plus their form_fields and participant_evaluations, which would
-// otherwise be orphaned once their parent form/FGD is gone), then resets
-// the cohort's own aggregate stats back to a clean slate. The cohort
-// document itself is NOT deleted.
-export const deleteAllCohortData = async (cohortId) => {
+// Shared by deleteAllCohortData and deleteCohortCompletely below — wipes
+// every participant, form response, FGD, and form tied to this cohort
+// (plus their form_fields and participant_evaluations, which would
+// otherwise be orphaned once their parent form/FGD is gone). Does not
+// touch the cohort document itself.
+const wipeAllCohortData = async (cohortId) => {
   const { participantIds, responseIds, fgdIds, formIds } =
     await gatherDirectCohortIds(cohortId);
 
@@ -99,6 +100,23 @@ export const deleteAllCohortData = async (cohortId) => {
     batchDelete(COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationIds),
   ]);
 
+  return {
+    deletedParticipants: participantIds.length,
+    deletedResponses: responseIds.length,
+    deletedFgds: fgdIds.length,
+    deletedForms: formIds.length,
+    deletedFormFields: formFieldIds.length,
+    deletedEvaluations: evaluationIds.length,
+  };
+};
+
+// Deletes every participant, form response, FGD, and form tied to this
+// cohort, then resets the cohort's own aggregate stats back to a clean
+// slate. The cohort document itself is NOT deleted — this is the
+// "wipe and start over" action, available to any admin.
+export const deleteAllCohortData = async (cohortId) => {
+  const counts = await wipeAllCohortData(cohortId);
+
   await updateDoc(doc(db, COLLECTIONS.COHORTS, cohortId), {
     total_registrations: 0,
     total_selected: 0,
@@ -110,12 +128,17 @@ export const deleteAllCohortData = async (cohortId) => {
     updated_at: serverTimestamp(),
   });
 
-  return {
-    deletedParticipants: participantIds.length,
-    deletedResponses: responseIds.length,
-    deletedFgds: fgdIds.length,
-    deletedForms: formIds.length,
-    deletedFormFields: formFieldIds.length,
-    deletedEvaluations: evaluationIds.length,
-  };
+  return counts;
+};
+
+// Deletes every participant, form response, FGD, and form tied to this
+// cohort, AND the cohort document itself — a genuinely irreversible,
+// super-admin-only action (see firestore.rules: cohorts delete is
+// isSuperAdmin() only, unlike the isAdmin()-level archive/update).
+export const deleteCohortCompletely = async (cohortId) => {
+  const counts = await wipeAllCohortData(cohortId);
+
+  await deleteDoc(doc(db, COLLECTIONS.COHORTS, cohortId));
+
+  return counts;
 };
