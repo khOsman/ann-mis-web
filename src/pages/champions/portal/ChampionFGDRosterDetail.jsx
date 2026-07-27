@@ -88,13 +88,13 @@ export default function ChampionFGDRosterDetail() {
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="bg-[var(--ann-purple)] text-center py-3 font-bold text-lg text-white">
+            <div className="bg-[#DCE6F7] text-center py-3 font-bold text-lg border-b border-gray-300">
               Amra Notun Network &quot;Changemakers&quot; Training
             </div>
-            <div className="bg-[var(--ann-pink)] text-center py-2 font-semibold text-white">
+            <div className="bg-[#DCE6F7] text-center py-2 font-semibold border-b border-gray-300">
               {cohort?.cohort_name} ({cohort?.cohort_code})
             </div>
-            <div className="bg-white text-center py-2 font-semibold text-[var(--ann-text-dark)] border-b border-gray-300">
+            <div className="bg-white text-center py-2 font-semibold border-b border-gray-300">
               FGD Roster Sheet
             </div>
 
@@ -108,7 +108,7 @@ export default function ChampionFGDRosterDetail() {
                     {sortedFgds.map((fgd) => (
                       <th
                         key={fgd.id}
-                        className="border border-gray-300 bg-[var(--ann-pink)] text-white px-4 py-2 whitespace-nowrap"
+                        className="border border-gray-300 bg-green-500 text-white px-4 py-2 whitespace-nowrap"
                       >
                         {fgd.fgd_code}
                       </th>
@@ -184,7 +184,7 @@ export default function ChampionFGDRosterDetail() {
                                 type="button"
                                 disabled={bookingFgdId === fgd.id}
                                 onClick={() => handleBook(fgd.id)}
-                                className="px-3 py-1.5 rounded-lg bg-[var(--ann-purple)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
                               >
                                 {bookingFgdId === fgd.id ? "Booking..." : "Book This Slot"}
                               </button>
