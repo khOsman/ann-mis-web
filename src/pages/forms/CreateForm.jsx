@@ -6,6 +6,7 @@ import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { useAlert } from "../../context/AlertContext";
+import { ROUTES } from "../../constants/routes";
 import { useCohorts } from "../../hooks";
 import { isSlugAvailable, normalizeSlug } from "../../services/formService";
 
@@ -155,7 +156,14 @@ export default function CreateForm() {
 
   return (
     <AdminLayout title="Create Form" subtitle="Create registration form metadata">
-      <PageContainer className="py-6 lg:py-8">
+      <PageContainer className="py-6 lg:py-8 space-y-4">
+        <button
+          onClick={() => navigate(ROUTES.forms)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back to Forms
+        </button>
+
         <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
@@ -18,6 +18,7 @@ import { formatBDPhone } from "../../../utils/phone";
 
 export default function FGDDetails() {
   const { fgdId } = useParams();
+  const navigate = useNavigate();
   const { showAlert } = useAlert();
   const [evaluationTarget, setEvaluationTarget] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(false);
@@ -147,7 +148,13 @@ export default function FGDDetails() {
         title="FGD Details"
         subtitle="Loading FGD information"
       >
-        <PageContainer className="py-6 lg:py-8">
+        <PageContainer className="py-6 lg:py-8 space-y-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-sm font-semibold text-[var(--ann-pink)]"
+          >
+            ← Back
+          </button>
           <p className="text-gray-500">Loading FGD...</p>
         </PageContainer>
       </AdminLayout>
@@ -157,7 +164,13 @@ export default function FGDDetails() {
   if (error || !fgd) {
     return (
       <AdminLayout title="FGD Details" subtitle="Unable to load FGD">
-        <PageContainer className="py-6 lg:py-8">
+        <PageContainer className="py-6 lg:py-8 space-y-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-sm font-semibold text-[var(--ann-pink)]"
+          >
+            ← Back
+          </button>
           <p className="text-red-500">
             {error?.message || "FGD not found."}
           </p>
@@ -172,6 +185,13 @@ export default function FGDDetails() {
       subtitle={`${fgd.cohort_name || "-"} • ${fgd.total_participants || 0} participants`}
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back
+        </button>
+
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
             FGD Information

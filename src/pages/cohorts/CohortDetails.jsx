@@ -104,7 +104,13 @@ export default function CohortDetails() {
         title="Cohort Details"
         subtitle="Loading cohort information"
       >
-        <PageContainer className="py-6">
+        <PageContainer className="py-6 space-y-4">
+          <button
+            onClick={() => navigate(ROUTES.cohorts)}
+            className="text-sm font-semibold text-[var(--ann-pink)]"
+          >
+            ← Back to Cohorts
+          </button>
           <p>Loading...</p>
         </PageContainer>
       </AdminLayout>
@@ -119,6 +125,13 @@ export default function CohortDetails() {
       }`}
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
+        <button
+          onClick={() => navigate(ROUTES.cohorts)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back to Cohorts
+        </button>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
           {[
             ["Registrations", cohort.total_registrations || 0],

@@ -195,7 +195,14 @@ export default function ChampionProfile() {
       title="Champion Profile"
       subtitle="Review Champion details, assign a role, and manage onboarding status"
     >
-      <PageContainer className="py-6 lg:py-8">
+      <PageContainer className="py-6 lg:py-8 space-y-4">
+        <button
+          onClick={() => navigate(ROUTES.champions)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back to Champions
+        </button>
+
         {loading ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             Loading Champion...

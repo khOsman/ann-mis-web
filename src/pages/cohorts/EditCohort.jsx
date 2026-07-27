@@ -131,7 +131,13 @@ export default function EditCohort() {
   if (loading || !cohort) {
     return (
       <AdminLayout title="Edit Cohort" subtitle="Loading cohort information">
-        <PageContainer className="py-6 lg:py-8">
+        <PageContainer className="py-6 lg:py-8 space-y-4">
+          <button
+            onClick={() => navigate(ROUTES.cohorts)}
+            className="text-sm font-semibold text-[var(--ann-pink)]"
+          >
+            ← Back to Cohorts
+          </button>
           <p className="text-gray-500">Loading cohort...</p>
         </PageContainer>
       </AdminLayout>
@@ -143,7 +149,14 @@ export default function EditCohort() {
       title="Edit Cohort"
       subtitle="Update cohort information and settings"
     >
-      <PageContainer className="py-6 lg:py-8">
+      <PageContainer className="py-6 lg:py-8 space-y-4">
+        <button
+          onClick={() => navigate(ROUTES.cohorts)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back to Cohorts
+        </button>
+
         <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">

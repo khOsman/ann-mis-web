@@ -27,6 +27,7 @@ import { db } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { ROUTES } from "../../constants/routes";
 import { FIELD_TYPES } from "../../constants/fieldTypes";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { isSlugAvailable } from "../../services/formService";
@@ -375,6 +376,13 @@ const handleCopyLink = async () => {
   return (
     <AdminLayout title="Form Builder" subtitle="Build registration form fields">
       <PageContainer className="py-6 lg:py-8">
+        <button
+          onClick={() => navigate(ROUTES.forms)}
+          className="text-sm font-semibold text-[var(--ann-pink)] mb-5 inline-block"
+        >
+          ← Back to Forms
+        </button>
+
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">

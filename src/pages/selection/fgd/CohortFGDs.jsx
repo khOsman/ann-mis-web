@@ -216,6 +216,13 @@ export default function CohortFGDs() {
       subtitle="Manage FGDs for this cohort"
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
+        <button
+          onClick={() => navigate(`/admin/cohorts/${cohortId}`)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back to Cohort Details
+        </button>
+
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
             {cohort?.cohort_name || "Cohort FGDs"}

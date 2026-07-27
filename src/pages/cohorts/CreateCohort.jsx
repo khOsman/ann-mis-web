@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { ROUTES } from "../../constants/routes";
 import {
   DIVISIONS,
   DISTRICTS_BY_DIVISION,
@@ -16,6 +18,7 @@ import { validateCreateCohort } from "../../validators";
 import { buildCreateCohortPayload } from "../../builders";
 
 export default function CreateCohort() {
+  const navigate = useNavigate();
   const { showAlert } = useAlert();
 
   const initialFormState = {
@@ -95,7 +98,14 @@ export default function CreateCohort() {
 
   return (
     <AdminLayout title="Create Cohort" subtitle="Create a new ANN cohort">
-      <PageContainer className="py-6 lg:py-8">
+      <PageContainer className="py-6 lg:py-8 space-y-4">
+        <button
+          onClick={() => navigate(ROUTES.cohorts)}
+          className="text-sm font-semibold text-[var(--ann-pink)]"
+        >
+          ← Back to Cohorts
+        </button>
+
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm max-w-4xl">
           <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
             Cohort Information
