@@ -32,6 +32,25 @@ export default function ChampionFGDRosterDetail() {
     [fgds]
   );
 
+  // Consecutive FGDs sharing the same date get one merged cell (a day can
+  // hold several FGDs at different times, or just one) — matches the
+  // reference roster sheet's layout instead of repeating the date per column.
+  const dateGroups = useMemo(() => {
+    const groups = [];
+
+    sortedFgds.forEach((fgd) => {
+      const last = groups[groups.length - 1];
+
+      if (last && last.date === fgd.session_date) {
+        last.fgds.push(fgd);
+      } else {
+        groups.push({ date: fgd.session_date, fgds: [fgd] });
+      }
+    });
+
+    return groups;
+  }, [sortedFgds]);
+
   const handleBook = async (fgdId) => {
     setBookingFgdId(fgdId);
 
@@ -100,12 +119,13 @@ export default function ChampionFGDRosterDetail() {
                     <th className="border border-gray-300 bg-gray-50 px-3 py-2 text-left sticky left-0 z-10">
                       Date
                     </th>
-                    {sortedFgds.map((fgd) => (
+                    {dateGroups.map((group) => (
                       <td
-                        key={fgd.id}
+                        key={group.fgds[0].id}
+                        colSpan={group.fgds.length}
                         className="border border-gray-300 px-4 py-2 text-center whitespace-nowrap"
                       >
-                        {fgd.session_date || "Not set"}
+                        {group.date || "Not set"}
                       </td>
                     ))}
                   </tr>
