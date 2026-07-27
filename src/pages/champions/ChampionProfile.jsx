@@ -9,6 +9,7 @@ import { useChampions } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
 import { formatTimeRangeBDT } from "../../utils/time";
 import { formatBDPhone } from "../../utils/phone";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import {
   ACCOUNT_STATUS,
   ACCOUNT_STATUS_OPTIONS,
@@ -23,6 +24,7 @@ import {
   activateChampionMember,
   approveChampion,
   createChampionAccount,
+  deleteChampion,
   rejectChampion,
   updateChampion,
 } from "../../services/championsService";
@@ -44,6 +46,8 @@ export default function ChampionProfile() {
   const [selectedRole, setSelectedRole] = useState("");
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     data: champion,
@@ -156,6 +160,24 @@ export default function ChampionProfile() {
       showAlert("error", error.message || "Failed to update champion.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setShowDeleteConfirm(false);
+    setDeleting(true);
+
+    try {
+      await deleteChampion({ championId });
+      showAlert(
+        "success",
+        "Champion deleted. Their login account, if any, was removed too."
+      );
+      navigate(ROUTES.champions);
+    } catch (error) {
+      showAlert("error", error.message || "Failed to delete champion.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -281,6 +303,17 @@ export default function ChampionProfile() {
                       className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
                     >
                       Edit
+                    </button>
+                  )}
+
+                  {isSuperAdmin && !editing && (
+                    <button
+                      type="button"
+                      disabled={deleting}
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="border border-red-300 text-red-600 px-5 py-2.5 rounded-xl font-semibold hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {deleting ? "Deleting..." : "Delete"}
                     </button>
                   )}
                 </div>
@@ -517,6 +550,17 @@ export default function ChampionProfile() {
           </div>
         )}
       </PageContainer>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`Delete ${champion?.name || "this champion"}?`}
+        message="This permanently deletes their Champions Pool record and, if they ever had an account created, removes their login from Firebase Authentication too. This cannot be undone."
+        confirmText="Delete Permanently"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </AdminLayout>
   );
 }

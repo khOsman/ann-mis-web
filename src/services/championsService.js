@@ -91,6 +91,12 @@ export const updateChampion = async ({ championId, updates }) => {
   });
 };
 
+export const deleteChampion = async ({ championId }) => {
+  return apiClient.delete(`/api/champions/${championId}`, {
+    authenticated: true,
+  });
+};
+
 export const assignChampionToFGD = async ({ championId, fgdId }) => {
   return apiClient.post(
     `/api/champions/${championId}/assign-fgd`,

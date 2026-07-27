@@ -123,7 +123,8 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isSignedIn() && request.auth.uid == championId);
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /participant_evaluations/{evaluationId} {
