@@ -277,7 +277,13 @@ export default function SelectionCommittee() {
                                   ROUTES.championProfile.replace(
                                     ":championId",
                                     champion.id
-                                  )
+                                  ),
+                                  {
+                                    state: {
+                                      from: ROUTES.selectionCommittee,
+                                      fromLabel: "Selection Committee",
+                                    },
+                                  }
                                 )
                               }
                               className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"

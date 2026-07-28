@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -18,8 +18,15 @@ import {
 export default function CohortDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showAlert } = useAlert();
   const { isSuperAdmin, isViewer } = useAuth();
+
+  // Both the dashboard and AllCohorts.jsx link here — each passes where it
+  // came from via navigation state so "Back" returns there instead of
+  // always landing on All Cohorts.
+  const backTo = location.state?.from || ROUTES.cohorts;
+  const backLabel = location.state?.fromLabel || "Cohorts";
 
   const { data: cohort, loading, error } = useCohort(id);
 
@@ -126,10 +133,10 @@ export default function CohortDetails() {
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
         <button
-          onClick={() => navigate(ROUTES.cohorts)}
+          onClick={() => navigate(backTo)}
           className="text-sm font-semibold text-[var(--ann-pink)]"
         >
-          ← Back to Cohorts
+          ← Back to {backLabel}
         </button>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">

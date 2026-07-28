@@ -156,7 +156,11 @@ export default function Admin() {
                       <tr
                         key={cohort.id}
                         className="border-t border-gray-100 cursor-pointer hover:bg-gray-50"
-                        onClick={() => navigate(`/admin/cohorts/${cohort.id}`)}
+                        onClick={() =>
+                          navigate(`/admin/cohorts/${cohort.id}`, {
+                            state: { from: ROUTES.admin, fromLabel: "Dashboard" },
+                          })
+                        }
                       >
                         <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                           <div>{cohort.cohort_name || "-"}</div>

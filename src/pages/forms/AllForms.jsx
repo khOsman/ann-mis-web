@@ -98,7 +98,9 @@ export default function AllForms() {
       const newFormId = await cloneForm(formId);
 
       showAlert("success", "Form cloned successfully. Update the copy's information below.");
-      navigate(`/admin/forms/${newFormId}/edit`);
+      navigate(`/admin/forms/${newFormId}/edit`, {
+        state: { from: ROUTES.forms, fromLabel: "Forms" },
+      });
     } catch (error) {
       console.error("Failed to clone form:", error);
       showAlert("error", error.message || "Failed to clone form.");
@@ -259,7 +261,9 @@ export default function AllForms() {
                           {!isViewer && (
                             <button
                               onClick={() =>
-                                navigate(`/admin/forms/${form.id}/edit`)
+                                navigate(`/admin/forms/${form.id}/edit`, {
+                                  state: { from: ROUTES.forms, fromLabel: "Forms" },
+                                })
                               }
                               className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                             >

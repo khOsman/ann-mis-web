@@ -287,7 +287,9 @@ export default function AllCohorts() {
                         <div className="flex flex-col gap-2">
                           <button
                             onClick={() =>
-                              navigate(`/admin/cohorts/${cohort.id}`)
+                              navigate(`/admin/cohorts/${cohort.id}`, {
+                                state: { from: ROUTES.cohorts, fromLabel: "Cohorts" },
+                              })
                             }
                             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                           >

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
@@ -17,6 +17,13 @@ export default function EditForm() {
   const { id } = useParams();
   const { showAlert } = useAlert();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // AllForms.jsx and FormBuilder.jsx both link here — each passes where it
+  // came from via navigation state so "Back" returns there instead of
+  // always landing on All Forms.
+  const backTo = location.state?.from || ROUTES.forms;
+  const backLabel = location.state?.fromLabel || "Forms";
 
   const { data: allCohorts } = useCohorts();
   const cohorts = useMemo(
@@ -169,10 +176,10 @@ export default function EditForm() {
       <AdminLayout title="Edit Form" subtitle="Update registration form metadata">
         <PageContainer className="py-6 lg:py-8 space-y-4">
           <button
-            onClick={() => navigate(ROUTES.forms)}
+            onClick={() => navigate(backTo)}
             className="text-sm font-semibold text-[var(--ann-pink)]"
           >
-            ← Back to Forms
+            ← Back to {backLabel}
           </button>
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-500">
             Loading form...
@@ -186,10 +193,10 @@ export default function EditForm() {
     <AdminLayout title="Edit Form" subtitle="Update registration form metadata">
       <PageContainer className="py-6 lg:py-8 space-y-4">
         <button
-          onClick={() => navigate(ROUTES.forms)}
+          onClick={() => navigate(backTo)}
           className="text-sm font-semibold text-[var(--ann-pink)]"
         >
-          ← Back to Forms
+          ← Back to {backLabel}
         </button>
 
         <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">

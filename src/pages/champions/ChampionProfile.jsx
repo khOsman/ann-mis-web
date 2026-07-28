@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
@@ -40,8 +40,16 @@ const EDIT_FIELDS = [
 export default function ChampionProfile() {
   const { championId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showAlert } = useAlert();
   const { isSuperAdmin, isViewer } = useAuth();
+
+  // AllChampions.jsx and SelectionCommittee.jsx both link here — each
+  // passes where it came from via navigation state so "Back" (and the
+  // post-delete redirect) return there instead of always landing on
+  // All Champions.
+  const backTo = location.state?.from || ROUTES.champions;
+  const backLabel = location.state?.fromLabel || "Champions";
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const [editing, setEditing] = useState(false);
@@ -173,7 +181,7 @@ export default function ChampionProfile() {
         "success",
         "Champion deleted. Their login account, if any, was removed too."
       );
-      navigate(ROUTES.champions);
+      navigate(backTo);
     } catch (error) {
       showAlert("error", error.message || "Failed to delete champion.");
     } finally {
@@ -197,10 +205,10 @@ export default function ChampionProfile() {
     >
       <PageContainer className="py-6 lg:py-8 space-y-4">
         <button
-          onClick={() => navigate(ROUTES.champions)}
+          onClick={() => navigate(backTo)}
           className="text-sm font-semibold text-[var(--ann-pink)]"
         >
-          ← Back to Champions
+          ← Back to {backLabel}
         </button>
 
         {loading ? (

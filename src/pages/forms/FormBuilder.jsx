@@ -398,7 +398,14 @@ const handleCopyLink = async () => {
 
         <button
           type="button"
-          onClick={() => navigate(`/admin/forms/${id}/edit`)}
+          onClick={() =>
+            navigate(`/admin/forms/${id}/edit`, {
+              state: {
+                from: `/admin/forms/${id}/builder`,
+                fromLabel: "Form Builder",
+              },
+            })
+          }
           className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
         >
           Edit Form Info

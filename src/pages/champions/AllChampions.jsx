@@ -202,7 +202,9 @@ function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
 
       <button
         onClick={() =>
-          navigate(ROUTES.championProfile.replace(":championId", champion.id))
+          navigate(ROUTES.championProfile.replace(":championId", champion.id), {
+            state: { from: ROUTES.champions, fromLabel: "Champions" },
+          })
         }
         className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
       >
