@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
@@ -25,8 +25,9 @@ import { formatBDPhone } from "../../../utils/phone";
 
 // Its own component so each row can hold its own live subscription to that
 // participant's evaluations — hooks can't be called inside a .map() loop.
-function ParticipantRow({ participant, isViewer, onEvaluate }) {
+function ParticipantRow({ participant, isViewer, onEvaluate, fgdCode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: evaluations, loading: loadingEvaluations } =
     useParticipantEvaluations(participant.id);
 
@@ -84,7 +85,14 @@ function ParticipantRow({ participant, isViewer, onEvaluate }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate(`/admin/participants/${participant.id}`)}
+            onClick={() =>
+              navigate(`/admin/participants/${participant.id}`, {
+                state: {
+                  from: location.pathname,
+                  fromLabel: fgdCode ? `${fgdCode} Details` : "FGD Details",
+                },
+              })
+            }
             className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
           >
             View Profile
@@ -678,6 +686,7 @@ export default function FGDDetails() {
                       participant={participant}
                       isViewer={isViewer}
                       onEvaluate={setEvaluationTarget}
+                      fgdCode={fgd.fgd_code}
                     />
                   ))
                 )}

@@ -225,7 +225,12 @@ export default function AllParticipants() {
                       <td className="p-4">
                         <button
                           onClick={() =>
-                            navigate(`/admin/participants/${participant.id}`)
+                            navigate(`/admin/participants/${participant.id}`, {
+                              state: {
+                                from: "/admin/participants",
+                                fromLabel: "Participants",
+                              },
+                            })
                           }
                           className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
                         >

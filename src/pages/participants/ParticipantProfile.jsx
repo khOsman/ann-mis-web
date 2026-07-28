@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getFormResponseById } from "../../services/registrationService";
 import { useParticipant, useParticipantEvaluations } from "../../hooks";
 import {
@@ -15,7 +15,14 @@ import { formatBDPhone } from "../../utils/phone";
 export default function ParticipantProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showAlert } = useAlert();
+
+  // Different pages link into this profile (All Participants, FGD Details,
+  // ...) — each passes where it came from via navigation state so "Back"
+  // returns there instead of always landing on the generic list.
+  const backTo = location.state?.from || "/admin/participants";
+  const backLabel = location.state?.fromLabel || "Participants";
 
   const { data: participant, loading } = useParticipant(id);
   const { data: evaluations, loading: loadingEvaluations } =
@@ -85,10 +92,10 @@ export default function ParticipantProfile() {
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
         <button
-          onClick={() => navigate("/admin/participants")}
+          onClick={() => navigate(backTo)}
           className="text-sm font-semibold text-[var(--ann-pink)]"
         >
-          ← Back to Participants
+          ← Back to {backLabel}
         </button>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
