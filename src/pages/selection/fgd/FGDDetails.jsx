@@ -4,7 +4,7 @@ import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
 import { useAuth } from "../../../context/AuthContext";
-import { useChampions, useFGD } from "../../../hooks";
+import { useChampions, useFGD, useParticipantEvaluations } from "../../../hooks";
 import {
   updateFGDSchedule,
   updateFGDStatus,
@@ -16,12 +16,83 @@ import {
 } from "../../../services/championsService";
 import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
 import { FGD_STATUS_OPTIONS } from "../../../constants/fgd";
-import { REQUIRED_EVALUATIONS } from "../../../constants/evaluation";
+import { FEEDBACK_OPTIONS, REQUIRED_EVALUATIONS } from "../../../constants/evaluation";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
 import { formatBDPhone } from "../../../utils/phone";
 
+
+// Its own component so each row can hold its own live subscription to that
+// participant's evaluations — hooks can't be called inside a .map() loop.
+function ParticipantRow({ participant, isViewer, onEvaluate }) {
+  const { data: evaluations, loading: loadingEvaluations } =
+    useParticipantEvaluations(participant.id);
+
+  return (
+    <tr className="border-t border-gray-100">
+      <td className="p-4 font-semibold">{participant.name || "-"}</td>
+      <td className="p-4">{formatBDPhone(participant.phone) || "-"}</td>
+      <td className="p-4">{participant.institution || "-"}</td>
+      <td className="p-4">{participant.fgd_attendance_status || "Pending"}</td>
+
+      <td className="p-4">
+        {participant.average_evaluation_score != null ? (
+          <>
+            <span className="font-semibold">
+              {Number(participant.average_evaluation_score).toFixed(1)}
+            </span>
+            <span className="text-xs text-gray-400 ml-1">
+              ({participant.evaluation_count || 0}/{REQUIRED_EVALUATIONS})
+            </span>
+          </>
+        ) : (
+          "-"
+        )}
+      </td>
+
+      <td className="p-4 min-w-[220px]">
+        {loadingEvaluations ? (
+          <span className="text-xs text-gray-400">Loading...</span>
+        ) : evaluations.length === 0 ? (
+          "-"
+        ) : (
+          <div className="space-y-1.5">
+            {evaluations.map((evaluation) => (
+              <div key={evaluation.id} className="text-xs">
+                <span className="font-semibold text-gray-700">
+                  {evaluation.evaluator_name || "SC member"}:
+                </span>{" "}
+                <span className="text-gray-600">
+                  {FEEDBACK_OPTIONS[evaluation.feedback_option]?.label ||
+                    evaluation.feedback_option ||
+                    "-"}
+                </span>
+                {evaluation.notes && (
+                  <span className="text-gray-400"> — {evaluation.notes}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+
+      <td className="p-4">{participant.selection_status || "-"}</td>
+
+      <td className="p-4">
+        {!isViewer && (
+          <button
+            type="button"
+            onClick={() => onEvaluate(participant)}
+            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+          >
+            Evaluate
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
 
 export default function FGDDetails() {
   const { fgdId } = useParams();
@@ -591,39 +662,12 @@ export default function FGDDetails() {
                   </tr>
                 ) : (
                   participants.map((participant) => (
-                    <tr
+                    <ParticipantRow
                       key={participant.id}
-                      className="border-t border-gray-100"
-                    >
-                      <td className="p-4 font-semibold">
-                        {participant.name || "-"}
-                      </td>
-                      <td className="p-4">{formatBDPhone(participant.phone) || "-"}</td>
-                      <td className="p-4">
-                        {participant.institution || "-"}
-                      </td>
-                      <td className="p-4">
-                        {participant.fgd_attendance_status || "Pending"}
-                      </td>
-                      <td className="p-4">{participant.fgd_score || "-"}</td>
-                      <td className="p-4">
-                        {participant.fgd_feedback || "-"}
-                      </td>
-                      <td className="p-4">
-                        {participant.selection_status || "-"}
-                      </td>
-                      <td className="p-4">
-                        {!isViewer && (
-                          <button
-                            type="button"
-                            onClick={() => setEvaluationTarget(participant)}
-                            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
-                          >
-                            Evaluate
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                      participant={participant}
+                      isViewer={isViewer}
+                      onEvaluate={setEvaluationTarget}
+                    />
                   ))
                 )}
               </tbody>

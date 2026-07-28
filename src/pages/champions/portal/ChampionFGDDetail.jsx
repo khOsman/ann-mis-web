@@ -320,7 +320,6 @@ export default function ChampionFGDDetail() {
                     <th className="text-left p-3">Institution</th>
                     <th className="text-left p-3">Attendance</th>
                     <th className="text-left p-3">Evaluations</th>
-                    <th className="text-left p-3">Avg. Score</th>
                     <th className="text-left p-3">Selection</th>
                     <th className="text-left p-3">Action</th>
                   </tr>
@@ -346,11 +345,6 @@ export default function ChampionFGDDetail() {
                         </select>
                       </td>
                       <td className="p-3">{participant.evaluation_count || 0} / 3</td>
-                      <td className="p-3">
-                        {participant.average_evaluation_score != null
-                          ? Number(participant.average_evaluation_score).toFixed(1)
-                          : "-"}
-                      </td>
                       <td className="p-3">{participant.selection_status || "-"}</td>
                       <td className="p-3">
                         <button
