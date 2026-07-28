@@ -26,6 +26,7 @@ import { formatBDPhone } from "../../../utils/phone";
 // Its own component so each row can hold its own live subscription to that
 // participant's evaluations — hooks can't be called inside a .map() loop.
 function ParticipantRow({ participant, isViewer, onEvaluate }) {
+  const navigate = useNavigate();
   const { data: evaluations, loading: loadingEvaluations } =
     useParticipantEvaluations(participant.id);
 
@@ -80,15 +81,25 @@ function ParticipantRow({ participant, isViewer, onEvaluate }) {
       <td className="p-4">{participant.selection_status || "-"}</td>
 
       <td className="p-4">
-        {!isViewer && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => onEvaluate(participant)}
-            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+            onClick={() => navigate(`/admin/participants/${participant.id}`)}
+            className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
           >
-            Evaluate
+            View Profile
           </button>
-        )}
+
+          {!isViewer && (
+            <button
+              type="button"
+              onClick={() => onEvaluate(participant)}
+              className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+            >
+              Evaluate
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );
