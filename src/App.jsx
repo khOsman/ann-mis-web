@@ -38,6 +38,7 @@ import ChampionProjects from "./pages/champions/portal/ChampionProjects";
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
+import ImpersonationSession from "./pages/system/ImpersonationSession";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -387,6 +388,7 @@ export default function App() {
         <Route path="/account-inactive" element={<AccountInactive />} />
         <Route path="/access-denied" element={<AccessDenied />} />
         <Route path="/form/:slug" element={<PublicForm />} />
+        <Route path="/session/:code" element={<ImpersonationSession />} />
        
 
         </Routes>

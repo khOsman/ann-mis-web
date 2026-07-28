@@ -16,6 +16,7 @@ import annLogo from "../assets/ann-logo.png";
 import { BRAND } from "../constants/brand";
 import { ROUTES } from "../constants/routes";
 import { CHAMPION_ROLES, CHAMPION_ROLE_LABELS } from "../constants/champions";
+import ImpersonationBanner from "../components/common/ImpersonationBanner";
 
 function buildMenuItems(role) {
   const items = [
@@ -162,7 +163,9 @@ export default function ChampionLayout({ children, title, subtitle }) {
   );
 
   return (
-    <div className="min-h-screen bg-[var(--ann-bg)] flex">
+    <div className="min-h-screen bg-[var(--ann-bg)] flex flex-col">
+      <ImpersonationBanner />
+      <div className="flex flex-1 min-h-0">
       <aside
         className={`hidden lg:flex bg-[var(--ann-purple)] text-white px-5 py-6 flex-col transition-all duration-300 ${
           sidebarOpen ? "lg:w-56 xl:w-60" : "lg:w-20"
@@ -228,6 +231,7 @@ export default function ChampionLayout({ children, title, subtitle }) {
 
         {children}
       </main>
+      </div>
     </div>
   );
 }

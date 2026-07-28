@@ -15,8 +15,20 @@ const firebaseConfig = {
   appId: "1:797692464906:web:b198ae88e26f4b95cb74f3"
 };
 
+// Tabs opened for the "log in as" impersonation flow (/session/:code) get
+// their own named Firebase app instance. Firebase keys its persisted auth
+// state by app name, so this keeps that tab's sign-in completely isolated
+// from the admin's own session in every other tab — all of which share the
+// default ("[DEFAULT]") app below.
+const isImpersonationTab =
+  typeof window !== "undefined" &&
+  window.location.pathname.startsWith("/session/");
+
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(
+  firebaseConfig,
+  isImpersonationTab ? "impersonation" : undefined
+);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);

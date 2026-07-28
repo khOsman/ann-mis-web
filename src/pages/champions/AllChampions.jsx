@@ -20,6 +20,7 @@ import {
   deleteChampion,
   rejectChampion,
 } from "../../services/championsService";
+import { openImpersonationTab } from "../../services/impersonationService";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 const ROLE_FILTERS = [
@@ -36,9 +37,26 @@ function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
 
   const isPending = champion.registration_status === REGISTRATION_STATUS.PENDING;
   const isApproved = champion.registration_status === REGISTRATION_STATUS.APPROVED;
+
+  const isActiveChampion =
+    champion.member_status === MEMBER_STATUS.ACTIVE &&
+    champion.account_status === ACCOUNT_STATUS.ACTIVE;
+
+  const handleLoginAs = async () => {
+    setImpersonating(true);
+
+    try {
+      await openImpersonationTab({ targetType: "champion", targetId: champion.id });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to start impersonation session.");
+    } finally {
+      setImpersonating(false);
+    }
+  };
 
   const showRegularInviteButton =
     isApproved &&
@@ -210,6 +228,17 @@ function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
       >
         View
       </button>
+
+      {!isViewer && isActiveChampion && (
+        <button
+          type="button"
+          disabled={impersonating}
+          onClick={handleLoginAs}
+          className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+        >
+          {impersonating ? "Starting..." : "Login as"}
+        </button>
+      )}
 
       {isSuperAdmin && (
         <button

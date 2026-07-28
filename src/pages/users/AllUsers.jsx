@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUsers, deleteUser } from "../../services/userService";
+import { openImpersonationTab } from "../../services/impersonationService";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
@@ -10,13 +11,14 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 export default function AllUsers() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isSuperAdmin, appUser } = useAuth();
+  const { isAdmin, isSuperAdmin, appUser } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [impersonatingId, setImpersonatingId] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -79,6 +81,18 @@ export default function AllUsers() {
       showAlert("error", error.message || "Failed to delete user.");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleLoginAs = async (user) => {
+    setImpersonatingId(user.id);
+
+    try {
+      await openImpersonationTab({ targetType: "user", targetId: user.id });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to start impersonation session.");
+    } finally {
+      setImpersonatingId(null);
     }
   };
 
@@ -196,6 +210,16 @@ export default function AllUsers() {
                           >
                             View Profile
                           </button>
+
+                          {isAdmin && user.status === "active" && user.id !== appUser?.id && (
+                            <button
+                              onClick={() => handleLoginAs(user)}
+                              disabled={impersonatingId === user.id}
+                              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold disabled:opacity-50"
+                            >
+                              {impersonatingId === user.id ? "Starting..." : "Login as"}
+                            </button>
+                          )}
 
                           {isSuperAdmin && user.id !== appUser?.id && (
                             <button
