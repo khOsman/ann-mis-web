@@ -39,7 +39,14 @@ export default function UserProfile() {
     setForm({
       role: userData.role || USER_ROLES.PENDING,
       status: userData.status || USER_STATUSES.PENDING,
-      permissions: userData.permissions || getPermissionsByRole(userData.role),
+      // Merge role defaults under whatever's already saved — this backfills
+      // any permission key added after this user's doc was last saved (e.g.
+      // "champions") with a sensible default, without touching any key the
+      // admin has already toggled by hand.
+      permissions: {
+        ...getPermissionsByRole(userData.role),
+        ...(userData.permissions || {}),
+      },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData?.id]);

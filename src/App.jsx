@@ -155,7 +155,7 @@ export default function App() {
           <Route
             path={ROUTES.championProfile}
             element={
-              <ProtectedRoute permission="selection">
+              <ProtectedRoute permission="champions">
                 <ChampionProfile />
               </ProtectedRoute>
             }
@@ -164,7 +164,7 @@ export default function App() {
           <Route
             path={ROUTES.champions}
             element={
-              <ProtectedRoute permission="selection">
+              <ProtectedRoute permission="champions">
                 <AllChampions />
               </ProtectedRoute>
             }
@@ -173,7 +173,7 @@ export default function App() {
           <Route
             path={ROUTES.selectionCommittee}
             element={
-              <ProtectedRoute permission="selection">
+              <ProtectedRoute permission="champions">
                 <SelectionCommittee />
               </ProtectedRoute>
             }
