@@ -39,6 +39,8 @@ import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
 import ImpersonationSession from "./pages/system/ImpersonationSession";
+import ParticipantDashboard from "./pages/participants/portal/ParticipantDashboard";
+import ParticipantAchievements from "./pages/participants/portal/ParticipantAchievements";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -129,6 +131,24 @@ export default function App() {
             element={
               <ProtectedRoute championOnly>
                 <ChampionProjects />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.participantHome}
+            element={
+              <ProtectedRoute participantOnly>
+                <ParticipantDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.participantAchievements}
+            element={
+              <ProtectedRoute participantOnly>
+                <ParticipantAchievements />
               </ProtectedRoute>
             }
           />

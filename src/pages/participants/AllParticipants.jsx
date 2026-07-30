@@ -2,18 +2,34 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCohorts, useParticipants } from "../../hooks";
 import { useAuth } from "../../context/AuthContext";
+import { useAlert } from "../../context/AlertContext";
 import { COHORT_STATUS } from "../../constants/status";
 import { ROUTES } from "../../constants/routes";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { formatBDPhone } from "../../utils/phone";
+import { openImpersonationTab } from "../../services/impersonationService";
 
 const TABLE_COLUMN_COUNT = 13;
 const PAGE_SIZE = 50;
 
 export default function AllParticipants() {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
+  const { showAlert } = useAlert();
+  const [impersonatingId, setImpersonatingId] = useState(null);
+
+  const handleLoginAs = async (participant) => {
+    setImpersonatingId(participant.id);
+
+    try {
+      await openImpersonationTab({ targetType: "participant", targetId: participant.id });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to start impersonation session.");
+    } finally {
+      setImpersonatingId(null);
+    }
+  };
 
   const { data: participants, loading } = useParticipants();
   const { data: allCohorts } = useCohorts();
@@ -223,19 +239,31 @@ export default function AllParticipants() {
                       </td>
 
                       <td className="p-4">
-                        <button
-                          onClick={() =>
-                            navigate(`/admin/participants/${participant.id}`, {
-                              state: {
-                                from: "/admin/participants",
-                                fromLabel: "Participants",
-                              },
-                            })
-                          }
-                          className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
-                        >
-                          View Profile
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              navigate(`/admin/participants/${participant.id}`, {
+                                state: {
+                                  from: "/admin/participants",
+                                  fromLabel: "Participants",
+                                },
+                              })
+                            }
+                            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold"
+                          >
+                            View Profile
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleLoginAs(participant)}
+                              disabled={impersonatingId === participant.id}
+                              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] text-xs font-semibold disabled:opacity-50"
+                            >
+                              {impersonatingId === participant.id ? "Starting..." : "Login as"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

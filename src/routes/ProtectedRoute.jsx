@@ -8,6 +8,7 @@ export default function ProtectedRoute({
   adminOnly = false,
   superAdminOnly = false,
   championOnly = false,
+  participantOnly = false,
 }) {
   const {
     authLoading,
@@ -15,6 +16,7 @@ export default function ProtectedRoute({
     isAdmin,
     isSuperAdmin,
     isChampion,
+    isParticipant,
     isActive,
     hasPermission,
   } = useAuth();
@@ -45,7 +47,15 @@ export default function ProtectedRoute({
     return children;
   }
 
-  if (isChampion) {
+  if (participantOnly) {
+    if (!isParticipant) {
+      return <Navigate to="/access-denied" replace />;
+    }
+
+    return children;
+  }
+
+  if (isChampion || isParticipant) {
     return <Navigate to="/access-denied" replace />;
   }
 

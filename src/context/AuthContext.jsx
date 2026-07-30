@@ -54,6 +54,23 @@ export function AuthProvider({ children }) {
             return;
           }
 
+          // Not a Champion either — check whether this is a Participant
+          // session (only reachable today via admin "Login as" impersonation,
+          // since participants have no self-service registration/login of
+          // their own yet).
+          const participantRef = doc(db, COLLECTIONS.PARTICIPANTS, user.uid);
+          const participantSnap = await getDoc(participantRef);
+
+          if (participantSnap.exists()) {
+            setFirebaseUser(user);
+            setAppUser({
+              id: participantSnap.id,
+              userType: "participant",
+              ...participantSnap.data(),
+            });
+            return;
+          }
+
           setFirebaseUser(null);
           setAppUser(null);
           await signOut(auth);
@@ -113,10 +130,13 @@ export function AuthProvider({ children }) {
   };
 
   const isChampion = appUser?.userType === "champion";
+  const isParticipant = appUser?.userType === "participant";
 
   const isActive = isChampion
     ? appUser?.member_status === MEMBER_STATUS.ACTIVE &&
       appUser?.account_status === ACCOUNT_STATUS.ACTIVE
+    : isParticipant
+    ? true // no separate account-activation lifecycle for participants
     : appUser?.status === USER_STATUSES.ACTIVE;
 
   const isAdmin = [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN].includes(
@@ -138,6 +158,7 @@ export function AuthProvider({ children }) {
         isSuperAdmin,
         isViewer,
         isChampion,
+        isParticipant,
         hasPermission,
         logout,
       }}

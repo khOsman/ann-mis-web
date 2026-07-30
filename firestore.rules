@@ -105,7 +105,8 @@ service cloud.firestore {
 
     match /participants/{participantId} {
       allow create: if true;
-      allow read: if isSelectionUser();
+      allow read: if isSelectionUser()
+        || (isSignedIn() && request.auth.uid == participantId);
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }

@@ -38,9 +38,14 @@ export default function ImpersonationSession() {
           JSON.stringify({ targetType, targetName, adminName })
         );
 
-        navigate(targetType === "champion" ? ROUTES.championHome : ROUTES.admin, {
-          replace: true,
-        });
+        const destination =
+          targetType === "champion"
+            ? ROUTES.championHome
+            : targetType === "participant"
+            ? ROUTES.participantHome
+            : ROUTES.admin;
+
+        navigate(destination, { replace: true });
       } catch (err) {
         if (!cancelled) {
           setError(err.message || "Failed to start this session.");
