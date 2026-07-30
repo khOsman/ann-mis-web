@@ -23,7 +23,10 @@ export default function ParticipantAchievements() {
   const [downloading, setDownloading] = useState(false);
 
   const graduated = participant?.graduation_status === GRADUATION_STATUS.GRADUATED;
-  const cohortYear = participant?.cohort_code?.match(/\d{2,4}/)?.[0] || "";
+  // Cohort codes use a 2-digit year suffix (e.g. "Raj-26") — expand to 4
+  // digits to match the certificate's "..., 2022" style.
+  const rawYear = participant?.cohort_code?.match(/(\d{2,4})$/)?.[1] || "";
+  const cohortYear = rawYear.length === 2 ? `20${rawYear}` : rawYear;
 
   const handleDownload = async () => {
     if (!certificateRef.current) return;
@@ -81,7 +84,7 @@ export default function ParticipantAchievements() {
                     <CertificateTemplate
                       ref={certificateRef}
                       name={participant.name}
-                      programmeName="Amra Notun Changemakers' Programme"
+                      programmeName="Amra Notun Network Changemakers' Training"
                       year={cohortYear}
                     />
                   </div>
