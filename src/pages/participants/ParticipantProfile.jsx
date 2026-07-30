@@ -1,22 +1,42 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getFormResponseById } from "../../services/registrationService";
+import { updateParticipant } from "../../services/participantService";
 import { useParticipant, useParticipantEvaluations } from "../../hooks";
 import {
   FEEDBACK_OPTIONS,
   RECOMMENDATION_OPTIONS,
   REQUIRED_EVALUATIONS,
 } from "../../constants/evaluation";
+import {
+  SELECTION_STATUS,
+  ENROLLMENT_STATUS,
+  GRADUATION_STATUS,
+  PROJECT_STATUS,
+} from "../../constants/status";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 import { formatBDPhone } from "../../utils/phone";
+
+const STATUS_FIELDS = [
+  ["selection_status", "Selection", SELECTION_STATUS],
+  ["enrollment_status", "Enrollment", ENROLLMENT_STATUS],
+  ["graduation_status", "Graduation", GRADUATION_STATUS],
+  ["project_status", "Project", PROJECT_STATUS],
+];
 
 export default function ParticipantProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { showAlert } = useAlert();
+  const { isSuperAdmin } = useAuth();
+
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [statusForm, setStatusForm] = useState({});
+  const [savingStatus, setSavingStatus] = useState(false);
 
   // Different pages link into this profile (All Participants, FGD Details,
   // ...) — each passes where it came from via navigation state so "Back"
@@ -63,6 +83,30 @@ export default function ParticipantProfile() {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  const startEditingStatus = () => {
+    setStatusForm({
+      selection_status: participant?.selection_status || SELECTION_STATUS.PENDING,
+      enrollment_status: participant?.enrollment_status || ENROLLMENT_STATUS.PENDING,
+      graduation_status: participant?.graduation_status || GRADUATION_STATUS.PENDING,
+      project_status: participant?.project_status || PROJECT_STATUS.PENDING,
+    });
+    setEditingStatus(true);
+  };
+
+  const handleSaveStatus = async () => {
+    setSavingStatus(true);
+
+    try {
+      await updateParticipant(id, statusForm);
+      showAlert("success", "Participant status updated.");
+      setEditingStatus(false);
+    } catch (error) {
+      showAlert("error", error.message || "Failed to update status.");
+    } finally {
+      setSavingStatus(false);
+    }
   };
 
   const journeySteps = [
@@ -180,23 +224,80 @@ export default function ParticipantProfile() {
           </div>
 
           <div className="xl:col-span-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-              Participant Journey
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                Participant Journey
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-5">
-              {journeySteps.map(([label, status]) => (
-                <div
-                  key={label}
-                  className="border border-gray-200 rounded-2xl p-4 bg-gray-50"
+              {isSuperAdmin && !editingStatus && (
+                <button
+                  type="button"
+                  onClick={startEditingStatus}
+                  className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
                 >
-                  <p className="text-xs text-gray-500">{label}</p>
-                  <p className="font-bold text-[var(--ann-purple)] mt-1">
-                    {status || "Pending"}
-                  </p>
-                </div>
-              ))}
+                  Update Status
+                </button>
+              )}
             </div>
+
+            {editingStatus ? (
+              <div className="mt-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {STATUS_FIELDS.map(([field, label, options]) => (
+                    <div key={field}>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {label}
+                      </label>
+                      <select
+                        value={statusForm[field]}
+                        onChange={(e) =>
+                          setStatusForm((prev) => ({ ...prev, [field]: e.target.value }))
+                        }
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      >
+                        {Object.values(options).map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-3 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStatus(false)}
+                    className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingStatus}
+                    onClick={handleSaveStatus}
+                    className="bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                  >
+                    {savingStatus ? "Saving..." : "Save Status"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-5">
+                {journeySteps.map(([label, status]) => (
+                  <div
+                    key={label}
+                    className="border border-gray-200 rounded-2xl p-4 bg-gray-50"
+                  >
+                    <p className="text-xs text-gray-500">{label}</p>
+                    <p className="font-bold text-[var(--ann-purple)] mt-1">
+                      {status || "Pending"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-8">
               <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">

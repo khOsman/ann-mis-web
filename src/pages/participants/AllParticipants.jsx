@@ -3,12 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { useCohorts, useParticipants } from "../../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
-import { COHORT_STATUS } from "../../constants/status";
+import {
+  COHORT_STATUS,
+  SELECTION_STATUS,
+  ENROLLMENT_STATUS,
+  GRADUATION_STATUS,
+} from "../../constants/status";
 import { ROUTES } from "../../constants/routes";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { formatBDPhone } from "../../utils/phone";
 import { openImpersonationTab } from "../../services/impersonationService";
+import { updateParticipant } from "../../services/participantService";
 
 const TABLE_COLUMN_COUNT = 13;
 const PAGE_SIZE = 50;
@@ -18,6 +24,7 @@ export default function AllParticipants() {
   const { isAdmin, isSuperAdmin } = useAuth();
   const { showAlert } = useAlert();
   const [impersonatingId, setImpersonatingId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
   const handleLoginAs = async (participant) => {
     setImpersonatingId(participant.id);
@@ -28,6 +35,19 @@ export default function AllParticipants() {
       showAlert("error", error.message || "Failed to start impersonation session.");
     } finally {
       setImpersonatingId(null);
+    }
+  };
+
+  const handleStatusChange = async (participantId, field, value) => {
+    setUpdatingId(participantId);
+
+    try {
+      await updateParticipant(participantId, { [field]: value });
+      showAlert("success", "Status updated.");
+    } catch (error) {
+      showAlert("error", error.message || "Failed to update status.");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -92,6 +112,27 @@ export default function AllParticipants() {
       {value || "-"}
     </span>
   );
+
+  const StatusCell = ({ participant, field, options }) => {
+    if (!isSuperAdmin) {
+      return <StatusBadge value={participant[field]} />;
+    }
+
+    return (
+      <select
+        value={participant[field] || Object.values(options)[0]}
+        disabled={updatingId === participant.id}
+        onChange={(e) => handleStatusChange(participant.id, field, e.target.value)}
+        className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--ann-pink)] disabled:opacity-50"
+      >
+        {Object.values(options).map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </select>
+    );
+  };
 
   return (
     <AdminLayout
@@ -223,15 +264,27 @@ export default function AllParticipants() {
                       </td>
 
                       <td className="p-4">
-                        <StatusBadge value={participant.selection_status} />
+                        <StatusCell
+                          participant={participant}
+                          field="selection_status"
+                          options={SELECTION_STATUS}
+                        />
                       </td>
 
                       <td className="p-4">
-                        <StatusBadge value={participant.enrollment_status} />
+                        <StatusCell
+                          participant={participant}
+                          field="enrollment_status"
+                          options={ENROLLMENT_STATUS}
+                        />
                       </td>
 
                       <td className="p-4">
-                        <StatusBadge value={participant.graduation_status} />
+                        <StatusCell
+                          participant={participant}
+                          field="graduation_status"
+                          options={GRADUATION_STATUS}
+                        />
                       </td>
 
                       <td className="p-4 text-gray-600">
