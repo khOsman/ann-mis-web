@@ -107,7 +107,9 @@ service cloud.firestore {
       allow create: if true;
       allow read: if isSelectionUser()
         || (isSignedIn() && request.auth.uid == participantId);
-      allow update: if isAdmin();
+      // Any status field on a participant (selection/attendance/enrollment/
+      // graduation/etc.) is super-admin-only, not just isAdmin().
+      allow update: if isSuperAdmin();
       allow delete: if isSuperAdmin();
     }
 

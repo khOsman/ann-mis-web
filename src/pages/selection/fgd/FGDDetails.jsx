@@ -25,7 +25,7 @@ import { formatBDPhone } from "../../../utils/phone";
 
 // Its own component so each row can hold its own live subscription to that
 // participant's evaluations — hooks can't be called inside a .map() loop.
-function ParticipantRow({ participant, isViewer, onEvaluate, fgdCode }) {
+function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: evaluations, loading: loadingEvaluations } =
@@ -98,7 +98,7 @@ function ParticipantRow({ participant, isViewer, onEvaluate, fgdCode }) {
             View Profile
           </button>
 
-          {!isViewer && (
+          {isSuperAdmin && (
             <button
               type="button"
               onClick={() => onEvaluate(participant)}
@@ -117,7 +117,7 @@ export default function FGDDetails() {
   const { fgdId } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isViewer } = useAuth();
+  const { isViewer, isSuperAdmin } = useAuth();
   const [evaluationTarget, setEvaluationTarget] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleForm, setScheduleForm] = useState(null);
@@ -685,6 +685,7 @@ export default function FGDDetails() {
                       key={participant.id}
                       participant={participant}
                       isViewer={isViewer}
+                      isSuperAdmin={isSuperAdmin}
                       onEvaluate={setEvaluationTarget}
                       fgdCode={fgd.fgd_code}
                     />
