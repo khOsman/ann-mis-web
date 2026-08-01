@@ -43,8 +43,11 @@ const CertificateTemplate = forwardRef(function CertificateTemplate(
           top: NAME_BOX.top,
           width: NAME_BOX.width,
           height: NAME_BOX.height,
-          display: "flex",
-          alignItems: "center",
+          // line-height (not flex/align-items) centers the text — html2canvas
+          // doesn't reliably capture flexbox vertical centering and was
+          // rendering the text pushed outside this box, clipped by overflow:
+          // hidden down to a few stray pixel slivers.
+          lineHeight: `${NAME_BOX.height}px`,
           fontFamily: "Arial, 'Helvetica Neue', sans-serif",
           fontSize: 42,
           letterSpacing: 1,
@@ -64,8 +67,7 @@ const CertificateTemplate = forwardRef(function CertificateTemplate(
           top: PROGRAMME_BOX.top,
           width: PROGRAMME_BOX.width,
           height: PROGRAMME_BOX.height,
-          display: "flex",
-          alignItems: "center",
+          lineHeight: `${PROGRAMME_BOX.height}px`,
           fontFamily: "Arial, 'Helvetica Neue', sans-serif",
           fontSize: 34,
           fontWeight: "bold",
