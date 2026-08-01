@@ -42,11 +42,16 @@ const CertificateTemplate = forwardRef(function CertificateTemplate(
           left: NAME_BOX.left,
           top: NAME_BOX.top,
           width: NAME_BOX.width,
-          height: NAME_BOX.height,
-          // line-height (not flex/align-items) centers the text — html2canvas
-          // doesn't reliably capture flexbox vertical centering and was
-          // rendering the text pushed outside this box, clipped by overflow:
-          // hidden down to a few stray pixel slivers.
+          // The div's own height is taller than the line-height on purpose:
+          // html2canvas renders the line-centered text hugging the bottom of
+          // its line box rather than splitting the leading evenly top/bottom
+          // (confirmed by pixel-scanning a capture — ink sat 1px from the
+          // line-height edge), so a line-height-sized box clipped real
+          // glyph pixels via overflow: hidden. Extra height below (top and
+          // line-height stay unchanged, so the text's on-artwork position
+          // doesn't move) gives slack for that clip boundary to sit clear
+          // of the ink.
+          height: NAME_BOX.height + 40,
           lineHeight: `${NAME_BOX.height}px`,
           fontFamily: "Arial, 'Helvetica Neue', sans-serif",
           fontSize: 42,
@@ -66,7 +71,7 @@ const CertificateTemplate = forwardRef(function CertificateTemplate(
           left: PROGRAMME_BOX.left,
           top: PROGRAMME_BOX.top,
           width: PROGRAMME_BOX.width,
-          height: PROGRAMME_BOX.height,
+          height: PROGRAMME_BOX.height + 40,
           lineHeight: `${PROGRAMME_BOX.height}px`,
           fontFamily: "Arial, 'Helvetica Neue', sans-serif",
           fontSize: 34,
