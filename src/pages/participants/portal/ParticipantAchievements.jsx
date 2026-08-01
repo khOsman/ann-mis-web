@@ -19,7 +19,12 @@ export default function ParticipantAchievements() {
   const { data: participant, loading } = useParticipant(appUser?.id);
   const { showAlert } = useAlert();
 
-  const certificateRef = useRef(null);
+  const previewRef = useRef(null);
+  // html2canvas captures an element's on-screen (transform-scaled) rendering,
+  // not its natural layout size — capturing the shrunk preview node produced
+  // a downscaled, visually corrupted image. This ref points at a separate,
+  // off-screen, untransformed copy used only for the actual download.
+  const downloadRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
 
   const graduated = participant?.graduation_status === GRADUATION_STATUS.GRADUATED;
@@ -29,13 +34,13 @@ export default function ParticipantAchievements() {
   const cohortYear = rawYear.length === 2 ? `20${rawYear}` : rawYear;
 
   const handleDownload = async () => {
-    if (!certificateRef.current) return;
+    if (!downloadRef.current) return;
 
     setDownloading(true);
 
     try {
       await downloadCertificatePng({
-        element: certificateRef.current,
+        element: downloadRef.current,
         fileName: `${participant.participant_code || "certificate"}_Certificate.png`,
       });
     } catch (error) {
@@ -82,12 +87,21 @@ export default function ParticipantAchievements() {
                     }}
                   >
                     <CertificateTemplate
-                      ref={certificateRef}
+                      ref={previewRef}
                       name={participant.name}
                       programmeName="Amra Notun Network Changemakers' Training"
                       year={cohortYear}
                     />
                   </div>
+                </div>
+
+                <div style={{ position: "absolute", left: -99999, top: 0 }}>
+                  <CertificateTemplate
+                    ref={downloadRef}
+                    name={participant.name}
+                    programmeName="Amra Notun Network Changemakers' Training"
+                    year={cohortYear}
+                  />
                 </div>
 
                 <button
