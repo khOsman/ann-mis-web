@@ -10,7 +10,7 @@ import CertificateTemplate, {
   CERTIFICATE_WIDTH,
   CERTIFICATE_HEIGHT,
 } from "../../../components/participants/CertificateTemplate";
-import { downloadCertificatePdf } from "../../../services/certificateService";
+import { downloadCertificatePng } from "../../../services/certificateService";
 
 const PREVIEW_SCALE = 0.55;
 
@@ -34,9 +34,9 @@ export default function ParticipantAchievements() {
     setDownloading(true);
 
     try {
-      await downloadCertificatePdf({
+      await downloadCertificatePng({
         element: certificateRef.current,
-        fileName: `${participant.participant_code || "certificate"}_Certificate.pdf`,
+        fileName: `${participant.participant_code || "certificate"}_Certificate.png`,
       });
     } catch (error) {
       console.error("Certificate download failed:", error);

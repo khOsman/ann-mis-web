@@ -71,10 +71,12 @@ const CertificateTemplate = forwardRef(function CertificateTemplate(
           fontWeight: "bold",
           whiteSpace: "nowrap",
           overflow: "hidden",
-          backgroundImage: "linear-gradient(90deg, #681048 0%, #D03090 100%)",
-          WebkitBackgroundClip: "text",
-          backgroundClip: "text",
-          color: "transparent",
+          // A flat color, not the original file's left-to-right gradient —
+          // html2canvas (used to rasterize this for download) doesn't
+          // support background-clip: text, and silently paints a solid
+          // black box instead when it's used. This is the midpoint of the
+          // sampled gradient (#681048 -> #D03090).
+          color: "#9C206C",
         }}
       >
         {programmeName || "Amra Notun Changemakers' Programme"}

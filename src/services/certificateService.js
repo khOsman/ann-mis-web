@@ -1,32 +1,29 @@
-import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
-// Renders an already-mounted DOM element (the CertificateTemplate) to a PDF
-// via jsPDF's built-in .html() — which uses html2canvas internally, so no
-// separate canvas-conversion step is needed here.
-export const downloadCertificatePdf = ({ element, fileName }) => {
-  return new Promise((resolve, reject) => {
-    const width = element.offsetWidth;
-    const height = element.offsetHeight;
-
-    const doc = new jsPDF({
-      orientation: width >= height ? "landscape" : "portrait",
-      unit: "px",
-      format: [width, height],
-    });
-
-    doc.html(element, {
-      x: 0,
-      y: 0,
-      width,
-      windowWidth: width,
-      callback: (pdf) => {
-        try {
-          pdf.save(fileName);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      },
-    });
+// Renders an already-mounted DOM element (the CertificateTemplate) directly
+// to a PNG via html2canvas. Previously went through jsPDF's .html(), which
+// silently produced a spurious second (blank) page and doesn't support
+// html2canvas rendering everything correctly on every element style — a
+// direct canvas -> PNG download is simpler and has neither problem.
+export const downloadCertificatePng = async ({ element, fileName }) => {
+  const canvas = await html2canvas(element, {
+    scale: 2, // crisp output for a document meant to be printed/kept
+    useCORS: true,
+    backgroundColor: "#ffffff",
   });
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+
+  if (!blob) {
+    throw new Error("Failed to generate certificate image.");
+  }
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
