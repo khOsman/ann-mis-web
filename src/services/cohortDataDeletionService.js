@@ -53,6 +53,50 @@ const batchDelete = async (collectionName, ids) => {
   }
 };
 
+// Deleting an FGD leaves a stale reference on any champion still assigned
+// to it (assigned_fgd_ids / assigned_fgds / assigned_fgd_count) — this
+// mirrors the same filter logic ann-mis-server's POST /champions/:id/
+// unassign-fgd uses for a single champion/FGD, just fanned out across
+// every champion touched by this cohort wipe.
+const cleanupChampionFgdAssignments = async (fgdIds) => {
+  if (fgdIds.length === 0) return 0;
+
+  const fgdIdSet = new Set(fgdIds);
+  const affectedChampions = new Map();
+
+  for (const group of chunk(fgdIds, WHERE_IN_CHUNK_SIZE)) {
+    const snapshot = await getDocs(
+      query(
+        collection(db, COLLECTIONS.CHAMPIONS_POOL),
+        where("assigned_fgd_ids", "array-contains-any", group)
+      )
+    );
+    snapshot.docs.forEach((item) => affectedChampions.set(item.id, item.data()));
+  }
+
+  const championIds = [...affectedChampions.keys()];
+
+  for (const group of chunk(championIds, DELETE_CHUNK_SIZE)) {
+    const batch = writeBatch(db);
+    group.forEach((championId) => {
+      const champion = affectedChampions.get(championId);
+      const remainingFgds = (champion.assigned_fgds || []).filter(
+        (item) => !fgdIdSet.has(item.fgd_id)
+      );
+
+      batch.update(doc(db, COLLECTIONS.CHAMPIONS_POOL, championId), {
+        assigned_fgds: remainingFgds,
+        assigned_fgd_ids: remainingFgds.map((item) => item.fgd_id),
+        assigned_fgd_count: remainingFgds.length,
+        updated_at: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+  }
+
+  return championIds.length;
+};
+
 const gatherDirectCohortIds = async (cohortId) => {
   const [participantIds, responseIds, fgdIds, formIds] = await Promise.all([
     getIdsWhere(COLLECTIONS.PARTICIPANTS, "cohort_id", cohortId),
@@ -100,8 +144,16 @@ const wipeAllCohortData = async (cohortId) => {
     batchDelete(COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationIds),
   ]);
 
+  // Runs after the FGDs are gone, not in parallel with them — it queries
+  // champions by assigned_fgd_ids, and racing that query against the FGD
+  // deletes above wouldn't change which champions match anyway, but doing
+  // it after keeps the intent obvious: this is cleanup of what deleting
+  // those FGDs left behind.
+  const updatedChampions = await cleanupChampionFgdAssignments(fgdIds);
+
   return {
     deletedParticipants: participantIds.length,
+    updatedChampions,
     deletedResponses: responseIds.length,
     deletedFgds: fgdIds.length,
     deletedForms: formIds.length,

@@ -80,7 +80,10 @@ export default function CohortDetails() {
 
       showAlert(
         "success",
-        `Deleted ${result.deletedParticipants} participant(s), ${result.deletedResponses} response(s), ${result.deletedFgds} FGD(s), and ${result.deletedForms} form(s).`
+        `Deleted ${result.deletedParticipants} participant(s), ${result.deletedResponses} response(s), ${result.deletedFgds} FGD(s), and ${result.deletedForms} form(s).` +
+          (result.updatedChampions
+            ? ` Cleared stale FGD assignments from ${result.updatedChampions} committee member(s).`
+            : "")
       );
 
       closeDangerZone();
