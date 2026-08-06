@@ -3,12 +3,26 @@ import { auth } from "../../firebase";
 import { useAlert } from "../../context/AlertContext";
 import { updateFGDParticipant } from "../../services/fgdService";
 import { FGD_ATTENDANCE_STATUS } from "../../constants/fgd";
-import { RUBRIC_CRITERIA, RUBRIC_MAX_TOTAL } from "../../constants/evaluation";
+import {
+  RUBRIC_CRITERIA,
+  RUBRIC_MAX_TOTAL,
+  RECOMMENDATION_OPTIONS,
+} from "../../constants/evaluation";
 import { formatBDPhone } from "../../utils/phone";
 
 const EMPTY_RUBRIC_SCORES = Object.fromEntries(
   RUBRIC_CRITERIA.map((criterion) => [criterion.key, ""])
 );
+
+// selection_status drives cohort "Selected" counts and status badges
+// app-wide, so it can only ever be Selected/Waitlisted/Rejected — the
+// 4-tier recommendation collapses onto that 3-value scale here.
+const RECOMMENDATION_TO_STATUS = {
+  strongly_recommend: "Selected",
+  recommend: "Selected",
+  waiting: "Waitlisted",
+  do_not_recommend: "Rejected",
+};
 
 export default function ParticipantEvaluationModal({
   open,
@@ -88,12 +102,24 @@ export default function ParticipantEvaluationModal({
       }
     }
 
+    if (!form.selection_recommendation) {
+      showAlert("error", "Please select a recommendation.");
+      return;
+    }
+
+    if (!form.fgd_feedback.trim()) {
+      showAlert("error", "Please provide participant feedback.");
+      return;
+    }
+
     try {
       setSaving(true);
 
       const user = auth.currentUser;
 
-      const updatedSelectionStatus = form.selection_recommendation || participant.selection_status;
+      const updatedSelectionStatus =
+        RECOMMENDATION_TO_STATUS[form.selection_recommendation] ||
+        participant.selection_status;
 
       await updateFGDParticipant(participant.id, {
         ...form,
@@ -259,9 +285,11 @@ export default function ParticipantEvaluationModal({
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
             >
               <option value="">Select Recommendation</option>
-              <option value="Selected">Selected</option>
-              <option value="Waitlisted">Waitlisted</option>
-              <option value="Rejected">Rejected</option>
+              {Object.entries(RECOMMENDATION_OPTIONS).map(([key, opt]) => (
+                <option key={key} value={key}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
 
