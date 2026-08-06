@@ -108,8 +108,8 @@ function EvaluationModal({ target, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start md:items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl my-4 md:my-8">
-        <div className="border-b px-5 sm:px-6 py-4 flex items-start justify-between">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl my-4 md:my-8 max-h-[95vh] flex flex-col">
+        <div className="sticky top-0 bg-white border-b px-5 sm:px-6 py-4 rounded-t-2xl flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
               Evaluate Participant
@@ -123,7 +123,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
           </button>
         </div>
 
-        <div className="px-5 sm:px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-5">
           <div>
             <label className="block text-sm font-semibold mb-3">Selection Rubric</label>
             <div className="space-y-3">
@@ -206,7 +206,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
           </div>
         </div>
 
-        <div className="border-t px-5 sm:px-6 py-4 flex flex-col sm:flex-row justify-end gap-3">
+        <div className="sticky bottom-0 bg-white border-t rounded-b-2xl px-5 sm:px-6 py-4 flex flex-col sm:flex-row justify-end gap-3">
           <button
             onClick={onClose}
             className="border border-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-gray-50"
