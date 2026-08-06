@@ -349,7 +349,7 @@ export default function ParticipantProfile() {
               </span>
               {participant.average_evaluation_score != null && (
                 <span className="px-3 py-1.5 rounded-full bg-pink-50 text-[var(--ann-pink)] text-xs font-semibold whitespace-nowrap">
-                  Avg. {Number(participant.average_evaluation_score).toFixed(1)} / 10
+                  Avg. {Number(participant.average_evaluation_score).toFixed(1)} / 100
                 </span>
               )}
             </div>
@@ -367,7 +367,7 @@ export default function ParticipantProfile() {
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
                     <th className="text-left p-3">Evaluator</th>
-                    <th className="text-center p-3">FGD Score</th>
+                    <th className="text-center p-3">Rubric Score</th>
                     <th className="text-left p-3">Feedback</th>
                     <th className="text-left p-3">Recommendation</th>
                     <th className="text-center p-3">Computed Score</th>
@@ -382,7 +382,7 @@ export default function ParticipantProfile() {
                         {evaluation.evaluator_name || "-"}
                       </td>
                       <td className="p-3 text-center">
-                        {evaluation.fgd_score ?? "-"}
+                        {evaluation.rubric_total ?? "-"}
                       </td>
                       <td className="p-3">
                         {FEEDBACK_OPTIONS[evaluation.feedback_option]?.label ||

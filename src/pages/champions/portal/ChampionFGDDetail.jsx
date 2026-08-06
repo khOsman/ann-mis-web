@@ -14,15 +14,21 @@ import {
   FEEDBACK_OPTIONS,
   RECOMMENDATION_OPTIONS,
   ATTENDANCE_OPTIONS,
+  RUBRIC_CRITERIA,
+  RUBRIC_MAX_TOTAL,
 } from "../../../constants/evaluation";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
 import { ROUTES } from "../../../constants/routes";
 
+const EMPTY_RUBRIC_SCORES = Object.fromEntries(
+  RUBRIC_CRITERIA.map((criterion) => [criterion.key, ""])
+);
+
 function EvaluationModal({ target, onClose, onSaved }) {
   const { showAlert } = useAlert();
   const [form, setForm] = useState({
-    fgd_score: "",
+    rubric_scores: EMPTY_RUBRIC_SCORES,
     feedback_option: "",
     recommendation_option: "",
     notes: "",
@@ -31,7 +37,12 @@ function EvaluationModal({ target, onClose, onSaved }) {
 
   useEffect(() => {
     if (!target) return;
-    setForm({ fgd_score: "", feedback_option: "", recommendation_option: "", notes: "" });
+    setForm({
+      rubric_scores: EMPTY_RUBRIC_SCORES,
+      feedback_option: "",
+      recommendation_option: "",
+      notes: "",
+    });
   }, [target]);
 
   if (!target) return null;
@@ -43,17 +54,35 @@ function EvaluationModal({ target, onClose, onSaved }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleRubricChange = (key, value) => {
+    setForm((prev) => ({
+      ...prev,
+      rubric_scores: { ...prev.rubric_scores, [key]: value },
+    }));
+  };
+
+  const rubricTotal = RUBRIC_CRITERIA.reduce(
+    (sum, criterion) => sum + (Number(form.rubric_scores[criterion.key]) || 0),
+    0
+  );
+
   const handleSubmit = async () => {
     if (!form.feedback_option || !form.recommendation_option) {
       showAlert("error", "Please select both feedback and recommendation.");
       return;
     }
 
-    const score = Number(form.fgd_score);
+    for (const criterion of RUBRIC_CRITERIA) {
+      const raw = form.rubric_scores[criterion.key];
+      const value = Number(raw);
 
-    if (form.fgd_score === "" || Number.isNaN(score) || score < 0 || score > 10) {
-      showAlert("error", "FGD score must be a number between 0 and 10.");
-      return;
+      if (raw === "" || Number.isNaN(value) || value < 0 || value > criterion.maxScore) {
+        showAlert(
+          "error",
+          `${criterion.label} must be a number between 0 and ${criterion.maxScore}.`
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -61,7 +90,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
     try {
       await submitEvaluation({
         participantId: participant.id,
-        fgd_score: score,
+        rubric_scores: form.rubric_scores,
         feedback_option: form.feedback_option,
         recommendation_option: form.recommendation_option,
         notes: form.notes,
@@ -79,7 +108,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start md:items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4 md:my-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl my-4 md:my-8">
         <div className="border-b px-5 sm:px-6 py-4 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
@@ -96,18 +125,38 @@ function EvaluationModal({ target, onClose, onSaved }) {
 
         <div className="px-5 sm:px-6 py-5 space-y-5">
           <div>
-            <label className="block text-sm font-semibold mb-2">FGD Score (0 - 10)</label>
-            <input
-              type="number"
-              step="0.5"
-              min="0"
-              max="10"
-              name="fgd_score"
-              value={form.fgd_score}
-              onChange={handleChange}
-              placeholder="Enter score"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
-            />
+            <label className="block text-sm font-semibold mb-3">Selection Rubric</label>
+            <div className="space-y-3">
+              {RUBRIC_CRITERIA.map((criterion) => (
+                <div
+                  key={criterion.key}
+                  className="flex items-start justify-between gap-3 border border-gray-200 rounded-xl px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{criterion.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{criterion.description}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max={criterion.maxScore}
+                      value={form.rubric_scores[criterion.key]}
+                      onChange={(e) => handleRubricChange(criterion.key, e.target.value)}
+                      placeholder="0"
+                      className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-right focus:outline-none focus:border-[var(--ann-pink)]"
+                    />
+                    <span className="text-sm text-gray-500">/ {criterion.maxScore}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-1 mt-3 text-sm font-semibold">
+              <span>Total:</span>
+              <span className="text-[var(--ann-pink)]">{rubricTotal}</span>
+              <span className="text-gray-500">/ {RUBRIC_MAX_TOTAL}</span>
+            </div>
           </div>
 
           <div>

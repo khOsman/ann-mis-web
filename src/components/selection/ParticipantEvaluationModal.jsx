@@ -3,7 +3,12 @@ import { auth } from "../../firebase";
 import { useAlert } from "../../context/AlertContext";
 import { updateFGDParticipant } from "../../services/fgdService";
 import { FGD_ATTENDANCE_STATUS } from "../../constants/fgd";
+import { RUBRIC_CRITERIA, RUBRIC_MAX_TOTAL } from "../../constants/evaluation";
 import { formatBDPhone } from "../../utils/phone";
+
+const EMPTY_RUBRIC_SCORES = Object.fromEntries(
+  RUBRIC_CRITERIA.map((criterion) => [criterion.key, ""])
+);
 
 export default function ParticipantEvaluationModal({
   open,
@@ -17,7 +22,7 @@ export default function ParticipantEvaluationModal({
 
   const [form, setForm] = useState({
     fgd_attendance_status: FGD_ATTENDANCE_STATUS.PENDING,
-    fgd_score: "",
+    rubric_scores: EMPTY_RUBRIC_SCORES,
     selection_recommendation: "",
     fgd_feedback: "",
     selection_committee_notes: "",
@@ -31,7 +36,10 @@ export default function ParticipantEvaluationModal({
         participant.fgd_attendance_status ||
         FGD_ATTENDANCE_STATUS.PENDING,
 
-      fgd_score: participant.fgd_score || "",
+      rubric_scores: RUBRIC_CRITERIA.reduce((acc, criterion) => {
+        acc[criterion.key] = participant.rubric_scores?.[criterion.key] ?? "";
+        return acc;
+      }, {}),
 
       selection_recommendation:
         participant.selection_recommendation || "",
@@ -54,7 +62,32 @@ export default function ParticipantEvaluationModal({
     }));
   };
 
+  const handleRubricChange = (key, value) => {
+    setForm((prev) => ({
+      ...prev,
+      rubric_scores: { ...prev.rubric_scores, [key]: value },
+    }));
+  };
+
+  const rubricTotal = RUBRIC_CRITERIA.reduce(
+    (sum, criterion) => sum + (Number(form.rubric_scores[criterion.key]) || 0),
+    0
+  );
+
   const handleSave = async () => {
+    for (const criterion of RUBRIC_CRITERIA) {
+      const raw = form.rubric_scores[criterion.key];
+      const value = Number(raw);
+
+      if (raw === "" || Number.isNaN(value) || value < 0 || value > criterion.maxScore) {
+        showAlert(
+          "error",
+          `${criterion.label} must be a number between 0 and ${criterion.maxScore}.`
+        );
+        return;
+      }
+    }
+
     try {
       setSaving(true);
 
@@ -64,6 +97,11 @@ export default function ParticipantEvaluationModal({
 
       await updateFGDParticipant(participant.id, {
         ...form,
+        // The rubric replaced the old manual 0-10 field — fgd_score is now
+        // the 0-100 rubric total, kept under its existing name since nothing
+        // else in the app assumes a 0-10 range for it.
+        fgd_score: rubricTotal,
+
         // Update participant journey
         selection_status: updatedSelectionStatus,
 
@@ -169,21 +207,42 @@ export default function ParticipantEvaluationModal({
           {/* Score */}
 
           <div>
-            <label className="block text-sm font-semibold mb-2">
-              FGD Score (0 - 10)
+            <label className="block text-sm font-semibold mb-3">
+              Selection Rubric
             </label>
 
-            <input
-              type="number"
-              step="0.5"
-              min="0"
-              max="10"
-              name="fgd_score"
-              value={form.fgd_score}
-              onChange={handleChange}
-              placeholder="Enter score"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
-            />
+            <div className="space-y-3">
+              {RUBRIC_CRITERIA.map((criterion) => (
+                <div
+                  key={criterion.key}
+                  className="flex items-start justify-between gap-3 border border-gray-200 rounded-xl px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{criterion.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{criterion.description}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max={criterion.maxScore}
+                      value={form.rubric_scores[criterion.key]}
+                      onChange={(e) => handleRubricChange(criterion.key, e.target.value)}
+                      placeholder="0"
+                      className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-right focus:outline-none focus:border-[var(--ann-pink)]"
+                    />
+                    <span className="text-sm text-gray-500">/ {criterion.maxScore}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-1 mt-3 text-sm font-semibold">
+              <span>Total:</span>
+              <span className="text-[var(--ann-pink)]">{rubricTotal}</span>
+              <span className="text-gray-500">/ {RUBRIC_MAX_TOTAL}</span>
+            </div>
           </div>
 
           {/* Recommendation */}

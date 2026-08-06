@@ -43,14 +43,14 @@ export const markAttendance = async ({ participantId, status }) => {
 
 export const submitEvaluation = async ({
   participantId,
-  fgd_score,
+  rubric_scores,
   feedback_option,
   recommendation_option,
   notes,
 }) => {
   return apiClient.post(
     `/api/me/participants/${participantId}/evaluate`,
-    { fgd_score, feedback_option, recommendation_option, notes },
+    { rubric_scores, feedback_option, recommendation_option, notes },
     { authenticated: true }
   );
 };
