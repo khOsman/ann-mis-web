@@ -98,7 +98,11 @@ service cloud.firestore {
 
     match /form_responses/{responseId} {
       allow create: if true;
-      allow read: if isActiveUser();
+      // isSelectionUser() (not isActiveUser()) — an active champion needs
+      // this to read a participant's application answers on the new
+      // Selection Committee participant profile page, same as they can
+      // already read the participants/fgds docs those answers belong to.
+      allow read: if isSelectionUser();
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }
