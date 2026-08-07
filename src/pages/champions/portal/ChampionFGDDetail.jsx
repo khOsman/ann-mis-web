@@ -396,13 +396,28 @@ export default function ChampionFGDDetail() {
                       <td className="p-3">{participant.evaluation_count || 0} / 3</td>
                       <td className="p-3">{participant.selection_status || "-"}</td>
                       <td className="p-3">
-                        <button
-                          type="button"
-                          onClick={() => setEvaluationTarget({ participant })}
-                          className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
-                        >
-                          Evaluate
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                ROUTES.championParticipantProfile
+                                  .replace(":fgdId", fgdId)
+                                  .replace(":participantId", participant.id)
+                              )
+                            }
+                            className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                          >
+                            View Profile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEvaluationTarget({ participant })}
+                            className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+                          >
+                            Evaluate
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

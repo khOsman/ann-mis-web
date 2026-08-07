@@ -17,6 +17,7 @@ export const ROUTES = {
   championMyProfile: "/champions/profile",
   championFGDs: "/champions/fgds",
   championFGDDetail: "/champions/fgds/:fgdId",
+  championParticipantProfile: "/champions/fgds/:fgdId/participants/:participantId",
   championFGDRosters: "/champions/fgd-rosters",
   championFGDRosterDetail: "/champions/fgd-rosters/:cohortId",
   championClassroom: "/champions/classroom",
