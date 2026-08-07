@@ -7,3 +7,13 @@ export const participantEvaluationsQuery = (participantId) =>
     collection(db, COLLECTIONS.PARTICIPANT_EVALUATIONS),
     where("participant_id", "==", participantId)
   );
+
+// Every evaluation a single champion has submitted within one FGD — used to
+// show that champion their own completion checkmark per participant,
+// without revealing whether other evaluators have submitted theirs.
+export const myFgdEvaluationsQuery = (championId, fgdId) =>
+  query(
+    collection(db, COLLECTIONS.PARTICIPANT_EVALUATIONS),
+    where("champion_id", "==", championId),
+    where("fgd_id", "==", fgdId)
+  );

@@ -4,7 +4,7 @@ import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
 import { useAlert } from "../../../context/AlertContext";
-import { useChampions, useParticipantsByFGD } from "../../../hooks";
+import { useChampions, useParticipantsByFGD, useMyFgdEvaluations } from "../../../hooks";
 import {
   requestFGDChange,
   markAttendance,
@@ -239,6 +239,7 @@ export default function ChampionFGDDetail() {
 
   const { data: champion, loading: loadingChampion } = useChampions(appUser?.id);
   const { data: participants, loading: loadingParticipants } = useParticipantsByFGD(fgdId);
+  const { evaluatedParticipantIds } = useMyFgdEvaluations(appUser?.id, fgdId);
 
   const fgd = (champion?.assigned_fgds || []).find((item) => item.fgd_id === fgdId);
 
@@ -374,53 +375,79 @@ export default function ChampionFGDDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  {participants.map((participant) => (
-                    <tr key={participant.id} className="border-t border-gray-100">
-                      <td className="p-3 font-semibold">{participant.name || "-"}</td>
-                      <td className="p-3">{participant.institution || "-"}</td>
-                      <td className="p-3">
-                        <select
-                          value={participant.fgd_attendance_status || "Pending"}
-                          onChange={(e) =>
-                            handleAttendanceChange(participant.id, e.target.value)
-                          }
-                          className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--ann-pink)]"
-                        >
-                          {ATTENDANCE_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-3">{participant.evaluation_count || 0} / 3</td>
-                      <td className="p-3">{participant.selection_status || "-"}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                ROUTES.championParticipantProfile
-                                  .replace(":fgdId", fgdId)
-                                  .replace(":participantId", participant.id)
-                              )
+                  {participants.map((participant) => {
+                    const isAbsent = participant.fgd_attendance_status === "Absent";
+                    const isEvaluatedByMe = evaluatedParticipantIds.has(participant.id);
+
+                    return (
+                      <tr
+                        key={participant.id}
+                        className={`border-t border-gray-100 ${
+                          isAbsent ? "bg-red-50" : ""
+                        }`}
+                      >
+                        <td className={`p-3 font-semibold ${isAbsent ? "text-red-700" : ""}`}>
+                          {participant.name || "-"}
+                        </td>
+                        <td className={`p-3 ${isAbsent ? "text-red-700" : ""}`}>
+                          {participant.institution || "-"}
+                        </td>
+                        <td className="p-3">
+                          <select
+                            value={participant.fgd_attendance_status || "Pending"}
+                            onChange={(e) =>
+                              handleAttendanceChange(participant.id, e.target.value)
                             }
-                            className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                            className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--ann-pink)] ${
+                              isAbsent
+                                ? "border-red-300 text-red-700 font-semibold"
+                                : "border-gray-300"
+                            }`}
                           >
-                            View Profile
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEvaluationTarget({ participant })}
-                            className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
-                          >
-                            Evaluate
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {ATTENDANCE_OPTIONS.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="p-3">{participant.evaluation_count || 0} / 3</td>
+                        <td className="p-3">{participant.selection_status || "-"}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  ROUTES.championParticipantProfile
+                                    .replace(":fgdId", fgdId)
+                                    .replace(":participantId", participant.id)
+                                )
+                              }
+                              className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                            >
+                              View Profile
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEvaluationTarget({ participant })}
+                              className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
+                            >
+                              {isEvaluatedByMe ? "Edit Evaluation" : "Evaluate"}
+                            </button>
+                            {isEvaluatedByMe && (
+                              <span
+                                title="You've evaluated this participant"
+                                className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold shrink-0"
+                              >
+                                ✓
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
