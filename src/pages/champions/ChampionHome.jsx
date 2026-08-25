@@ -1,7 +1,7 @@
 import ChampionLayout from "../../layouts/ChampionLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAuth } from "../../context/AuthContext";
-import { CHAMPION_ROLES } from "../../constants/champions";
+import { CHAMPION_ROLES, getChampionRoles } from "../../constants/champions";
 import StatCard from "../../components/dashboard/StatCard";
 import YearlyProjectTrendChart from "../../components/champions/YearlyProjectTrendChart";
 import { MOCK_PROJECTS, MOCK_YEARLY_TREND } from "../../constants/mockMentorData";
@@ -34,7 +34,7 @@ function MentorDashboard({ appUser }) {
 export default function ChampionHome() {
   const { appUser } = useAuth();
 
-  if (appUser?.role === CHAMPION_ROLES.MENTOR) {
+  if (getChampionRoles(appUser).includes(CHAMPION_ROLES.MENTOR)) {
     return (
       <ChampionLayout>
         <MentorDashboard appUser={appUser} />

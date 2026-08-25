@@ -5,7 +5,12 @@ import { useAuth } from "../../../context/AuthContext";
 import { useAlert } from "../../../context/AlertContext";
 import { useChampions } from "../../../hooks";
 import { updateMyProfile } from "../../../services/championPortalService";
-import { GENDER_OPTIONS, EDUCATION_LEVEL_OPTIONS } from "../../../constants/champions";
+import {
+  GENDER_OPTIONS,
+  EDUCATION_LEVEL_OPTIONS,
+  CHAMPION_ROLE_LABELS,
+  getChampionRoles,
+} from "../../../constants/champions";
 import { formatBDPhone } from "../../../utils/phone";
 
 const PERSONAL_FIELDS = [
@@ -136,7 +141,11 @@ export default function ChampionMyProfile() {
                 <Info label="Email" value={champion?.email} />
                 <Info
                   label="Role"
-                  value={champion?.role ? champion.role.replace(/_/g, " ") : "-"}
+                  value={
+                    getChampionRoles(champion)
+                      .map((r) => CHAMPION_ROLE_LABELS[r] || r)
+                      .join(", ") || "-"
+                  }
                 />
               </div>
             </div>

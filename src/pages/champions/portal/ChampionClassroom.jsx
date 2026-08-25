@@ -2,15 +2,16 @@ import { Navigate } from "react-router-dom";
 import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
-import { CHAMPION_ROLES } from "../../../constants/champions";
+import { CHAMPION_ROLES, getChampionRoles } from "../../../constants/champions";
 import { ROUTES } from "../../../constants/routes";
 
 export default function ChampionClassroom() {
   const { appUser } = useAuth();
 
-  const allowed = [CHAMPION_ROLES.FACILITATOR, CHAMPION_ROLES.CO_FACILITATOR].includes(
-    appUser?.role
-  );
+  const championRoles = getChampionRoles(appUser);
+  const allowed =
+    championRoles.includes(CHAMPION_ROLES.FACILITATOR) ||
+    championRoles.includes(CHAMPION_ROLES.CO_FACILITATOR);
 
   if (!allowed) {
     return <Navigate to={ROUTES.championHome} replace />;

@@ -9,19 +9,21 @@ import { ROUTES } from "../../constants/routes";
 import {
   ACCOUNT_STATUS,
   CHAMPION_ROLE_LABELS,
-  CHAMPION_ROLE_OPTIONS,
   MEMBER_STATUS,
   REGISTRATION_STATUS,
+  getChampionRoles,
 } from "../../constants/champions";
 import {
   activateChampionMember,
   approveChampion,
+  assignChampionRoles,
   createChampionAccount,
   deleteChampion,
   rejectChampion,
 } from "../../services/championsService";
 import { openImpersonationTab } from "../../services/impersonationService";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import RoleCheckboxGroup from "../../components/champions/RoleCheckboxGroup";
 
 const ROLE_FILTERS = [
   { key: "all", label: "All" },
@@ -33,11 +35,13 @@ function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
 
-  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
+  const [managingRoles, setManagingRoles] = useState(false);
+  const [manageRolesValue, setManageRolesValue] = useState([]);
 
   const isPending = champion.registration_status === REGISTRATION_STATUS.PENDING;
   const isApproved = champion.registration_status === REGISTRATION_STATUS.APPROVED;
@@ -70,18 +74,42 @@ function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
     champion.member_status === MEMBER_STATUS.INACTIVE;
 
   const handleApprove = async () => {
-    if (!selectedRole) {
-      showAlert("error", "Select a role before approving.");
+    if (selectedRoles.length === 0) {
+      showAlert("error", "Select at least one role before approving.");
       return;
     }
 
     setActionLoading(true);
 
     try {
-      await approveChampion({ championId: champion.id, role: selectedRole });
+      await approveChampion({ championId: champion.id, roles: selectedRoles });
       showAlert("success", `${champion.name} approved.`);
     } catch (error) {
       showAlert("error", error.message || "Failed to approve champion.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const startManagingRoles = () => {
+    setManageRolesValue(getChampionRoles(champion));
+    setManagingRoles(true);
+  };
+
+  const handleSaveRoles = async () => {
+    if (manageRolesValue.length === 0) {
+      showAlert("error", "Select at least one role.");
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      await assignChampionRoles({ championId: champion.id, roles: manageRolesValue });
+      showAlert("success", "Roles updated.");
+      setManagingRoles(false);
+    } catch (error) {
+      showAlert("error", error.message || "Failed to update roles.");
     } finally {
       setActionLoading(false);
     }
@@ -149,38 +177,63 @@ function ChampionRowActions({ champion, isSuperAdmin, isViewer }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
       {isPending && !isViewer && (
-        <>
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--ann-pink)]"
-          >
-            <option value="">Select role...</option>
-            {CHAMPION_ROLE_OPTIONS.map((role) => (
-              <option key={role} value={role}>
-                {CHAMPION_ROLE_LABELS[role]}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col items-start gap-2">
+          <RoleCheckboxGroup value={selectedRoles} onChange={setSelectedRoles} />
 
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={handleApprove}
+              className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+            >
+              Approve
+            </button>
+
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={handleReject}
+              className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isApproved && !isViewer && (
+        managingRoles ? (
+          <div className="flex flex-col items-start gap-2">
+            <RoleCheckboxGroup value={manageRolesValue} onChange={setManageRolesValue} />
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleSaveRoles}
+                className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setManagingRoles(false)}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
           <button
             type="button"
-            disabled={actionLoading}
-            onClick={handleApprove}
-            className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+            onClick={startManagingRoles}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
           >
-            Approve
+            Manage Roles
           </button>
-
-          <button
-            type="button"
-            disabled={actionLoading}
-            onClick={handleReject}
-            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </>
+        )
       )}
 
       {showRegularInviteButton && !isViewer && (
@@ -291,8 +344,9 @@ export default function AllChampions() {
 
   const filteredData = data.filter((champion) => {
     if (roleFilter === "all") return true;
-    if (roleFilter === "unassigned") return !champion.role;
-    return champion.role === roleFilter;
+    const roles = getChampionRoles(champion);
+    if (roleFilter === "unassigned") return roles.length === 0;
+    return roles.includes(roleFilter);
   });
 
   return (
@@ -444,13 +498,15 @@ export default function AllChampions() {
                         </td>
 
                         <td className="px-6 py-4">
-                          {champion.role
-                            ? CHAMPION_ROLE_LABELS[champion.role] || champion.role
-                            : (
-                              <span className="text-amber-600 text-xs font-semibold">
-                                Unassigned
-                              </span>
-                            )}
+                          {getChampionRoles(champion).length > 0 ? (
+                            getChampionRoles(champion)
+                              .map((r) => CHAMPION_ROLE_LABELS[r] || r)
+                              .join(", ")
+                          ) : (
+                            <span className="text-amber-600 text-xs font-semibold">
+                              Unassigned
+                            </span>
+                          )}
                         </td>
 
                         <td className="px-6 py-4">

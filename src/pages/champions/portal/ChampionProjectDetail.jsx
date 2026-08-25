@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
-import { CHAMPION_ROLES } from "../../../constants/champions";
+import { CHAMPION_ROLES, getChampionRoles } from "../../../constants/champions";
 import { ROUTES } from "../../../constants/routes";
 import {
   MOCK_PROJECTS,
@@ -55,7 +55,7 @@ export default function ChampionProjectDetail() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedReports, setUploadedReports] = useState([]);
 
-  const allowed = appUser?.role === CHAMPION_ROLES.MENTOR;
+  const allowed = getChampionRoles(appUser).includes(CHAMPION_ROLES.MENTOR);
 
   if (!allowed) {
     return <Navigate to={ROUTES.championHome} replace />;

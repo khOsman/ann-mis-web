@@ -15,16 +15,22 @@ import { useAuth } from "../context/AuthContext";
 import annLogo from "../assets/ann-logo.png";
 import { BRAND } from "../constants/brand";
 import { ROUTES } from "../constants/routes";
-import { CHAMPION_ROLES, CHAMPION_ROLE_LABELS } from "../constants/champions";
+import {
+  CHAMPION_ROLES,
+  CHAMPION_ROLE_LABELS,
+  getChampionRoles,
+} from "../constants/champions";
 import ImpersonationBanner from "../components/common/ImpersonationBanner";
 
-function buildMenuItems(role) {
+// A champion can hold more than one role at once, so every applicable
+// section is unioned in rather than picking just the first match.
+function buildMenuItems(roles) {
   const items = [
     { label: "Dashboard", path: ROUTES.championHome, icon: LayoutDashboard },
     { label: "Profile", path: ROUTES.championMyProfile, icon: UserCircle },
   ];
 
-  if (role === CHAMPION_ROLES.SELECTION_COMMITTEE) {
+  if (roles.includes(CHAMPION_ROLES.SELECTION_COMMITTEE)) {
     items.push({
       label: "FGDs",
       icon: Users,
@@ -33,16 +39,20 @@ function buildMenuItems(role) {
         { label: "Assigned FGDs", path: ROUTES.championFGDs, icon: List },
       ],
     });
-  } else if (
-    role === CHAMPION_ROLES.FACILITATOR ||
-    role === CHAMPION_ROLES.CO_FACILITATOR
+  }
+
+  if (
+    roles.includes(CHAMPION_ROLES.FACILITATOR) ||
+    roles.includes(CHAMPION_ROLES.CO_FACILITATOR)
   ) {
     items.push({
       label: "Classroom",
       path: ROUTES.championClassroom,
       icon: GraduationCap,
     });
-  } else if (role === CHAMPION_ROLES.MENTOR) {
+  }
+
+  if (roles.includes(CHAMPION_ROLES.MENTOR)) {
     items.push({ label: "Projects", path: ROUTES.championProjects, icon: Rocket });
   }
 
@@ -59,8 +69,12 @@ export default function ChampionLayout({ children, title, subtitle }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const menuItems = useMemo(() => buildMenuItems(appUser?.role), [appUser?.role]);
-  const roleLabel = appUser?.role ? CHAMPION_ROLE_LABELS[appUser.role] : "Champion";
+  const championRoles = useMemo(() => getChampionRoles(appUser), [appUser]);
+  const menuItems = useMemo(() => buildMenuItems(championRoles), [championRoles]);
+  const roleLabel =
+    championRoles.length > 0
+      ? championRoles.map((r) => CHAMPION_ROLE_LABELS[r] || r).join(", ")
+      : "Champion";
 
   const isActive = (item) => item.path && location.pathname === item.path;
 

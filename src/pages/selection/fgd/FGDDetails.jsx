@@ -14,7 +14,11 @@ import {
   assignChampionToFGD,
   unassignChampionFromFGD,
 } from "../../../services/championsService";
-import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
+import {
+  CHAMPION_ROLES,
+  MEMBER_STATUS,
+  getChampionRoles,
+} from "../../../constants/champions";
 import { FGD_STATUS_OPTIONS } from "../../../constants/fgd";
 import { FEEDBACK_OPTIONS, REQUIRED_EVALUATIONS } from "../../../constants/evaluation";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
@@ -180,7 +184,7 @@ export default function FGDDetails() {
     () =>
       allChampions.filter(
         (champion) =>
-          champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+          getChampionRoles(champion).includes(CHAMPION_ROLES.SELECTION_COMMITTEE) &&
           champion.member_status === MEMBER_STATUS.ACTIVE
       ),
     [allChampions]

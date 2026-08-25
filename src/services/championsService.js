@@ -46,10 +46,18 @@ export const registerChampionRequest = async ({ email, profile }) => {
   });
 };
 
-export const approveChampion = async ({ championId, role }) => {
+export const approveChampion = async ({ championId, roles }) => {
   return apiClient.post(
     `/api/champions/${championId}/approve`,
-    { role },
+    { roles },
+    { authenticated: true }
+  );
+};
+
+export const assignChampionRoles = async ({ championId, roles }) => {
+  return apiClient.post(
+    `/api/champions/${championId}/roles`,
+    { roles },
     { authenticated: true }
   );
 };

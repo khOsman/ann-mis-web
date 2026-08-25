@@ -11,7 +11,7 @@ export const createChampion = (overrides = {}) => ({
 
   firebase_uid: "",
 
-  role: "",
+  roles: [],
 
   registration_status: REGISTRATION_STATUS.PENDING,
 

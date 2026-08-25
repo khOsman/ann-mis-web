@@ -10,19 +10,21 @@ import { ROUTES } from "../../constants/routes";
 import { formatTimeRangeBDT } from "../../utils/time";
 import { formatBDPhone } from "../../utils/phone";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import RoleCheckboxGroup from "../../components/champions/RoleCheckboxGroup";
 import {
   ACCOUNT_STATUS,
   ACCOUNT_STATUS_OPTIONS,
   CHAMPION_ROLE_LABELS,
-  CHAMPION_ROLE_OPTIONS,
   MEMBER_STATUS,
   MEMBER_STATUS_OPTIONS,
   REGISTRATION_STATUS,
   REGISTRATION_STATUS_OPTIONS,
+  getChampionRoles,
 } from "../../constants/champions";
 import {
   activateChampionMember,
   approveChampion,
+  assignChampionRoles,
   createChampionAccount,
   deleteChampion,
   rejectChampion,
@@ -51,11 +53,13 @@ export default function ChampionProfile() {
   const backTo = location.state?.from || ROUTES.champions;
   const backLabel = location.state?.fromLabel || "Champions";
   const [actionLoading, setActionLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState([]);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [managingRoles, setManagingRoles] = useState(false);
+  const [manageRolesValue, setManageRolesValue] = useState([]);
 
   const {
     data: champion,
@@ -64,20 +68,45 @@ export default function ChampionProfile() {
   } = useChampions(championId);
 
   const handleApprove = async () => {
-    if (!selectedRole) {
-      showAlert("error", "Select a role before approving.");
+    if (selectedRoles.length === 0) {
+      showAlert("error", "Select at least one role before approving.");
       return;
     }
 
     setActionLoading(true);
 
     try {
-      await approveChampion({ championId, role: selectedRole });
+      await approveChampion({ championId, roles: selectedRoles });
 
       showAlert("success", "Champion approved successfully.");
       // No manual refetch needed — the live listener updates `champion` automatically.
     } catch (error) {
       showAlert("error", error.message || "Failed to approve champion.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const startManagingRoles = () => {
+    setManageRolesValue(getChampionRoles(champion));
+    setManagingRoles(true);
+  };
+
+  const handleSaveRoles = async () => {
+    if (manageRolesValue.length === 0) {
+      showAlert("error", "Select at least one role.");
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      await assignChampionRoles({ championId, roles: manageRolesValue });
+      showAlert("success", "Roles updated successfully.");
+      setManagingRoles(false);
+      // No manual refetch needed — the live listener updates `champion` automatically.
+    } catch (error) {
+      showAlert("error", error.message || "Failed to update roles.");
     } finally {
       setActionLoading(false);
     }
@@ -142,7 +171,7 @@ export default function ChampionProfile() {
       date_of_birth: champion.date_of_birth || "",
       institution: champion.institution || "",
       address: champion.address || "",
-      role: champion.role || "",
+      roles: getChampionRoles(champion),
       registration_status: champion.registration_status || "",
       account_status: champion.account_status || "",
       member_status: champion.member_status || "",
@@ -230,9 +259,11 @@ export default function ChampionProfile() {
 
                   <p className="text-gray-500 mt-1">
                     {champion.champion_code}
-                    {champion.role && (
+                    {getChampionRoles(champion).length > 0 && (
                       <span className="ml-2 text-[var(--ann-purple)] font-semibold">
-                        {CHAMPION_ROLE_LABELS[champion.role] || champion.role}
+                        {getChampionRoles(champion)
+                          .map((r) => CHAMPION_ROLE_LABELS[r] || r)
+                          .join(", ")}
                       </span>
                     )}
                   </p>
@@ -242,18 +273,10 @@ export default function ChampionProfile() {
                   {champion.registration_status ===
                     REGISTRATION_STATUS.PENDING && !isViewer && (
                     <>
-                      <select
-                        value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value)}
-                        className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
-                      >
-                        <option value="">Select role...</option>
-                        {CHAMPION_ROLE_OPTIONS.map((role) => (
-                          <option key={role} value={role}>
-                            {CHAMPION_ROLE_LABELS[role]}
-                          </option>
-                        ))}
-                      </select>
+                      <RoleCheckboxGroup
+                        value={selectedRoles}
+                        onChange={setSelectedRoles}
+                      />
 
                       <button
                         type="button"
@@ -273,6 +296,16 @@ export default function ChampionProfile() {
                         Reject
                       </button>
                     </>
+                  )}
+
+                  {isApproved && !isViewer && !managingRoles && (
+                    <button
+                      type="button"
+                      onClick={startManagingRoles}
+                      className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                    >
+                      Manage Roles
+                    </button>
                   )}
 
                   {showRegularInviteButton && !isViewer && (
@@ -336,6 +369,35 @@ export default function ChampionProfile() {
               </div>
             </div>
 
+            {managingRoles && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h3 className="font-bold text-lg mb-4">Manage Roles</h3>
+
+                <RoleCheckboxGroup
+                  value={manageRolesValue}
+                  onChange={setManageRolesValue}
+                />
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setManagingRoles(false)}
+                    className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={handleSaveRoles}
+                    className="bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                  >
+                    {actionLoading ? "Saving..." : "Save Roles"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {editing ? (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                 <div className="border-b px-6 py-4 flex items-center justify-between">
@@ -362,21 +424,14 @@ export default function ChampionProfile() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Role
+                      Roles
                     </label>
-                    <select
-                      name="role"
-                      value={editForm.role}
-                      onChange={handleEditChange}
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--ann-pink)]"
-                    >
-                      <option value="">Unassigned</option>
-                      {CHAMPION_ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>
-                          {CHAMPION_ROLE_LABELS[role]}
-                        </option>
-                      ))}
-                    </select>
+                    <RoleCheckboxGroup
+                      value={editForm.roles}
+                      onChange={(roles) =>
+                        setEditForm((prev) => ({ ...prev, roles }))
+                      }
+                    />
                   </div>
 
                   <div className="md:col-span-2">
@@ -490,7 +545,9 @@ export default function ChampionProfile() {
                 <div className="grid md:grid-cols-3 gap-6 p-6">
                   <Info
                     label="Role"
-                    value={champion.role ? CHAMPION_ROLE_LABELS[champion.role] : ""}
+                    value={getChampionRoles(champion)
+                      .map((r) => CHAMPION_ROLE_LABELS[r] || r)
+                      .join(", ")}
                   />
                   <Info
                     label="Registration"

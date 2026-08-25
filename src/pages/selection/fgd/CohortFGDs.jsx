@@ -17,7 +17,11 @@ import {
   assignChampionToFGD,
   unassignChampionFromFGD,
 } from "../../../services/championsService";
-import { CHAMPION_ROLES, MEMBER_STATUS } from "../../../constants/champions";
+import {
+  CHAMPION_ROLES,
+  MEMBER_STATUS,
+  getChampionRoles,
+} from "../../../constants/champions";
 
 export default function CohortFGDs() {
   const { cohortId } = useParams();
@@ -50,7 +54,7 @@ export default function CohortFGDs() {
     () =>
       allChampions.filter(
         (champion) =>
-          champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+          getChampionRoles(champion).includes(CHAMPION_ROLES.SELECTION_COMMITTEE) &&
           champion.member_status === MEMBER_STATUS.ACTIVE
       ),
     [allChampions]

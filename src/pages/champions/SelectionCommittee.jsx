@@ -6,7 +6,11 @@ import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 import { useChampions, useFGDChangeRequests } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
-import { CHAMPION_ROLES, REGISTRATION_STATUS } from "../../constants/champions";
+import {
+  CHAMPION_ROLES,
+  REGISTRATION_STATUS,
+  getChampionRoles,
+} from "../../constants/champions";
 import {
   assignChampionToFGD,
   unassignChampionFromFGD,
@@ -50,7 +54,7 @@ export default function SelectionCommittee() {
     () =>
       champions.filter(
         (champion) =>
-          champion.role === CHAMPION_ROLES.SELECTION_COMMITTEE &&
+          getChampionRoles(champion).includes(CHAMPION_ROLES.SELECTION_COMMITTEE) &&
           champion.registration_status === REGISTRATION_STATUS.APPROVED
       ),
     [champions]
