@@ -227,7 +227,7 @@ export default function ChampionLayout({ children, title, subtitle }) {
 
             <div>
               <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--ann-text-dark)]">
-                {title || roleLabel}
+                {title || "Champion"}
               </h2>
               <p className="text-sm text-gray-500">
                 {subtitle || `${appUser?.champion_code || ""} • ${roleLabel}`}
