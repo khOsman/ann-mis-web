@@ -22,6 +22,7 @@ export const ROUTES = {
   championFGDRosterDetail: "/champions/fgd-rosters/:cohortId",
   championClassroom: "/champions/classroom",
   championProjects: "/champions/projects",
+  championProjectDetail: "/champions/projects/:projectId",
 
   participantHome: "/participant",
   participantAchievements: "/participant/achievements",
