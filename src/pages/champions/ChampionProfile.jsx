@@ -32,6 +32,7 @@ import {
 } from "../../services/championsService";
 
 const EDIT_FIELDS = [
+  ["champion_code", "Champion Code", "text"],
   ["name", "Full Name", "text"],
   ["email", "Email Address", "email"],
   ["phone", "Phone", "text"],
@@ -165,6 +166,7 @@ export default function ChampionProfile() {
 
   const startEditing = () => {
     setEditForm({
+      champion_code: champion.champion_code || "",
       name: champion.name || "",
       email: champion.email || "",
       phone: champion.phone || "",
