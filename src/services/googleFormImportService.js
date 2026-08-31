@@ -265,18 +265,30 @@ const abbreviateFallback = (name) => {
 
 // Cohort values in the sheet look like "<City>-<YY>" (e.g. "Rajshahi-26").
 // The stored cohort_code uses the short division abbreviation ("Raj-26")
-// while the original sheet value is kept as cohort_name for display.
+// while the original sheet value is kept as cohort_name for display. This
+// is only ever a *suggestion* now — the admin reviews/edits both the name
+// and the code in the preview step before anything is imported.
 export const normalizeCohortCode = (rawValue) => {
   const value = String(rawValue || "").trim();
   const match = value.match(/^(.*?)[\s-]+(\d{2,4})$/);
 
-  if (!match) return value;
+  if (match) {
+    const [, namePart, yearPart] = match;
+    const key = namePart.trim().toLowerCase();
+    const abbreviation = DIVISION_ABBREVIATIONS[key] || abbreviateFallback(namePart);
 
-  const [, namePart, yearPart] = match;
-  const key = namePart.trim().toLowerCase();
-  const abbreviation = DIVISION_ABBREVIATIONS[key] || abbreviateFallback(namePart);
+    return `${abbreviation}-${yearPart}`;
+  }
 
-  return `${abbreviation}-${yearPart}`;
+  // No "<name>-<year>" pattern found. A value that's already short and
+  // has no spaces (e.g. "DHK-C3") is probably already a decent code — keep
+  // it as-is. A long free-text value (e.g. a full institution name) gets
+  // abbreviated instead of being suggested whole, which is what previously
+  // produced participant codes like
+  // "ANN-Mawlana Bhashani Science and Technology University-0127-...".
+  if (value.length <= 15 && !/\s/.test(value)) return value;
+
+  return abbreviateFallback(value);
 };
 
 // ---------------------------------------------------------------------------
@@ -405,8 +417,9 @@ export const buildImportPreview = async ({ headers, rows }) => {
     });
 
     groups.push({
-      cohortValue,
-      cohortCode,
+      cohortValue, // raw sheet value — stable grouping key, not shown/edited directly
+      cohortName: cohortValue, // editable, defaults to the raw value
+      cohortCode, // editable, defaults to the auto-suggested code
       cohortExists: !!existingCohort,
       existingCohort,
       rows: previewRows,
@@ -414,6 +427,26 @@ export const buildImportPreview = async ({ headers, rows }) => {
   }
 
   return { fieldDefs, groups };
+};
+
+// Re-runs the existing-cohort + duplicate-email lookup for one group after
+// the admin edits its Cohort Code in the preview — keeps the "New/Existing
+// cohort" badge and per-row duplicate flags accurate for whatever code
+// they actually end up importing with, not just the auto-suggested one.
+export const recheckCohortCode = async ({ cohortCode, rows }) => {
+  const existingCohort = await findCohortByCode(cohortCode);
+  const existingEmails = existingCohort
+    ? await getExistingParticipantEmails(existingCohort.id)
+    : new Set();
+
+  const updatedRows = rows.map((row) => {
+    const normalizedEmail = String(row.email || "").trim().toLowerCase();
+    const isDuplicate = normalizedEmail ? existingEmails.has(normalizedEmail) : false;
+
+    return { ...row, isDuplicate, decision: isDuplicate ? "skip" : "import" };
+  });
+
+  return { existingCohort, rows: updatedRows };
 };
 
 // ---------------------------------------------------------------------------
@@ -500,15 +533,21 @@ const createFormForCohort = async (cohort, fieldDefs) => {
 };
 
 const findOrCreateCohort = async (group) => {
-  if (group.existingCohort) {
-    return { id: group.existingCohort.id, ...group.existingCohort, isNew: false };
+  // Always re-checked fresh here rather than trusting the preview-time
+  // `existingCohort` — the admin may have edited the Cohort Code since
+  // then, and this is the value that actually ends up on every imported
+  // participant record.
+  const existingCohort = await findCohortByCode(group.cohortCode);
+
+  if (existingCohort) {
+    return { id: existingCohort.id, ...existingCohort, isNew: false };
   }
 
   const cohortRef = doc(collection(db, COLLECTIONS.COHORTS));
   const cohortData = createCohort({
     id: cohortRef.id,
     cohort_code: group.cohortCode,
-    cohort_name: group.cohortValue,
+    cohort_name: group.cohortName,
     status: "Active",
     total_registrations: 0,
     current_participant_sequence: 0,

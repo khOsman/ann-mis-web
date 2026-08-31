@@ -7,6 +7,7 @@ import { ROUTES } from "../../constants/routes";
 import {
   parseWorkbookFile,
   buildImportPreview,
+  recheckCohortCode,
   runImport,
 } from "../../services/googleFormImportService";
 import { formatBDPhone } from "../../utils/phone";
@@ -56,6 +57,49 @@ export default function BulkImportParticipants() {
     }
   };
 
+  const updateGroupField = (cohortValue, field, value) => {
+    setPreview((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        groups: prev.groups.map((group) =>
+          group.cohortValue === cohortValue ? { ...group, [field]: value } : group
+        ),
+      };
+    });
+  };
+
+  const handleRecheckCohort = async (cohortValue) => {
+    const group = preview?.groups.find((g) => g.cohortValue === cohortValue);
+    if (!group || !group.cohortCode.trim()) return;
+
+    updateGroupField(cohortValue, "checkingCohort", true);
+
+    try {
+      const { existingCohort, rows } = await recheckCohortCode({
+        cohortCode: group.cohortCode.trim(),
+        rows: group.rows,
+      });
+
+      setPreview((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          groups: prev.groups.map((g) =>
+            g.cohortValue === cohortValue
+              ? { ...g, cohortExists: !!existingCohort, existingCohort, rows, checkingCohort: false }
+              : g
+          ),
+        };
+      });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to check cohort code.");
+      updateGroupField(cohortValue, "checkingCohort", false);
+    }
+  };
+
   const toggleRowDecision = (cohortValue, rowIndex) => {
     setPreview((prev) => {
       if (!prev) return prev;
@@ -85,8 +129,19 @@ export default function BulkImportParticipants() {
       )
     : 0;
 
+  const hasInvalidCohortFields = preview
+    ? preview.groups.some(
+        (group) => !group.cohortName.trim() || !group.cohortCode.trim()
+      )
+    : false;
+
   const handleConfirm = async () => {
     if (!preview) return;
+
+    if (hasInvalidCohortFields) {
+      showAlert("error", "Every cohort needs both a Name and a Code before importing.");
+      return;
+    }
 
     setImporting(true);
 
@@ -169,27 +224,54 @@ export default function BulkImportParticipants() {
                 key={group.cohortValue}
                 className="bg-white rounded-2xl border overflow-hidden"
               >
-                <div className="px-6 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="px-6 py-4 border-b space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Cohort Name
+                      </label>
+                      <input
+                        type="text"
+                        value={group.cohortName}
+                        onChange={(e) =>
+                          updateGroupField(group.cohortValue, "cohortName", e.target.value)
+                        }
+                        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Cohort Code
+                      </label>
+                      <input
+                        type="text"
+                        value={group.cohortCode}
+                        onChange={(e) =>
+                          updateGroupField(group.cohortValue, "cohortCode", e.target.value)
+                        }
+                        onBlur={() => handleRecheckCohort(group.cohortValue)}
+                        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      />
+                    </div>
+
+                    <span
+                      className={`text-xs font-semibold px-3 py-2.5 rounded-full whitespace-nowrap ${
+                        group.cohortExists
+                          ? "bg-purple-50 text-[var(--ann-purple)]"
+                          : "bg-green-50 text-green-700"
+                      }`}
+                    >
+                      {group.checkingCohort
+                        ? "Checking..."
+                        : group.cohortExists
+                        ? "Existing cohort"
+                        : "New cohort"}
+                    </span>
+                  </div>
+
                   <div>
-                    <h4 className="font-bold text-[var(--ann-text-dark)]">
-                      {group.cohortValue}
-                      {group.cohortCode !== group.cohortValue && (
-                        <span className="text-gray-400 font-normal">
-                          {" "}
-                          → {group.cohortCode}
-                        </span>
-                      )}{" "}
-                      <span
-                        className={`ml-2 text-xs font-semibold px-2 py-1 rounded-full ${
-                          group.cohortExists
-                            ? "bg-purple-50 text-[var(--ann-purple)]"
-                            : "bg-green-50 text-green-700"
-                        }`}
-                      >
-                        {group.cohortExists ? "Existing cohort" : "New cohort"}
-                      </span>
-                    </h4>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500">
                       {group.rows.length} row(s) •{" "}
                       {group.rows.filter((r) => r.decision === "import").length} will be
                       imported
@@ -248,6 +330,12 @@ export default function BulkImportParticipants() {
               </div>
             ))}
 
+            {hasInvalidCohortFields && (
+              <p className="text-sm text-red-600 text-right">
+                Every cohort needs both a Name and a Code before importing.
+              </p>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
@@ -261,7 +349,7 @@ export default function BulkImportParticipants() {
               </button>
               <button
                 type="button"
-                disabled={importing || totalToImport === 0}
+                disabled={importing || totalToImport === 0 || hasInvalidCohortFields}
                 onClick={handleConfirm}
                 className="bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
               >
