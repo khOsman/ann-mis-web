@@ -19,6 +19,7 @@ import {
 } from "../../../constants/evaluation";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
+import { formatBDPhone } from "../../../utils/phone";
 import { ROUTES } from "../../../constants/routes";
 
 const EMPTY_RUBRIC_SCORES = Object.fromEntries(
@@ -363,10 +364,12 @@ export default function ChampionFGDDetail() {
             ) : participants.length === 0 ? (
               <p className="text-gray-500 text-sm">No participants found for this FGD.</p>
             ) : (
-              <table className="w-full min-w-[820px] text-sm">
+              <table className="w-full min-w-[1020px] text-sm">
                 <thead className="bg-[#F9FAFB] text-gray-500">
                   <tr>
                     <th className="text-left p-3">Name</th>
+                    <th className="text-left p-3">Email</th>
+                    <th className="text-left p-3">Mobile</th>
                     <th className="text-left p-3">Institution</th>
                     <th className="text-left p-3">Attendance</th>
                     <th className="text-left p-3">Evaluations</th>
@@ -388,6 +391,12 @@ export default function ChampionFGDDetail() {
                       >
                         <td className={`p-3 font-semibold ${isAbsent ? "text-red-700" : ""}`}>
                           {participant.name || "-"}
+                        </td>
+                        <td className={`p-3 ${isAbsent ? "text-red-700" : ""}`}>
+                          {participant.email || "-"}
+                        </td>
+                        <td className={`p-3 ${isAbsent ? "text-red-700" : ""}`}>
+                          {formatBDPhone(participant.phone) || "-"}
                         </td>
                         <td className={`p-3 ${isAbsent ? "text-red-700" : ""}`}>
                           {participant.institution || "-"}
