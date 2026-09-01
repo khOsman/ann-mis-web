@@ -67,25 +67,29 @@ service cloud.firestore {
       allow create, update: if isAdmin();
       allow delete: if isSuperAdmin();
 
+      // The public registration form (publicRegistrationService.js) submits
+      // unauthenticated and bumps these two counters by exactly 1 per
+      // submission, inside its own transaction. Bounding the delta to
+      // exactly +1 (rather than just allowlisting the field names) means an
+      // anonymous caller can never inflate a cohort's counters faster than
+      // submitting that many real registrations would — one write, one
+      // increment, not an arbitrary jump.
       allow update: if request.auth == null
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly([
-            "total_registrations",
-            "current_participant_sequence",
-            "total_fgds",
-            "updated_at"
-          ]);
+          .hasOnly(["total_registrations", "current_participant_sequence", "updated_at"])
+        && request.resource.data.total_registrations == resource.data.total_registrations + 1
+        && request.resource.data.current_participant_sequence == resource.data.current_participant_sequence + 1;
     }
 
     match /forms/{formId} {
       allow read: if true;
 
+      // Same reasoning as cohorts above — bounded to the exact +1 the
+      // public registration transaction performs.
       allow update: if request.auth == null
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly([
-            "total_responses",
-            "updated_at"
-          ]);
+          .hasOnly(["total_responses", "updated_at"])
+        && request.resource.data.total_responses == resource.data.total_responses + 1;
 
       allow create, update: if isAdmin();
       allow delete: if isSuperAdmin();
@@ -124,9 +128,36 @@ service cloud.firestore {
     }
 
     match /champions_pool/{championId} {
+      // Mirrors exactly what the backend's own POST /api/champions/register
+      // writes (routes/champions.js) — the app always goes through that
+      // endpoint, so this is defense-in-depth for a direct-Firestore write,
+      // not the primary path. Beyond pinning the three lifecycle fields,
+      // it now also caps the write to that same field set and requires the
+      // identity fields to actually be non-empty strings, so a caller
+      // bypassing the backend can't attach arbitrary extra fields (e.g. a
+      // pre-set role or a fake permission) to a self-registration.
       allow create: if request.resource.data.registration_status == "Pending"
         && request.resource.data.account_status == "Not Created"
-        && request.resource.data.member_status == "Inactive";
+        && request.resource.data.member_status == "Inactive"
+        && request.resource.data.keys()
+          .hasOnly([
+            "champion_code", "firebase_uid", "roles",
+            "registration_status", "account_status", "member_status",
+            "invitation_sent_at", "password_set_at", "activated_at",
+            "name", "email", "phone", "date_of_birth", "gender",
+            "institution", "address", "photo_url",
+            "joined_at", "last_login_at",
+            "assigned_fgd_ids", "assigned_fgd_count",
+            "total_evaluated_participants",
+            "created_at", "updated_at"
+          ])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.phone is string && request.resource.data.phone.size() > 0
+        && request.resource.data.institution is string && request.resource.data.institution.size() > 0
+        && request.resource.data.address is string && request.resource.data.address.size() > 0
+        && request.resource.data.roles is list && request.resource.data.roles.size() == 0;
 
       allow read: if isAdmin()
         || (isSignedIn() && request.auth.uid == championId);
@@ -147,6 +178,12 @@ service cloud.firestore {
     match /fgd_change_requests/{requestId} {
       allow read: if isAdmin() || isActiveChampion();
       // Writes only happen via the backend's Admin SDK, same reasoning.
+    }
+
+    match /audit_log/{entryId} {
+      allow read: if isAdmin();
+      // Written only by the backend's requireAuth middleware whenever a
+      // request carries impersonation claims — no client write rule.
     }
   }
 }

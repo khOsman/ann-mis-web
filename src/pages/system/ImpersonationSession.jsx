@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   setPersistence,
   browserSessionPersistence,
@@ -12,14 +12,18 @@ import { ROUTES } from "../../constants/routes";
 export const IMPERSONATION_STORAGE_KEY = "ann_impersonation";
 
 export default function ImpersonationSession() {
-  const { code } = useParams();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const run = async () => {
+    if (!window.opener) {
+      setError("This page must be opened from the admin panel's \"Login as\" button.");
+      return undefined;
+    }
+
+    const finish = async (code) => {
       try {
         const { customToken, targetType, targetName, adminName } =
           await redeemImpersonation(code);
@@ -53,13 +57,28 @@ export default function ImpersonationSession() {
       }
     };
 
-    run();
+    // The code never travels in this tab's URL — the opener hands it over
+    // via postMessage once it hears we're listening, so it's never visible
+    // in the address bar, browser history, or anything that logs URLs.
+    const onMessage = (event) => {
+      if (event.source !== window.opener || event.origin !== window.location.origin) return;
+      if (event.data?.type !== "impersonation-code") return;
+
+      window.removeEventListener("message", onMessage);
+      finish(event.data.code);
+    };
+
+    window.addEventListener("message", onMessage);
+    window.opener.postMessage(
+      { type: "impersonation-session-ready" },
+      window.location.origin
+    );
 
     return () => {
       cancelled = true;
+      window.removeEventListener("message", onMessage);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[var(--ann-bg)] flex items-center justify-center px-4">

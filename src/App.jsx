@@ -428,7 +428,7 @@ export default function App() {
         <Route path="/account-inactive" element={<AccountInactive />} />
         <Route path="/access-denied" element={<AccessDenied />} />
         <Route path="/form/:slug" element={<PublicForm />} />
-        <Route path="/session/:code" element={<ImpersonationSession />} />
+        <Route path="/session" element={<ImpersonationSession />} />
 
 
         </Routes>
