@@ -19,7 +19,7 @@ import {
   MEMBER_STATUS,
   getChampionRoles,
 } from "../../../constants/champions";
-import { FGD_STATUS_OPTIONS } from "../../../constants/fgd";
+import { FGD_STATUS_OPTIONS, FGD_ROSTER_CAP } from "../../../constants/fgd";
 import { FEEDBACK_OPTIONS, REQUIRED_EVALUATIONS } from "../../../constants/evaluation";
 import ParticipantEvaluationModal from "../../../components/selection/ParticipantEvaluationModal";
 import { ensureHttpUrl } from "../../../utils/url";
@@ -195,6 +195,19 @@ export default function FGDDetails() {
     [fgd]
   );
 
+  const assignedCount = fgd?.committee_members?.length || 0;
+  const remainingSlots = Math.max(0, FGD_ROSTER_CAP - assignedCount);
+  const rosterFull = remainingSlots === 0;
+
+  // If a slot fills up from elsewhere (another admin, another tab) while
+  // this admin still has a selection pending, trim it back down rather than
+  // letting a stale over-selection reach the backend.
+  useEffect(() => {
+    setSelectedChampionIds((prev) =>
+      prev.length > remainingSlots ? prev.slice(0, remainingSlots) : prev
+    );
+  }, [remainingSlots]);
+
   const assignableCommittee = useMemo(() => {
     const keyword = committeeSearch.trim().toLowerCase();
 
@@ -206,11 +219,16 @@ export default function FGDDetails() {
   }, [activeCommittee, assignedChampionIds, committeeSearch]);
 
   const toggleSelected = (championId) => {
-    setSelectedChampionIds((prev) =>
-      prev.includes(championId)
-        ? prev.filter((id) => id !== championId)
-        : [...prev, championId]
-    );
+    setSelectedChampionIds((prev) => {
+      if (prev.includes(championId)) {
+        return prev.filter((id) => id !== championId);
+      }
+      // Can't select more than the FGD actually has room for — stops an
+      // admin from picking, say, 3 when only 1 slot is open, which used to
+      // reach the backend and silently leave 2 of them unattached.
+      if (prev.length >= remainingSlots) return prev;
+      return [...prev, championId];
+    });
   };
 
   const handleAssignSelected = async () => {
@@ -559,9 +577,20 @@ export default function FGDDetails() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-            Selection Committee Members
-          </h3>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+              Selection Committee Members
+            </h3>
+            <span
+              className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                rosterFull
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {assignedCount} / {FGD_ROSTER_CAP} assigned
+            </span>
+          </div>
 
           {fgd.committee_members?.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-3">
@@ -598,60 +627,86 @@ export default function FGDDetails() {
               Assign Active Committee Members
             </h4>
 
-            <input
-              type="text"
-              value={committeeSearch}
-              onChange={(e) => setCommitteeSearch(e.target.value)}
-              placeholder="Search by name..."
-              className="mt-3 w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
-            />
-
-            {loadingCommittee ? (
-              <p className="text-sm text-gray-500 mt-4">
-                Loading active committee members...
-              </p>
-            ) : assignableCommittee.length === 0 ? (
-              <p className="text-sm text-gray-500 mt-4">
-                No matching active committee members available.
+            {rosterFull ? (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-3">
+                This FGD's committee is full ({FGD_ROSTER_CAP}/{FGD_ROSTER_CAP}). Remove a
+                member above to free up a slot before assigning another.
               </p>
             ) : (
-              <div className="mt-4 max-h-64 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-100">
-                {assignableCommittee.map((champion) => (
-                  <label
-                    key={champion.id}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedChampionIds.includes(champion.id)}
-                      onChange={() => toggleSelected(champion.id)}
-                      className="accent-[var(--ann-pink)]"
-                    />
-                    <div>
-                      <p className="font-semibold">{champion.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {champion.champion_code} • {champion.email}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
+              <>
+                <input
+                  type="text"
+                  value={committeeSearch}
+                  onChange={(e) => setCommitteeSearch(e.target.value)}
+                  placeholder="Search by name..."
+                  className="mt-3 w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                />
 
-            <button
-              type="button"
-              disabled={assigningMembers || selectedChampionIds.length === 0}
-              onClick={handleAssignSelected}
-              className="mt-4 bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-50"
-            >
-              {assigningMembers
-                ? "Assigning..."
-                : `Assign Selected${
-                    selectedChampionIds.length > 0
-                      ? ` (${selectedChampionIds.length})`
-                      : ""
-                  }`}
-            </button>
+                {loadingCommittee ? (
+                  <p className="text-sm text-gray-500 mt-4">
+                    Loading active committee members...
+                  </p>
+                ) : assignableCommittee.length === 0 ? (
+                  <p className="text-sm text-gray-500 mt-4">
+                    No matching active committee members available.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500 mt-3">
+                      {remainingSlots} slot{remainingSlots === 1 ? "" : "s"} open — you can
+                      select up to {remainingSlots} at a time.
+                    </p>
+                    <div className="mt-2 max-h-64 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-100">
+                      {assignableCommittee.map((champion) => {
+                        const isSelected = selectedChampionIds.includes(champion.id);
+                        const selectionDisabled =
+                          !isSelected && selectedChampionIds.length >= remainingSlots;
+
+                        return (
+                          <label
+                            key={champion.id}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 ${
+                              selectionDisabled
+                                ? "opacity-50 cursor-not-allowed"
+                                : "cursor-pointer"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={selectionDisabled}
+                              onChange={() => toggleSelected(champion.id)}
+                              className="accent-[var(--ann-pink)]"
+                            />
+                            <div>
+                              <p className="font-semibold">{champion.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {champion.champion_code} • {champion.email}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  disabled={assigningMembers || selectedChampionIds.length === 0}
+                  onClick={handleAssignSelected}
+                  className="mt-4 bg-[var(--ann-pink)] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-50"
+                >
+                  {assigningMembers
+                    ? "Assigning..."
+                    : `Assign Selected${
+                        selectedChampionIds.length > 0
+                          ? ` (${selectedChampionIds.length})`
+                          : ""
+                      }`}
+                </button>
+              </>
+            )}
           </div>
           )}
         </div>

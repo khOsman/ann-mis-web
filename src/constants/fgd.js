@@ -15,3 +15,7 @@ export const FGD_ATTENDANCE_STATUS = {
 export const FGD_ATTENDANCE_OPTIONS = Object.values(
   FGD_ATTENDANCE_STATUS
 );
+
+// Matches the backend's FGD_ROSTER_CAP (services/fgdAssignment.js) — the
+// max Selection Committee members one FGD can have.
+export const FGD_ROSTER_CAP = 3;
