@@ -87,6 +87,12 @@ export const ADMIN_MENU_ITEMS = [
             icon: List,
             permission: "selection",
           },
+          {
+            label: "All Rosters",
+            path: ROUTES.selectionRosters,
+            icon: List,
+            permission: "selection",
+          },
         ],
     },
     {

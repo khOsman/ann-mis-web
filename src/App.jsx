@@ -38,6 +38,8 @@ import ChampionClassroom from "./pages/champions/portal/ChampionClassroom";
 import ChampionProjects from "./pages/champions/portal/ChampionProjects";
 import ChampionProjectDetail from "./pages/champions/portal/ChampionProjectDetail";
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
+import AllRosters from "./pages/selection/fgd/AllRosters";
+import RosterDetail from "./pages/selection/fgd/RosterDetail";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
 import ImpersonationSession from "./pages/system/ImpersonationSession";
@@ -188,6 +190,24 @@ export default function App() {
             element={
               <ProtectedRoute permission="selection">
                 <AllFGDs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionRosters}
+            element={
+              <ProtectedRoute permission="selection">
+                <AllRosters />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionRosterDetail}
+            element={
+              <ProtectedRoute permission="selection">
+                <RosterDetail />
               </ProtectedRoute>
             }
           />
