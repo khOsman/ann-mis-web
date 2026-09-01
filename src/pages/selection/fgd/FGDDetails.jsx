@@ -247,11 +247,24 @@ export default function FGDDetails() {
       );
 
       const failed = results.filter((result) => result.status === "rejected");
+      const succeededCount = results.length - failed.length;
 
       if (failed.length > 0) {
+        // Surface the backend's actual reason (e.g. "committee is already
+        // full" if someone else filled the last slot in the meantime, or a
+        // per-champion validation error) instead of just a bare count — a
+        // silent "1 failed" told the admin nothing about what to do next.
+        const reasons = [
+          ...new Set(
+            failed.map((result) => result.reason?.message || "Failed to assign.")
+          ),
+        ];
+
         showAlert(
           "error",
-          `${failed.length} of ${selectedChampionIds.length} assignment(s) failed.`
+          succeededCount > 0
+            ? `${succeededCount} assigned, ${failed.length} failed — ${reasons.join(" ")}`
+            : `Assignment failed — ${reasons.join(" ")}`
         );
       } else {
         showAlert(
