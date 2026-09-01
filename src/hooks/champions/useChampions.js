@@ -1,7 +1,7 @@
 import { useLiveCollection, useLiveDocument } from "../../realtime/useLive";
 import { championDocRef, championsQuery } from "../../services/championsService";
 
-const mapChampionDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapChampionDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useChampions = (championId = null) => {
   // Both hooks are always called (rules-of-hooks), but only one is ever

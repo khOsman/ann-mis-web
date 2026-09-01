@@ -23,8 +23,8 @@ export const getParticipants = async () => {
   const snapshot = await getDocs(participantsQuery());
 
   return snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   }));
 };
 
@@ -34,8 +34,8 @@ export const getParticipantById = async (participantId) => {
   if (!snapshot.exists()) return null;
 
   return {
-    id: snapshot.id,
     ...snapshot.data(),
+    id: snapshot.id,
   };
 };
 

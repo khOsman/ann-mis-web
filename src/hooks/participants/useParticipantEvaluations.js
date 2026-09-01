@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { participantEvaluationsQuery } from "../../services/evaluationService";
 
-const mapEvaluationDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapEvaluationDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useParticipantEvaluations = (participantId) => {
   const { data, loading, error } = useLiveCollection(

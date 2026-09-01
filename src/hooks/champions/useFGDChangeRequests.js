@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { pendingFGDChangeRequestsQuery } from "../../services/championPortalService";
 
-const mapRequestDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapRequestDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useFGDChangeRequests = () => {
   const { data, loading, error } = useLiveCollection(

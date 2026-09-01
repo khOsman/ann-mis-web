@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { myFgdEvaluationsQuery } from "../../services/evaluationService";
 
-const mapEvaluationDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapEvaluationDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 // The set of participant IDs the signed-in champion has already evaluated
 // within one FGD — used to show their own completion checkmark per

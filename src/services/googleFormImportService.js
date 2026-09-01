@@ -365,7 +365,7 @@ export const findCohortByCode = async (code) => {
     (item) => String(item.data().cohort_code || "").trim().toLowerCase() === normalized
   );
 
-  return match ? { id: match.id, ...match.data() } : null;
+  return match ? { ...match.data(), id: match.id } : null;
 };
 
 export const getExistingParticipantEmails = async (cohortId) => {
@@ -540,7 +540,7 @@ const findOrCreateCohort = async (group) => {
   const existingCohort = await findCohortByCode(group.cohortCode);
 
   if (existingCohort) {
-    return { id: existingCohort.id, ...existingCohort, isNew: false };
+    return { ...existingCohort, id: existingCohort.id, isNew: false };
   }
 
   const cohortRef = doc(collection(db, COLLECTIONS.COHORTS));

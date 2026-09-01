@@ -7,7 +7,7 @@ export const getFormResponseById = async (responseId) => {
   if (!snapshot.exists()) return null;
 
   return {
-    id: snapshot.id,
     ...snapshot.data(),
+    id: snapshot.id,
   };
 };

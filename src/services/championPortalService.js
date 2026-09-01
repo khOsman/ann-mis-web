@@ -13,7 +13,7 @@ export const getPendingFGDChangeRequests = async () => {
   const snapshot = await getDocs(pendingFGDChangeRequestsQuery());
 
   return snapshot.docs
-    .map((item) => ({ id: item.id, ...item.data() }))
+    .map((item) => ({ ...item.data(), id: item.id }))
     .sort((a, b) => (b.requested_at?.seconds || 0) - (a.requested_at?.seconds || 0));
 };
 

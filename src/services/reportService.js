@@ -78,8 +78,8 @@ export const getReportData = async (sourceKey) => {
   const snapshot = await getDocs(q);
 
   const rawData = snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   }));
 
   if (sourceKey === "form_responses") {

@@ -1,7 +1,7 @@
 import { useLiveCollection } from "../../realtime/useLive";
 import { updateUser, usersQuery } from "../../services/userService";
 
-const mapUserDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapUserDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useUsers = () => {
   const { data, loading, error } = useLiveCollection(

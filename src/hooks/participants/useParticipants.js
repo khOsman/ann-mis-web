@@ -1,7 +1,7 @@
 import { useLiveCollection } from "../../realtime/useLive";
 import { participantsQuery } from "../../services/participantService";
 
-const mapParticipantDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapParticipantDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useParticipants = () => {
   const { data, loading, error } = useLiveCollection(

@@ -5,8 +5,6 @@ import {
 } from "../constants/champions";
 
 export const createChampion = (overrides = {}) => ({
-  id: "",
-
   champion_code: "",
 
   firebase_uid: "",

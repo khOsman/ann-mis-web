@@ -47,9 +47,9 @@ export function AuthProvider({ children }) {
           if (championSnap.exists()) {
             setFirebaseUser(user);
             setAppUser({
-              id: championSnap.id,
               userType: "champion",
               ...championSnap.data(),
+              id: championSnap.id,
             });
             return;
           }
@@ -64,9 +64,9 @@ export function AuthProvider({ children }) {
           if (participantSnap.exists()) {
             setFirebaseUser(user);
             setAppUser({
-              id: participantSnap.id,
               userType: "participant",
               ...participantSnap.data(),
+              id: participantSnap.id,
             });
             return;
           }
@@ -104,8 +104,8 @@ export function AuthProvider({ children }) {
         }
 
         setAppUser({
-          id: userSnap.id,
           ...userSnap.data(),
+          id: userSnap.id,
         });
       } catch (error) {
         console.error("Auth context failed:", error);

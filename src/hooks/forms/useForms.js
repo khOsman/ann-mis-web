@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { formsQuery } from "../../services/formService";
 
-const mapFormDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapFormDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useForms = () => {
   const { data: allForms, loading, error } = useLiveCollection(

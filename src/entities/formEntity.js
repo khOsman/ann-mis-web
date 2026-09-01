@@ -1,6 +1,4 @@
 export const createFormEntity = (overrides = {}) => ({
-  id: "",
-
   form_title: "",
   form_description: "",
   public_slug: "",

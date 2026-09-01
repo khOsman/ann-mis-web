@@ -34,7 +34,7 @@ export default function PublicForm() {
         }
 
         const formDoc = formSnapshot.docs[0];
-        const formData = { id: formDoc.id, ...formDoc.data() };
+        const formData = { ...formDoc.data(), id: formDoc.id };
 
         if (formData.is_deleted === true || formData.status !== "Published") {
           setFormMeta(null);
@@ -51,7 +51,7 @@ export default function PublicForm() {
         const fieldsSnapshot = await getDocs(fieldsQuery);
 
         const fieldData = fieldsSnapshot.docs
-          .map((item) => ({ id: item.id, ...item.data() }))
+          .map((item) => ({ ...item.data(), id: item.id }))
           .sort((a, b) => (a.order || 0) - (b.order || 0));
 
         setFields(fieldData);

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { archiveCohort, cohortsQuery } from "../../services/cohortService";
 
-const mapCohortDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapCohortDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useCohorts = () => {
   const {

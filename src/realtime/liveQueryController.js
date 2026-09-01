@@ -86,7 +86,7 @@ export function subscribeToDocument(cacheKey, docRefFactory, onUpdate) {
       docRefFactory(),
       (snapshot) => {
         entry.latestData = snapshot.exists()
-          ? { id: snapshot.id, ...snapshot.data() }
+          ? { ...snapshot.data(), id: snapshot.id }
           : null;
         entry.latestError = null;
         entry.hasData = true;

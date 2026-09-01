@@ -1,6 +1,4 @@
 export const createCohortEntity = (overrides = {}) => ({
-  id: "",
-
   cohort_name: "",
   cohort_code: "",
 

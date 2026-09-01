@@ -69,8 +69,8 @@ export const getFGDsByCohort = async (cohortId) => {
   const snapshot = await getDocs(fgdsByCohortQuery(cohortId));
 
   return snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   }));
 };
 
@@ -82,8 +82,8 @@ export const getFGDById = async (fgdId) => {
   }
 
   return {
-    id: snapshot.id,
     ...snapshot.data(),
+    id: snapshot.id,
   };
 };
 
@@ -119,8 +119,8 @@ export const generateFGDsForCohort = async ({
 
   const participants = participantSnap.docs
     .map((item) => ({
-      id: item.id,
       ...item.data(),
+      id: item.id,
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
@@ -309,8 +309,8 @@ export const getParticipantsByFGD = async (fgdId) => {
 
   return snapshot.docs
     .map((item) => ({
-      id: item.id,
       ...item.data(),
+      id: item.id,
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 };

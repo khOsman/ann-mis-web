@@ -50,15 +50,15 @@ export const getParticipantMasterDataset = async () => {
 
   responseSnapshot.docs.forEach((item) => {
     responsesById[item.id] = {
-      id: item.id,
       ...item.data(),
+      id: item.id,
     };
   });
 
   const rows = participantSnapshot.docs.map((item) => {
     const participant = {
-      id: item.id,
       ...item.data(),
+      id: item.id,
     };
 
     const response = responsesById[participant.response_id];

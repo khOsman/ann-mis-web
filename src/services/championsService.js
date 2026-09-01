@@ -25,8 +25,8 @@ export const getChampion = async (championId) => {
   }
 
   return {
-    id: snapshot.id,
     ...snapshot.data(),
+    id: snapshot.id,
   };
 };
 
@@ -34,8 +34,8 @@ export const getChampions = async () => {
   const snapshot = await getDocs(championsQuery());
 
   return snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   }));
 };
 

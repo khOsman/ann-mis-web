@@ -38,8 +38,8 @@ export const getCohorts = async () => {
   const snapshot = await getDocs(cohortsQuery());
 
   return snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   }));
 };
 
@@ -55,8 +55,8 @@ export const getCohortById = async (cohortId) => {
   if (!snapshot.exists()) return null;
 
   return {
-    id: snapshot.id,
     ...snapshot.data(),
+    id: snapshot.id,
   };
 };
 

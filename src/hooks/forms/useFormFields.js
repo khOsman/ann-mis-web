@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { formFieldsQuery } from "../../services/formService";
 
-const mapFieldDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapFieldDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useFormFields = (formId) => {
   const { data, loading, error } = useLiveCollection(

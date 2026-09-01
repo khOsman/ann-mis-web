@@ -7,8 +7,6 @@ import {
 } from "../constants/status";
 
 export const createParticipantEntity = (overrides = {}) => ({
-  id: "",
-
   // Participant Identity
   participant_code: "",
 

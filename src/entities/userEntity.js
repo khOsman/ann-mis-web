@@ -2,7 +2,6 @@ import { USER_ROLES, USER_STATUSES } from "../constants/roles";
 import { USER_DESIGNATIONS } from "../constants/designations";
 
 export const createUserEntity = (overrides = {}) => ({
-  id: "",
   uid: "",
 
   name: "",

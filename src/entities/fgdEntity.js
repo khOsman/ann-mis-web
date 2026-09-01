@@ -1,8 +1,6 @@
 import { FGD_STATUS } from "../constants/fgd";
 
 export const createFgdEntity = (overrides = {}) => ({
-  id: "",
-
   // Cohort
   cohort_id: "",
   cohort_name: "",

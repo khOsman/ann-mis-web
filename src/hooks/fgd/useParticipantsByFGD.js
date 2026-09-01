@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLiveCollection } from "../../realtime/useLive";
 import { participantsByFGDQuery } from "../../services/fgdService";
 
-const mapParticipantDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapParticipantDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useParticipantsByFGD = (fgdId) => {
   const { data, loading, error } = useLiveCollection(

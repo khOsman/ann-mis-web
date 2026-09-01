@@ -1,7 +1,7 @@
 import { useLiveCollection } from "../../realtime/useLive";
 import { fgdsByCohortQuery } from "../../services/fgdService";
 
-const mapFgdDoc = (doc) => ({ id: doc.id, ...doc.data() });
+const mapFgdDoc = (doc) => ({ ...doc.data(), id: doc.id });
 
 export const useFGDsByCohort = (cohortId) => {
   const { data, loading, error } = useLiveCollection(

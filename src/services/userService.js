@@ -21,8 +21,8 @@ export const getUsers = async () => {
   const snapshot = await getDocs(usersQuery());
 
   return snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   }));
 };
 
@@ -32,8 +32,8 @@ export const getUserById = async (userId) => {
   if (!snapshot.exists()) return null;
 
   return {
-    id: snapshot.id,
     ...snapshot.data(),
+    id: snapshot.id,
   };
 };
 
