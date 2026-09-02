@@ -73,9 +73,16 @@ function SortableField({ field, index, selectedFieldId, setSelectedFieldId, rend
           </label>
         </div>
 
-        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
-          {field.field_type}
-        </span>
+        <div className="flex items-center gap-2">
+          {field.conditional_logic && (
+            <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-lg">
+              Conditional
+            </span>
+          )}
+          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
+            {field.field_type}
+          </span>
+        </div>
       </div>
 
       {renderFieldPreview(field)}
@@ -111,6 +118,41 @@ export default function FormBuilder() {
     () => fields.find((field) => field.id === selectedFieldId),
     [fields, selectedFieldId]
   );
+
+  // Local draft of the selected field's options — editing here never writes
+  // to Firestore on every keystroke (that raced against the live-listener
+  // echo and could revert characters the admin had just typed). Only
+  // discrete actions (blur, add, remove) commit. Re-synced from truth when
+  // the selection changes, or once when the newly-selected field's live
+  // data first arrives (it may not exist yet the instant a field is added).
+  const [optionsDraft, setOptionsDraft] = useState([]);
+
+  useEffect(() => {
+    if (selectedField) {
+      setOptionsDraft(selectedField.options || []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFieldId, !!selectedField]);
+
+  const commitOptions = (nextOptions) => {
+    if (!selectedField) return;
+    handleUpdateField(selectedField.id, { options: nextOptions });
+  };
+
+  // Fields whose answer can drive another field's visibility — only
+  // fields with a fixed, known option set make sense as a condition
+  // source, and only fields earlier in the form (a later question can't
+  // depend on an answer that hasn't been asked yet).
+  const conditionSourceCandidates = useMemo(() => {
+    if (!selectedField) return [];
+
+    return fields.filter(
+      (field) =>
+        field.id !== selectedField.id &&
+        ["dropdown", "radio", "checkbox"].includes(field.field_type) &&
+        (field.order || 0) < (selectedField.order || 0)
+    );
+  }, [fields, selectedField]);
 
   const handleAddField = async (fieldType) => {
     setSaving(true);
@@ -171,6 +213,21 @@ export default function FormBuilder() {
 
   const handleDeleteField = async (fieldId) => {
     try {
+      // Any field whose conditional logic points at the one being deleted
+      // would otherwise reference a question that no longer exists.
+      const dependents = fields.filter(
+        (field) => field.conditional_logic?.source_field_id === fieldId
+      );
+
+      await Promise.all(
+        dependents.map((field) =>
+          updateDoc(doc(db, "form_fields", field.id), {
+            conditional_logic: null,
+            updated_at: serverTimestamp(),
+          })
+        )
+      );
+
       await deleteDoc(doc(db, "form_fields", fieldId));
       showAlert("success", "Field removed successfully.");
       setSelectedFieldId(null);
@@ -841,23 +898,179 @@ const handleCopyLink = async () => {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Options
                     </label>
-                    <textarea
-                      value={(selectedField.options || []).join("\n")}
-                      onChange={(e) =>
-                        handleUpdateField(selectedField.id, {
-                          options: e.target.value
-                            .split("\n")
-                            .map((item) => item.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-28 focus:outline-none focus:border-[var(--ann-pink)]"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Add one option per line.
+
+                    <div className="space-y-2">
+                      {optionsDraft.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <input
+                            value={option}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setOptionsDraft((prev) =>
+                                prev.map((item, i) => (i === index ? value : item))
+                              );
+                            }}
+                            onBlur={() => commitOptions(optionsDraft)}
+                            placeholder={`Option ${index + 1}`}
+                            className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = optionsDraft.filter((_, i) => i !== index);
+                              setOptionsDraft(next);
+                              commitOptions(next);
+                            }}
+                            className="text-gray-400 hover:text-red-500 p-2"
+                            aria-label={`Remove option ${index + 1}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = [...optionsDraft, ""];
+                        setOptionsDraft(next);
+                        commitOptions(next);
+                      }}
+                      className="mt-3 w-full border border-dashed border-gray-300 text-gray-600 rounded-xl px-4 py-2.5 text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                    >
+                      + Add Option
+                    </button>
+
+                    <p className="text-xs text-gray-500 mt-2">
+                      Add, remove, or edit as many options as you need. Changes save when you click away from an option.
                     </p>
                   </div>
                 )}
+
+                <div className="border border-gray-200 rounded-2xl p-4 space-y-3">
+                  <h4 className="font-bold text-[var(--ann-text-dark)]">
+                    Conditional Logic
+                  </h4>
+
+                  <label
+                    className={`flex items-center gap-2 text-sm font-medium ${
+                      conditionSourceCandidates.length === 0
+                        ? "text-gray-400"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={conditionSourceCandidates.length === 0}
+                      checked={!!selectedField.conditional_logic}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const firstCandidate = conditionSourceCandidates[0];
+                          handleUpdateField(selectedField.id, {
+                            conditional_logic: {
+                              source_field_id: firstCandidate.id,
+                              match_values: [],
+                            },
+                          });
+                        } else {
+                          handleUpdateField(selectedField.id, {
+                            conditional_logic: null,
+                          });
+                        }
+                      }}
+                    />
+                    Only show this question based on another answer
+                  </label>
+
+                  {conditionSourceCandidates.length === 0 && (
+                    <p className="text-xs text-gray-500">
+                      Add a Dropdown, Radio, or Checkbox question before this
+                      one to enable conditional logic.
+                    </p>
+                  )}
+
+                  {selectedField.conditional_logic && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Show this question if the answer to
+                        </label>
+                        <select
+                          value={selectedField.conditional_logic.source_field_id}
+                          onChange={(e) =>
+                            handleUpdateField(selectedField.id, {
+                              conditional_logic: {
+                                source_field_id: e.target.value,
+                                match_values: [],
+                              },
+                            })
+                          }
+                          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                        >
+                          {conditionSourceCandidates.map((field) => (
+                            <option key={field.id} value={field.id}>
+                              {field.label_en || field.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          ...is one of
+                        </label>
+
+                        <div className="space-y-2">
+                          {(
+                            conditionSourceCandidates.find(
+                              (field) =>
+                                field.id ===
+                                selectedField.conditional_logic.source_field_id
+                            )?.options || []
+                          ).map((option) => {
+                            const matchValues =
+                              selectedField.conditional_logic.match_values || [];
+                            const checked = matchValues.includes(option);
+
+                            return (
+                              <label
+                                key={option}
+                                className="flex items-center gap-2 text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const next = e.target.checked
+                                      ? [...matchValues, option]
+                                      : matchValues.filter((v) => v !== option);
+
+                                    handleUpdateField(selectedField.id, {
+                                      conditional_logic: {
+                                        ...selectedField.conditional_logic,
+                                        match_values: next,
+                                      },
+                                    });
+                                  }}
+                                />
+                                {option}
+                              </label>
+                            );
+                          })}
+                        </div>
+
+                        {(selectedField.conditional_logic.match_values || [])
+                          .length === 0 && (
+                          <p className="text-xs text-amber-600 mt-2">
+                            Select at least one value — otherwise this
+                            question stays hidden.
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 <button
                   type="button"

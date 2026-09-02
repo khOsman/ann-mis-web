@@ -182,6 +182,48 @@ export default function PublicForm() {
     return "";
   };
 
+  const isFieldVisible = (field) => {
+    const condition = field.conditional_logic;
+
+    if (!condition || !condition.source_field_id) return true;
+
+    const matchValues = condition.match_values || [];
+
+    if (matchValues.length === 0) return false;
+
+    const sourceValue = answers[condition.source_field_id];
+
+    if (Array.isArray(sourceValue)) {
+      return sourceValue.some((value) => matchValues.includes(value));
+    }
+
+    return matchValues.includes(sourceValue);
+  };
+
+  // A field hidden by conditional logic shouldn't submit a stale answer
+  // from before it was hidden (e.g. the visitor picked an answer, then
+  // changed an earlier answer so this question no longer applies).
+  useEffect(() => {
+    setAnswers((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      fields.forEach((field) => {
+        if (
+          field.conditional_logic &&
+          !isFieldVisible(field) &&
+          next[field.id] !== undefined
+        ) {
+          delete next[field.id];
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, fields]);
+
   const handleAnswerChange = (fieldId, value) => {
     setAnswers((prev) => ({
       ...prev,
@@ -209,7 +251,7 @@ export default function PublicForm() {
 
     const nextErrors = {};
 
-    fields.forEach((field) => {
+    fields.filter(isFieldVisible).forEach((field) => {
       const error = validateField(field, answers[field.id]);
 
       if (error) {
@@ -471,7 +513,7 @@ export default function PublicForm() {
             {fields.length === 0 ? (
               <p className="text-gray-500">No fields found for this form.</p>
             ) : (
-              fields.map((field) => renderField(field))
+              fields.filter(isFieldVisible).map((field) => renderField(field))
             )}
 
             <button
