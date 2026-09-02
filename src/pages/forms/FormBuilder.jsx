@@ -158,6 +158,17 @@ export default function FormBuilder() {
     setSaving(true);
 
     try {
+      // Insert right after whichever field is currently selected, so
+      // building a form top-to-bottom doesn't require adding at the end
+      // and then dragging into place. Falls back to the end when nothing
+      // is selected (or the selection is stale).
+      const selectedIndex = selectedFieldId
+        ? fields.findIndex((field) => field.id === selectedFieldId)
+        : -1;
+      const insertIndex = selectedIndex === -1 ? fields.length : selectedIndex + 1;
+      const newOrder = insertIndex + 1;
+      const fieldsToShift = fields.slice(insertIndex);
+
       const docRef = await addDoc(collection(db, "form_fields"), {
         form_id: id,
         label: fieldType.defaultLabel,
@@ -182,10 +193,21 @@ export default function FormBuilder() {
           error_message_bn: "",
         },
         options: fieldType.defaultOptions || [],
-        order: fields.length + 1,
+        order: newOrder,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
+
+      if (fieldsToShift.length > 0) {
+        await Promise.all(
+          fieldsToShift.map((field, i) =>
+            updateDoc(doc(db, "form_fields", field.id), {
+              order: newOrder + 1 + i,
+              updated_at: serverTimestamp(),
+            })
+          )
+        );
+      }
 
       showAlert("success", `${fieldType.label} field added.`);
       // No manual refetch — the live listener picks up the new field
