@@ -10,6 +10,7 @@ import { ROUTES } from "../../../constants/routes";
 import { useChampions, useCohort, useFGDsByCohort } from "../../../hooks";
 import {
   generateFGDsForCohort,
+  getParticipantsByFGD,
   regenerateFGDsForCohort,
   syncFGDStatusIfEnded,
 } from "../../../services/fgdService";
@@ -17,11 +18,23 @@ import {
   assignChampionToFGD,
   unassignChampionFromFGD,
 } from "../../../services/championsService";
+import { exportExcel } from "../../../services/exportService";
+import { formatBDPhone } from "../../../utils/phone";
 import {
   CHAMPION_ROLES,
   MEMBER_STATUS,
   getChampionRoles,
 } from "../../../constants/champions";
+
+const FGD_PARTICIPANT_EXPORT_COLUMNS = [
+  { key: "cohort_name", label: "Cohort" },
+  { key: "fgd_name", label: "FGD Name" },
+  { key: "participant_code", label: "ID" },
+  { key: "name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Number" },
+  { key: "institution", label: "Institution" },
+];
 
 export default function CohortFGDs() {
   const { cohortId } = useParams();
@@ -66,6 +79,7 @@ export default function CohortFGDs() {
   const [attaching, setAttaching] = useState(false);
   const [removeTargetId, setRemoveTargetId] = useState(null);
   const [removingChampionId, setRemovingChampionId] = useState(null);
+  const [exportingFgdId, setExportingFgdId] = useState(null);
 
   // Derived from the live `fgds` list (not a snapshot captured at click
   // time) so the modal reflects any change made elsewhere while it's open.
@@ -170,6 +184,39 @@ export default function CohortFGDs() {
       showAlert("error", error.message || "Failed to remove committee member.");
     } finally {
       setRemovingChampionId(null);
+    }
+  };
+
+  const handleExportParticipants = async (fgd) => {
+    setExportingFgdId(fgd.id);
+
+    try {
+      const participants = await getParticipantsByFGD(fgd.id);
+
+      if (participants.length === 0) {
+        showAlert("warning", `${fgd.fgd_code} has no participants to export.`);
+        return;
+      }
+
+      const rows = participants.map((participant) => ({
+        cohort_name: cohort?.cohort_name || fgd.cohort_name || "",
+        fgd_name: fgd.fgd_name || fgd.fgd_code || "",
+        participant_code: participant.participant_code || "",
+        name: participant.name || "",
+        email: participant.email || "",
+        phone: formatBDPhone(participant.phone),
+        institution: participant.institution || "",
+      }));
+
+      exportExcel({
+        rows,
+        columns: FGD_PARTICIPANT_EXPORT_COLUMNS,
+        sourceLabel: `${fgd.fgd_code}_Participants`,
+      });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to export participants.");
+    } finally {
+      setExportingFgdId(null);
     }
   };
 
@@ -475,6 +522,15 @@ export default function CohortFGDs() {
                             className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90"
                           >
                             View
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={exportingFgdId === fgd.id}
+                            onClick={() => handleExportParticipants(fgd)}
+                            className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+                          >
+                            {exportingFgdId === fgd.id ? "Exporting..." : "Export"}
                           </button>
                         </div>
                       </td>
