@@ -411,6 +411,8 @@ const markPendingParticipantsAbsent = async (fgdId) => {
       FGD_ATTENDANCE_STATUS.PENDING
   );
 
+  if (pendingDocs.length === 0) return;
+
   for (let i = 0; i < pendingDocs.length; i += 400) {
     const batch = writeBatch(db);
 
@@ -450,10 +452,21 @@ export const hasFGDScheduleEnded = (fgd) => {
 // No scheduled-job infrastructure exists to flip FGDs to Completed the
 // moment their session ends, so this reconciles opportunistically instead —
 // called whenever an FGD's live data is loaded in the admin UI. Once status
-// is Completed this is a no-op, so it can't loop or fight a manual edit
-// back to Draft/Active before the schedule has passed.
+// is Completed the status transition itself is a no-op, so it can't loop or
+// fight a manual edit back to Draft/Active before the schedule has passed.
+//
+// Also backfills Pending attendance on FGDs that were already Completed
+// before markPendingParticipantsAbsent existed — those never got their
+// stale Pending participants flipped to Absent, so every time one of those
+// FGDs is viewed this catches it up (a no-op once it has been).
 export const syncFGDStatusIfEnded = async (fgd) => {
-  if (!fgd || fgd.status === FGD_STATUS.COMPLETED) return;
+  if (!fgd) return;
+
+  if (fgd.status === FGD_STATUS.COMPLETED) {
+    await markPendingParticipantsAbsent(fgd.id);
+    return;
+  }
+
   if (!hasFGDScheduleEnded(fgd)) return;
 
   await updateFGDStatus(fgd.id, FGD_STATUS.COMPLETED);
