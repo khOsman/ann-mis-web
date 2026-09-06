@@ -27,6 +27,26 @@ import { formatTimeRangeBDT } from "../../../utils/time";
 import { formatBDPhone } from "../../../utils/phone";
 
 
+const ATTENDANCE_BADGE_CLASSES = {
+  Present: "bg-green-50 text-green-700",
+  Absent: "bg-red-50 text-red-700",
+  Pending: "bg-amber-50 text-amber-700",
+};
+
+function AttendanceBadge({ status }) {
+  const label = status || "Pending";
+
+  return (
+    <span
+      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+        ATTENDANCE_BADGE_CLASSES[label] || ATTENDANCE_BADGE_CLASSES.Pending
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
 // Its own component so each row can hold its own live subscription to that
 // participant's evaluations — hooks can't be called inside a .map() loop.
 function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCode }) {
@@ -41,7 +61,9 @@ function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCo
       <td className="p-4">{participant.email || "-"}</td>
       <td className="p-4">{formatBDPhone(participant.phone) || "-"}</td>
       <td className="p-4">{participant.institution || "-"}</td>
-      <td className="p-4">{participant.fgd_attendance_status || "Pending"}</td>
+      <td className="p-4">
+        <AttendanceBadge status={participant.fgd_attendance_status} />
+      </td>
 
       <td className="p-4">
         {participant.average_evaluation_score != null ? (

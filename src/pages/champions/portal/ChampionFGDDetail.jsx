@@ -26,6 +26,12 @@ const EMPTY_RUBRIC_SCORES = Object.fromEntries(
   RUBRIC_CRITERIA.map((criterion) => [criterion.key, ""])
 );
 
+const ATTENDANCE_SELECT_CLASSES = {
+  Present: "border-green-300 text-green-700 font-semibold bg-green-50",
+  Absent: "border-red-300 text-red-700 font-semibold bg-red-50",
+  Pending: "border-amber-300 text-amber-700 font-semibold bg-amber-50",
+};
+
 function EvaluationModal({ target, onClose, onSaved }) {
   const { showAlert } = useAlert();
   const [form, setForm] = useState({
@@ -380,6 +386,7 @@ export default function ChampionFGDDetail() {
                 <tbody>
                   {participants.map((participant) => {
                     const isAbsent = participant.fgd_attendance_status === "Absent";
+                    const attendanceStatus = participant.fgd_attendance_status || "Pending";
                     const isEvaluatedByMe = evaluatedParticipantIds.has(participant.id);
 
                     return (
@@ -403,14 +410,13 @@ export default function ChampionFGDDetail() {
                         </td>
                         <td className="p-3">
                           <select
-                            value={participant.fgd_attendance_status || "Pending"}
+                            value={attendanceStatus}
                             onChange={(e) =>
                               handleAttendanceChange(participant.id, e.target.value)
                             }
                             className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--ann-pink)] ${
-                              isAbsent
-                                ? "border-red-300 text-red-700 font-semibold"
-                                : "border-gray-300"
+                              ATTENDANCE_SELECT_CLASSES[attendanceStatus] ||
+                              ATTENDANCE_SELECT_CLASSES.Pending
                             }`}
                           >
                             {ATTENDANCE_OPTIONS.map((status) => (
