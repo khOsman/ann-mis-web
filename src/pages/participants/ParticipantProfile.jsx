@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getFormResponseById } from "../../services/registrationService";
 import { updateParticipant } from "../../services/participantService";
+import { removeEvaluation } from "../../services/evaluationService";
 import { useParticipant, useParticipantEvaluations } from "../../hooks";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import {
   FEEDBACK_OPTIONS,
   RECOMMENDATION_OPTIONS,
@@ -37,6 +39,8 @@ export default function ParticipantProfile() {
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusForm, setStatusForm] = useState({});
   const [savingStatus, setSavingStatus] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removingEvaluation, setRemovingEvaluation] = useState(false);
 
   // Different pages link into this profile (All Participants, FGD Details,
   // ...) — each passes where it came from via navigation state so "Back"
@@ -106,6 +110,27 @@ export default function ParticipantProfile() {
       showAlert("error", error.message || "Failed to update status.");
     } finally {
       setSavingStatus(false);
+    }
+  };
+
+  const handleRemoveEvaluation = async () => {
+    if (!removeTarget || removingEvaluation) return;
+
+    setRemovingEvaluation(true);
+
+    try {
+      await removeEvaluation({
+        evaluationId: removeTarget.id,
+        participantId: id,
+        cohortId: participant.cohort_id,
+      });
+      showAlert("success", "Evaluation removed.");
+      setRemoveTarget(null);
+      // No manual refetch — participant and evaluations are both live queries.
+    } catch (error) {
+      showAlert("error", error.message || "Failed to remove evaluation.");
+    } finally {
+      setRemovingEvaluation(false);
     }
   };
 
@@ -363,7 +388,7 @@ export default function ParticipantProfile() {
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-100">
-              <table className="w-full min-w-[820px] text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
                     <th className="text-left p-3">Evaluator</th>
@@ -373,6 +398,9 @@ export default function ParticipantProfile() {
                     <th className="text-center p-3">Computed Score</th>
                     <th className="text-left p-3">Notes</th>
                     <th className="text-left p-3">Evaluated At</th>
+                    {isSuperAdmin && (
+                      <th className="text-center p-3">Action</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -406,6 +434,17 @@ export default function ParticipantProfile() {
                       <td className="p-3 text-gray-500 whitespace-nowrap">
                         {formatDate(evaluation.created_at)}
                       </td>
+                      {isSuperAdmin && (
+                        <td className="p-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setRemoveTarget(evaluation)}
+                            className="text-xs text-red-500 hover:underline font-semibold"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -414,6 +453,19 @@ export default function ParticipantProfile() {
           )}
         </div>
       </PageContainer>
+
+      <ConfirmDialog
+        open={!!removeTarget}
+        title="Remove this evaluation?"
+        message={`This permanently deletes ${
+          removeTarget?.evaluator_name || "this evaluator"
+        }'s evaluation of ${participant.name || "this participant"}. Their evaluation count and average score will be recalculated from the remaining evaluations, and if that drops below ${REQUIRED_EVALUATIONS} the selection status will reset to Pending for re-evaluation. This cannot be undone.`}
+        confirmText={removingEvaluation ? "Removing..." : "Remove"}
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleRemoveEvaluation}
+        onCancel={() => setRemoveTarget(null)}
+      />
     </AdminLayout>
   );
 }

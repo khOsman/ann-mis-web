@@ -14,6 +14,16 @@ export const RECOMMENDATION_OPTIONS = {
 
 export const REQUIRED_EVALUATIONS = 3;
 
+// Mirrors ann-mis-server/constants/evaluation.js's deriveSelectionStatus
+// exactly — used client-side only when a super admin removes an evaluation
+// and the participant's aggregate needs recomputing without a round trip
+// to the backend (Firestore rules already allow this write directly).
+export const deriveSelectionStatus = (averageScore) => {
+  if (averageScore >= 70) return "Selected";
+  if (averageScore >= 40) return "Waitlisted";
+  return "Rejected";
+};
+
 export const ATTENDANCE_OPTIONS = ["Pending", "Present", "Absent"];
 
 // BRAC's official Participant Selection rubric — 7 weighted criteria summing
