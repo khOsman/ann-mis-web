@@ -399,11 +399,41 @@ export const updateFGDSchedule = async (fgdId, updates) => {
   );
 };
 
+// Once an FGD is closed out, anyone still marked Pending never actually
+// showed up (there's no session left for them to attend) — flip them to
+// Absent so the roster doesn't sit with a stale "awaiting attendance" state
+// forever. Chunked at 400 per batch to stay under Firestore's 500-write cap.
+const markPendingParticipantsAbsent = async (fgdId) => {
+  const snapshot = await getDocs(participantsByFGDQuery(fgdId));
+  const pendingDocs = snapshot.docs.filter(
+    (item) =>
+      (item.data().fgd_attendance_status || FGD_ATTENDANCE_STATUS.PENDING) ===
+      FGD_ATTENDANCE_STATUS.PENDING
+  );
+
+  for (let i = 0; i < pendingDocs.length; i += 400) {
+    const batch = writeBatch(db);
+
+    pendingDocs.slice(i, i + 400).forEach((item) => {
+      batch.update(item.ref, {
+        fgd_attendance_status: FGD_ATTENDANCE_STATUS.ABSENT,
+        updated_at: serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+  }
+};
+
 export const updateFGDStatus = async (fgdId, status) => {
   await updateDoc(doc(db, COLLECTIONS.FGDS, fgdId), {
     status,
     updated_at: serverTimestamp(),
   });
+
+  if (status === FGD_STATUS.COMPLETED) {
+    await markPendingParticipantsAbsent(fgdId);
+  }
 };
 
 // session_date/session_start_time/session_end_time come from plain
