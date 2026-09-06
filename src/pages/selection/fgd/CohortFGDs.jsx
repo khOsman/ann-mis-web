@@ -7,7 +7,12 @@ import { useAlert } from "../../../context/AlertContext";
 import { useAuth } from "../../../context/AuthContext";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { ROUTES } from "../../../constants/routes";
-import { useChampions, useCohort, useFGDsByCohort } from "../../../hooks";
+import {
+  useChampions,
+  useCohort,
+  useFGDsByCohort,
+  useParticipantsByFGD,
+} from "../../../hooks";
 import {
   generateFGDsForCohort,
   getParticipantsByFGD,
@@ -35,6 +40,119 @@ const FGD_PARTICIPANT_EXPORT_COLUMNS = [
   { key: "phone", label: "Number" },
   { key: "institution", label: "Institution" },
 ];
+
+// Its own component so each row can hold its own live subscription to that
+// FGD's participants — hooks can't be called inside a .map() loop. Present/
+// Absent/Total Selected are derived from the participants themselves rather
+// than fgd.total_present/total_absent, which nothing in the app ever writes
+// (same dead-field issue already fixed on the FGD Details page).
+function FGDListRow({
+  fgd,
+  isViewer,
+  onOpenAttachModal,
+  onRemoveTarget,
+  onExport,
+  exportingFgdId,
+}) {
+  const navigate = useNavigate();
+  const { data: participants } = useParticipantsByFGD(fgd.id);
+
+  const stats = useMemo(() => {
+    let present = 0;
+    let absent = 0;
+    let selected = 0;
+
+    participants.forEach((participant) => {
+      if (participant.fgd_attendance_status === "Present") present += 1;
+      if (participant.fgd_attendance_status === "Absent") absent += 1;
+      if (participant.selection_status === "Selected") selected += 1;
+    });
+
+    return { present, absent, selected };
+  }, [participants]);
+
+  return (
+    <tr className="border-t border-gray-100 hover:bg-gray-50">
+      <td className="px-6 py-5 font-semibold">{fgd.fgd_code}</td>
+
+      <td className="px-6 py-5">{fgd.fgd_name}</td>
+
+      <td className="px-6 py-5 text-center">{fgd.session_date || "Not set"}</td>
+
+      <td className="px-6 py-5 text-center">{fgd.total_participants || 0}</td>
+
+      <td className="px-6 py-5 text-center">{stats.present}</td>
+
+      <td className="px-6 py-5 text-center">{stats.absent}</td>
+
+      <td className="px-6 py-5 text-center">{stats.selected}</td>
+
+      <td className="px-6 py-5 text-center">{fgd.status || "-"}</td>
+
+      <td className="px-6 py-5">
+        {fgd.committee_members?.length > 0 ? (
+          <div className="flex flex-wrap justify-center gap-1.5 max-w-[220px] mx-auto">
+            {fgd.committee_members.map((member) => (
+              <span
+                key={member.champion_id}
+                title={member.email}
+                className="px-2 py-1 rounded-lg bg-purple-50 text-[var(--ann-purple)] text-xs font-semibold whitespace-nowrap"
+              >
+                {member.name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-xs text-gray-400">Unassigned</p>
+        )}
+      </td>
+
+      <td className="px-6 py-5 text-center">
+        <div className="flex items-center justify-center gap-2">
+          {!isViewer && (
+            <button
+              type="button"
+              onClick={() => onOpenAttachModal(fgd)}
+              className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            >
+              Attach SC
+            </button>
+          )}
+
+          {!isViewer && (
+            <button
+              type="button"
+              disabled={!fgd.committee_members?.length}
+              onClick={() => onRemoveTarget(fgd.id)}
+              className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Remove SC
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() =>
+              navigate(ROUTES.selectionFGDDetails.replace(":fgdId", fgd.id))
+            }
+            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90"
+          >
+            View
+          </button>
+
+          <button
+            type="button"
+            disabled={exportingFgdId === fgd.id}
+            onClick={() => onExport(fgd)}
+            className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+          >
+            {exportingFgdId === fgd.id ? "Exporting..." : "Export"}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 export default function CohortFGDs() {
   const { cohortId } = useParams();
@@ -426,14 +544,16 @@ export default function CohortFGDs() {
             )}
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1150px] text-sm">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
                     <th className="text-left px-6 py-4">FGD Code</th>
                     <th className="text-left px-6 py-4">Name</th>
+                    <th className="text-center px-6 py-4">FGD Date</th>
                     <th className="text-center px-6 py-4">Participants</th>
                     <th className="text-center px-6 py-4">Present</th>
                     <th className="text-center px-6 py-4">Absent</th>
+                    <th className="text-center px-6 py-4">Total Selected</th>
                     <th className="text-center px-6 py-4">Status</th>
                     <th className="text-center px-6 py-4">Selection Committee</th>
                     <th className="text-center px-6 py-4">Action</th>
@@ -442,99 +562,15 @@ export default function CohortFGDs() {
 
                 <tbody>
                   {fgds.map((fgd) => (
-                    <tr
+                    <FGDListRow
                       key={fgd.id}
-                      className="border-t border-gray-100 hover:bg-gray-50"
-                    >
-                      <td className="px-6 py-5 font-semibold">
-                        {fgd.fgd_code}
-                      </td>
-
-                      <td className="px-6 py-5">{fgd.fgd_name}</td>
-
-                      <td className="px-6 py-5 text-center">
-                        {fgd.total_participants || 0}
-                      </td>
-
-                      <td className="px-6 py-5 text-center">
-                        {fgd.total_present || 0}
-                      </td>
-
-                      <td className="px-6 py-5 text-center">
-                        {fgd.total_absent || 0}
-                      </td>
-
-                      <td className="px-6 py-5 text-center">
-                        {fgd.status || "-"}
-                      </td>
-
-                      <td className="px-6 py-5">
-                        {fgd.committee_members?.length > 0 ? (
-                          <div className="flex flex-wrap justify-center gap-1.5 max-w-[220px] mx-auto">
-                            {fgd.committee_members.map((member) => (
-                              <span
-                                key={member.champion_id}
-                                title={member.email}
-                                className="px-2 py-1 rounded-lg bg-purple-50 text-[var(--ann-purple)] text-xs font-semibold whitespace-nowrap"
-                              >
-                                {member.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-center text-xs text-gray-400">Unassigned</p>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          {!isViewer && (
-                            <button
-                              type="button"
-                              onClick={() => openAttachModal(fgd)}
-                              className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
-                            >
-                              Attach SC
-                            </button>
-                          )}
-
-                          {!isViewer && (
-                            <button
-                              type="button"
-                              disabled={!fgd.committee_members?.length}
-                              onClick={() => setRemoveTargetId(fgd.id)}
-                              className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Remove SC
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                ROUTES.selectionFGDDetails.replace(
-                                  ":fgdId",
-                                  fgd.id
-                                )
-                              )
-                            }
-                            className="px-4 py-2 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90"
-                          >
-                            View
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={exportingFgdId === fgd.id}
-                            onClick={() => handleExportParticipants(fgd)}
-                            className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
-                          >
-                            {exportingFgdId === fgd.id ? "Exporting..." : "Export"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      fgd={fgd}
+                      isViewer={isViewer}
+                      onOpenAttachModal={openAttachModal}
+                      onRemoveTarget={setRemoveTargetId}
+                      onExport={handleExportParticipants}
+                      exportingFgdId={exportingFgdId}
+                    />
                   ))}
                 </tbody>
               </table>
