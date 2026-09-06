@@ -38,6 +38,7 @@ function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCo
   return (
     <tr className="border-t border-gray-100">
       <td className="p-4 font-semibold">{participant.name || "-"}</td>
+      <td className="p-4">{participant.email || "-"}</td>
       <td className="p-4">{formatBDPhone(participant.phone) || "-"}</td>
       <td className="p-4">{participant.institution || "-"}</td>
       <td className="p-4">{participant.fgd_attendance_status || "Pending"}</td>
@@ -730,10 +731,11 @@ export default function FGDDetails() {
           </h3>
 
           <div className="overflow-x-auto mt-5">
-            <table className="w-full min-w-[900px] text-sm">
+            <table className="w-full min-w-[1050px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
                   <th className="text-left p-4">Name</th>
+                  <th className="text-left p-4">Email</th>
                   <th className="text-left p-4">Phone</th>
                   <th className="text-left p-4">Institution</th>
                   <th className="text-left p-4">Attendance</th>
@@ -747,7 +749,7 @@ export default function FGDDetails() {
               <tbody>
                 {participants.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="p-6 text-center text-gray-500">
+                    <td colSpan="9" className="p-6 text-center text-gray-500">
                       No participants found for this FGD.
                     </td>
                   </tr>
