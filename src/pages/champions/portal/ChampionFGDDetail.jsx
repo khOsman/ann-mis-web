@@ -32,29 +32,44 @@ const ATTENDANCE_SELECT_CLASSES = {
   Pending: "border-amber-300 text-amber-700 font-semibold bg-amber-50",
 };
 
+const BLANK_EVALUATION_FORM = {
+  rubric_scores: EMPTY_RUBRIC_SCORES,
+  feedback_option: "",
+  recommendation_option: "",
+  notes: "",
+};
+
 function EvaluationModal({ target, onClose, onSaved }) {
   const { showAlert } = useAlert();
-  const [form, setForm] = useState({
-    rubric_scores: EMPTY_RUBRIC_SCORES,
-    feedback_option: "",
-    recommendation_option: "",
-    notes: "",
-  });
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(BLANK_EVALUATION_FORM);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
+  // Pre-fills from whatever the champion already has for this participant —
+  // a saved draft or a previously-submitted evaluation — so reopening never
+  // loses earlier work. A brand-new participant with no prior record gets
+  // the blank form.
   useEffect(() => {
     if (!target) return;
-    setForm({
-      rubric_scores: EMPTY_RUBRIC_SCORES,
-      feedback_option: "",
-      recommendation_option: "",
-      notes: "",
-    });
+
+    const existing = target.evaluation;
+
+    setForm(
+      existing
+        ? {
+            rubric_scores: { ...EMPTY_RUBRIC_SCORES, ...(existing.rubric_scores || {}) },
+            feedback_option: existing.feedback_option || "",
+            recommendation_option: existing.recommendation_option || "",
+            notes: existing.notes || "",
+          }
+        : BLANK_EVALUATION_FORM
+    );
   }, [target]);
 
   if (!target) return null;
 
-  const { participant } = target;
+  const { participant, evaluation } = target;
+  const isSubmitted = evaluation?.status === "Submitted";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,6 +87,31 @@ function EvaluationModal({ target, onClose, onSaved }) {
     (sum, criterion) => sum + (Number(form.rubric_scores[criterion.key]) || 0),
     0
   );
+
+  // Drafts skip validation entirely — the whole point is to let an SC member
+  // save whatever partial progress they have and come back to it later.
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+
+    try {
+      await submitEvaluation({
+        participantId: participant.id,
+        rubric_scores: form.rubric_scores,
+        feedback_option: form.feedback_option,
+        recommendation_option: form.recommendation_option,
+        notes: form.notes,
+        is_draft: true,
+      });
+
+      showAlert("success", "Draft saved. You can come back and finish it anytime.");
+      onSaved?.();
+      onClose();
+    } catch (err) {
+      showAlert("error", err.message || "Failed to save draft.");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.feedback_option || !form.recommendation_option) {
@@ -92,7 +132,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
       }
     }
 
-    setSaving(true);
+    setSubmitting(true);
 
     try {
       await submitEvaluation({
@@ -109,7 +149,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
     } catch (err) {
       showAlert("error", err.message || "Failed to submit evaluation.");
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
@@ -118,9 +158,21 @@ function EvaluationModal({ target, onClose, onSaved }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl my-4 md:my-8 max-h-[95vh] flex flex-col">
         <div className="sticky top-0 bg-white border-b px-5 sm:px-6 py-4 rounded-t-2xl flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
-              Evaluate Participant
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
+                Evaluate Participant
+              </h2>
+              {evaluation?.status === "Draft" && (
+                <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold">
+                  Draft saved
+                </span>
+              )}
+              {isSubmitted && (
+                <span className="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-semibold">
+                  Submitted
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mt-1">
               {participant.name} • {participant.participant_code}
             </p>
@@ -220,12 +272,25 @@ function EvaluationModal({ target, onClose, onSaved }) {
           >
             Cancel
           </button>
+          {!isSubmitted && (
+            <button
+              onClick={handleSaveDraft}
+              disabled={savingDraft || submitting}
+              className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-xl font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+            >
+              {savingDraft ? "Saving..." : "Save Draft"}
+            </button>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={submitting || savingDraft}
             className="bg-[var(--ann-pink)] text-white px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "Submitting..." : "Submit Evaluation"}
+            {submitting
+              ? "Submitting..."
+              : isSubmitted
+              ? "Update Evaluation"
+              : "Submit Evaluation"}
           </button>
         </div>
       </div>
@@ -246,7 +311,8 @@ export default function ChampionFGDDetail() {
 
   const { data: champion, loading: loadingChampion } = useChampions(appUser?.id);
   const { data: participants, loading: loadingParticipants } = useParticipantsByFGD(fgdId);
-  const { evaluatedParticipantIds } = useMyFgdEvaluations(appUser?.id, fgdId);
+  const { byParticipantId: myEvaluationsByParticipantId, evaluatedParticipantIds } =
+    useMyFgdEvaluations(appUser?.id, fgdId);
 
   const fgd = (champion?.assigned_fgds || []).find((item) => item.fgd_id === fgdId);
 
@@ -388,6 +454,8 @@ export default function ChampionFGDDetail() {
                     const isAbsent = participant.fgd_attendance_status === "Absent";
                     const attendanceStatus = participant.fgd_attendance_status || "Pending";
                     const isEvaluatedByMe = evaluatedParticipantIds.has(participant.id);
+                    const myEvaluation = myEvaluationsByParticipantId.get(participant.id);
+                    const isDraftByMe = myEvaluation?.status === "Draft";
 
                     return (
                       <tr
@@ -445,10 +513,16 @@ export default function ChampionFGDDetail() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setEvaluationTarget({ participant })}
+                              onClick={() =>
+                                setEvaluationTarget({ participant, evaluation: myEvaluation })
+                              }
                               className="px-3 py-1.5 rounded-lg bg-[var(--ann-pink)] text-white text-xs font-semibold hover:opacity-90"
                             >
-                              {isEvaluatedByMe ? "Edit Evaluation" : "Evaluate"}
+                              {isEvaluatedByMe
+                                ? "Edit Evaluation"
+                                : isDraftByMe
+                                ? "Continue Draft"
+                                : "Evaluate"}
                             </button>
                             {isEvaluatedByMe && (
                               <span
@@ -456,6 +530,14 @@ export default function ChampionFGDDetail() {
                                 className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold shrink-0"
                               >
                                 ✓
+                              </span>
+                            )}
+                            {isDraftByMe && (
+                              <span
+                                title="You have a saved draft for this participant"
+                                className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold shrink-0"
+                              >
+                                Draft
                               </span>
                             )}
                           </div>

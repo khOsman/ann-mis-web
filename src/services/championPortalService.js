@@ -47,10 +47,11 @@ export const submitEvaluation = async ({
   feedback_option,
   recommendation_option,
   notes,
+  is_draft,
 }) => {
   return apiClient.post(
     `/api/me/participants/${participantId}/evaluate`,
-    { rubric_scores, feedback_option, recommendation_option, notes },
+    { rubric_scores, feedback_option, recommendation_option, notes, is_draft },
     { authenticated: true }
   );
 };

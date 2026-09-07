@@ -46,7 +46,12 @@ export const removeEvaluation = async ({ evaluationId, participantId, cohortId }
     )
   );
 
-  const scores = remainingSnap.docs.map((item) => item.data().computed_score);
+  // A draft never counted toward the participant's tally, so it shouldn't
+  // resurrect into it here either. A doc with no status field predates the
+  // draft feature and was always a full submission.
+  const scores = remainingSnap.docs
+    .filter((item) => (item.data().status || "Submitted") === "Submitted")
+    .map((item) => item.data().computed_score);
   const evaluationCount = scores.length;
   const averageScore =
     evaluationCount > 0
