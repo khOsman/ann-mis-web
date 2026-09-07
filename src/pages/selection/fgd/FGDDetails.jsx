@@ -52,8 +52,15 @@ function AttendanceBadge({ status }) {
 function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: evaluations, loading: loadingEvaluations } =
+  const { data: allEvaluations, loading: loadingEvaluations } =
     useParticipantEvaluations(participant.id);
+  // Same rule as the participant profile page — a draft is only meaningful
+  // to the super admin (and the SC member who owns it, in their own portal).
+  const evaluations = isSuperAdmin
+    ? allEvaluations
+    : allEvaluations.filter(
+        (evaluation) => (evaluation.status || "Submitted") === "Submitted"
+      );
 
   return (
     <tr className="border-t border-gray-100">
@@ -92,6 +99,11 @@ function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCo
                 <span className="font-semibold text-gray-700">
                   {evaluation.evaluator_name || "SC member"}:
                 </span>{" "}
+                {(evaluation.status || "Submitted") === "Draft" && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold mr-1">
+                    Draft
+                  </span>
+                )}
                 <span className="text-gray-600">
                   {FEEDBACK_OPTIONS[evaluation.feedback_option]?.label ||
                     evaluation.feedback_option ||

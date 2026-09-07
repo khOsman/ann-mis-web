@@ -49,8 +49,16 @@ export default function ParticipantProfile() {
   const backLabel = location.state?.fromLabel || "Participants";
 
   const { data: participant, loading } = useParticipant(id);
-  const { data: evaluations, loading: loadingEvaluations } =
+  const { data: allEvaluations, loading: loadingEvaluations } =
     useParticipantEvaluations(id);
+  // An in-progress draft is a committee member's unfinished thinking — only
+  // the super admin gets to see it (alongside the SC member who owns it, in
+  // their own portal); a plain admin/viewer only ever sees finished ones.
+  const evaluations = isSuperAdmin
+    ? allEvaluations
+    : allEvaluations.filter(
+        (evaluation) => (evaluation.status || "Submitted") === "Submitted"
+      );
   const [response, setResponse] = useState(null);
 
   // The submitted application response is immutable historical data — a
@@ -392,6 +400,7 @@ export default function ParticipantProfile() {
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
                     <th className="text-left p-3">Evaluator</th>
+                    {isSuperAdmin && <th className="text-center p-3">Status</th>}
                     <th className="text-center p-3">Rubric Score</th>
                     <th className="text-left p-3">Feedback</th>
                     <th className="text-left p-3">Recommendation</th>
@@ -409,6 +418,19 @@ export default function ParticipantProfile() {
                       <td className="p-3 font-semibold text-gray-800">
                         {evaluation.evaluator_name || "-"}
                       </td>
+                      {isSuperAdmin && (
+                        <td className="p-3 text-center">
+                          {(evaluation.status || "Submitted") === "Draft" ? (
+                            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold whitespace-nowrap">
+                              Draft
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-semibold whitespace-nowrap">
+                              Submitted
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="p-3 text-center">
                         {evaluation.rubric_total ?? "-"}
                       </td>
@@ -456,10 +478,22 @@ export default function ParticipantProfile() {
 
       <ConfirmDialog
         open={!!removeTarget}
-        title="Remove this evaluation?"
-        message={`This permanently deletes ${
-          removeTarget?.evaluator_name || "this evaluator"
-        }'s evaluation of ${participant.name || "this participant"}. Their evaluation count and average score will be recalculated from the remaining evaluations, and if that drops below ${REQUIRED_EVALUATIONS} the selection status will reset to Pending for re-evaluation. This cannot be undone.`}
+        title={
+          removeTarget?.status === "Draft"
+            ? "Remove this draft?"
+            : "Remove this evaluation?"
+        }
+        message={
+          removeTarget?.status === "Draft"
+            ? `This permanently deletes ${
+                removeTarget?.evaluator_name || "this evaluator"
+              }'s in-progress draft for ${
+                participant.name || "this participant"
+              }. It never counted toward their evaluation tally, so nothing else changes — the evaluator will start fresh next time. This cannot be undone.`
+            : `This permanently deletes ${
+                removeTarget?.evaluator_name || "this evaluator"
+              }'s evaluation of ${participant.name || "this participant"}. Their evaluation count and average score will be recalculated from the remaining evaluations, and if that drops below ${REQUIRED_EVALUATIONS} the selection status will reset to Pending for re-evaluation. This cannot be undone.`
+        }
         confirmText={removingEvaluation ? "Removing..." : "Remove"}
         cancelText="Cancel"
         variant="danger"
