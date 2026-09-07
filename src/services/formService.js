@@ -134,15 +134,38 @@ export const cloneForm = async (formId) => {
   if (!fieldsSnap.empty) {
     const batch = writeBatch(db);
 
-    fieldsSnap.docs.forEach((fieldDoc) => {
+    // Every field gets a brand-new doc ID in the clone, so a field's
+    // conditional_logic.source_field_id — which points at another field's
+    // OLD id — has to be remapped to that same field's NEW id, or the
+    // condition can never match anything and the cloned field stays
+    // permanently hidden.
+    const idMap = new Map();
+    const newRefs = fieldsSnap.docs.map((fieldDoc) => {
       const newFieldRef = doc(collection(db, COLLECTIONS.FORM_FIELDS));
+      idMap.set(fieldDoc.id, newFieldRef.id);
+      return { fieldDoc, newFieldRef };
+    });
 
-      batch.set(newFieldRef, {
-        ...fieldDoc.data(),
+    newRefs.forEach(({ fieldDoc, newFieldRef }) => {
+      const data = fieldDoc.data();
+      const payload = {
+        ...data,
         form_id: newFormRef.id,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
-      });
+      };
+
+      // Only set the key when the source field actually had one — Firestore
+      // rejects an explicit `undefined` value, which is what data.conditional_logic
+      // would be for every ordinary field that never had this key at all.
+      if (data.conditional_logic) {
+        payload.conditional_logic = {
+          ...data.conditional_logic,
+          source_field_id: idMap.get(data.conditional_logic.source_field_id) || null,
+        };
+      }
+
+      batch.set(newFieldRef, payload);
     });
 
     await batch.commit();
