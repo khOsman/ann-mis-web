@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -31,4 +31,16 @@ const app = initializeApp(
 );
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+
+// Plain WebSocket-based streaming (Firestore's default) gets silently
+// dropped by a lot of mobile carrier networks, corporate/school wifi, and
+// in-app browsers (e.g. opening the public registration link from inside
+// the Facebook/Instagram app) — the connection looks "offline" and every
+// write (including the registration transaction) fails, while the exact
+// same page works fine on a laptop's less-restricted network. Auto-detecting
+// long-polling falls back to plain HTTP when streaming isn't viable, which
+// works everywhere streaming does plus the networks that block it.
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+  useFetchStreams: false,
+});

@@ -63,7 +63,18 @@ service cloud.firestore {
     }
 
     match /cohorts/{cohortId} {
-      allow read: if isSelectionUser();
+      allow list: if isSelectionUser();
+
+      // The public registration transaction (publicRegistrationService.js)
+      // must read the cohort doc itself before it can write the +1 update
+      // below (it needs the current sequence number to mint the next
+      // participant code) — a bare `allow read: if isSelectionUser()` blocks
+      // that get() for every anonymous visitor, so real (never-signed-in)
+      // applicants get permission-denied on every submission while it looks
+      // fine to whoever tests it already signed in as staff. Scoped to
+      // `get` (single doc by ID) rather than `read`, so the cohorts
+      // collection still can't be listed/browsed anonymously.
+      allow get: if true;
       allow create, update: if isAdmin();
       allow delete: if isSuperAdmin();
 
