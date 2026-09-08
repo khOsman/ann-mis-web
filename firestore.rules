@@ -85,11 +85,20 @@ service cloud.firestore {
       // anonymous caller can never inflate a cohort's counters faster than
       // submitting that many real registrations would — one write, one
       // increment, not an arbitrary jump.
+      // current_participant_sequence is never set when a cohort is first
+      // created (createCohortEntity has no default for it — it only ever
+      // gets written here, lazily, on a cohort's first registration), so
+      // resource.data.current_participant_sequence is undefined until then.
+      // Reading it with plain dot access throws in rules evaluation (an
+      // undefined-property error), which denies the whole update — meaning
+      // every cohort's very first registration ever was silently broken.
+      // .get(key, default) reads it safely, defaulting to 0.
       allow update: if request.auth == null
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["total_registrations", "current_participant_sequence", "updated_at"])
         && request.resource.data.total_registrations == resource.data.total_registrations + 1
-        && request.resource.data.current_participant_sequence == resource.data.current_participant_sequence + 1;
+        && request.resource.data.current_participant_sequence
+          == resource.data.get("current_participant_sequence", 0) + 1;
     }
 
     match /forms/{formId} {
