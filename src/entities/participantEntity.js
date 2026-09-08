@@ -17,6 +17,7 @@ export const createParticipantEntity = (overrides = {}) => ({
   date_of_birth: "",
   age: "",
   institution: "",
+  custom_data: {},
 
   // Cohort Information
   cohort_id: "",

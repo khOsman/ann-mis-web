@@ -15,6 +15,8 @@ import ParticipantProfile from "./pages/participants/ParticipantProfile";
 import BulkImportParticipants from "./pages/participants/BulkImportParticipants";
 import AllUsers from "./pages/users/AllUsers";
 import UserProfile from "./pages/users/UserProfile";
+import AllDatabases from "./pages/database/AllDatabases";
+import DatabaseDetail from "./pages/database/DatabaseDetail";
 import ReportsDashboard from "./pages/reports/ReportsDashboard";
 import CustomReportBuilder from "./pages/reports/CustomReportBuilder";
 
@@ -379,6 +381,24 @@ export default function App() {
             element={
               <ProtectedRoute permission="users">
                 <UserProfile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.database}
+            element={
+              <ProtectedRoute permission="database">
+                <AllDatabases />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.databaseDetail}
+            element={
+              <ProtectedRoute permission="database">
+                <DatabaseDetail />
               </ProtectedRoute>
             }
           />

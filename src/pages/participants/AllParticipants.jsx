@@ -16,7 +16,7 @@ import { formatBDPhone } from "../../utils/phone";
 import { openImpersonationTab } from "../../services/impersonationService";
 import { updateParticipant } from "../../services/participantService";
 
-const TABLE_COLUMN_COUNT = 13;
+const TABLE_COLUMN_COUNT = 14;
 const PAGE_SIZE = 50;
 
 export default function AllParticipants() {
@@ -76,6 +76,7 @@ export default function AllParticipants() {
         participant.gender?.toLowerCase().includes(keyword) ||
         participant.email?.toLowerCase().includes(keyword) ||
         participant.phone?.toLowerCase().includes(keyword) ||
+        participant.institution?.toLowerCase().includes(keyword) ||
         participant.cohort_name?.toLowerCase().includes(keyword) ||
         participant.cohort_code?.toLowerCase().includes(keyword)
       );
@@ -194,6 +195,7 @@ export default function AllParticipants() {
                   <th className="text-left p-4">Gender</th>
                   <th className="text-left p-4">Email</th>
                   <th className="text-left p-4">Phone</th>
+                  <th className="text-left p-4">Institution</th>
                   <th className="text-left p-4">Cohort</th>
                   <th className="text-left p-4">Registration</th>
                   <th className="text-left p-4">Selection</th>
@@ -250,6 +252,10 @@ export default function AllParticipants() {
 
                       <td className="p-4 text-gray-600">
                         {formatBDPhone(participant.phone) || "-"}
+                      </td>
+
+                      <td className="p-4 text-gray-600">
+                        {participant.institution || "-"}
                       </td>
 
                       <td className="p-4 text-gray-600">

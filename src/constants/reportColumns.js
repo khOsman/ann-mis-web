@@ -39,6 +39,7 @@ const participantColumns = [
   },
   { key: "date_of_birth", label: "Date of Birth", filter: dateFilter },
   { key: "age", label: "Age", filter: numberFilter },
+  { key: "institution", label: "Institution", filter: textFilter },
   { key: "cohort_name", label: "Cohort", filter: textFilter },
   { key: "cohort_code", label: "Cohort Code", filter: textFilter },
   {

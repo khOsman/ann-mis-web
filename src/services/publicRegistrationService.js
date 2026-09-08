@@ -82,38 +82,76 @@ export const submitPublicRegistration = async ({
       value: answers[field.id] || "",
     }));
 
-  const name = getAnswerValueByKeywords(responseAnswers, [
-    "name",
-    "full name",
-    "participant name",
-    "applicant name",
-    "নাম",
-  ]);
+  // A field explicitly mapped to a Data Point (Form Builder → "Map to Data
+  // Point") always wins over keyword-guessing, since it's an admin's
+  // explicit choice rather than an inference. Unmapped fields fall through
+  // to the keyword search below exactly as before — zero behavior change
+  // for any field an admin hasn't touched.
+  const mappedValues = {};
+  const customData = {};
 
-  const email = getAnswerValueByKeywords(responseAnswers, [
-    "email",
-    "e-mail",
-    "ইমেইল",
-  ]);
+  fields.forEach((field) => {
+    if (field.field_type === "section") return;
 
-  const phone = getAnswerValueByKeywords(responseAnswers, [
-    "phone",
-    "mobile",
-    "contact",
-    "contact number",
-    "mobile number",
-    "মোবাইল",
-    "ফোন",
-  ]);
+    const value = answers[field.id];
+    const hasValue = Array.isArray(value) ? value.length > 0 : Boolean(value);
+    if (!hasValue) return;
+
+    if (field.mapped_participant_field) {
+      mappedValues[field.mapped_participant_field] = value;
+    } else if (field.data_point_id && field.data_point_key) {
+      customData[field.data_point_key] = value;
+    }
+  });
+
+  const name =
+    mappedValues.name ||
+    getAnswerValueByKeywords(responseAnswers, [
+      "name",
+      "full name",
+      "participant name",
+      "applicant name",
+      "নাম",
+    ]);
+
+  const email =
+    mappedValues.email ||
+    getAnswerValueByKeywords(responseAnswers, ["email", "e-mail", "ইমেইল"]);
+
+  const phone =
+    mappedValues.phone ||
+    getAnswerValueByKeywords(responseAnswers, [
+      "phone",
+      "mobile",
+      "contact",
+      "contact number",
+      "mobile number",
+      "মোবাইল",
+      "ফোন",
+    ]);
 
   const gender = normalizeGender(
-    getAnswerValueByKeywords(responseAnswers, ["gender", "sex", "লিঙ্গ"])
+    mappedValues.gender ||
+      getAnswerValueByKeywords(responseAnswers, ["gender", "sex", "লিঙ্গ"])
   );
 
   const dateOfBirth =
-    responseAnswers.find((answer) => answer.field_type === "date")?.value || "";
+    mappedValues.date_of_birth ||
+    responseAnswers.find((answer) => answer.field_type === "date")?.value ||
+    "";
 
   const age = calculateAge(dateOfBirth);
+
+  const institution =
+    mappedValues.institution ||
+    getAnswerValueByKeywords(responseAnswers, [
+      "institution",
+      "school",
+      "college",
+      "university",
+      "প্রতিষ্ঠান",
+      "শিক্ষা প্রতিষ্ঠান",
+    ]);
 
   const formRef = doc(db, "forms", formMeta.id);
   const cohortRef = doc(db, "cohorts", formMeta.cohort_id);
@@ -159,6 +197,8 @@ export const submitPublicRegistration = async ({
       gender,
       date_of_birth: dateOfBirth,
       age,
+      institution,
+      custom_data: customData,
 
       answers: responseAnswers,
 
@@ -184,6 +224,8 @@ export const submitPublicRegistration = async ({
       gender,
       date_of_birth: dateOfBirth,
       age,
+      institution,
+      custom_data: customData,
 
       search_name: name,
       search_email: email,

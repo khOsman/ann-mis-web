@@ -138,6 +138,22 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Canonical data-field registry ("Database" admin section) — the
+    // mapping a form field carries is denormalized onto the form_fields
+    // doc itself (already publicly readable), so the public registration
+    // flow never needs to read these directly. No anonymous access at all.
+    match /databases/{databaseId} {
+      allow read: if isSelectionUser();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /data_points/{dataPointId} {
+      allow read: if isSelectionUser();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
     match /champions_pool/{championId} {
       // Mirrors exactly what the backend's own POST /api/champions/register
       // writes (routes/champions.js) — the app always goes through that

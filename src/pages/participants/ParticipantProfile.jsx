@@ -241,6 +241,13 @@ export default function ParticipantProfile() {
               </div>
 
               <div>
+                <p className="text-gray-500">Institution</p>
+                <p className="font-semibold text-gray-800">
+                  {participant.institution || "-"}
+                </p>
+              </div>
+
+              <div>
                 <p className="text-gray-500">Cohort</p>
                 <p className="font-semibold text-gray-800">
                   {participant.cohort_name || "-"} ({participant.cohort_code || "-"})
@@ -362,6 +369,32 @@ export default function ParticipantProfile() {
                 )}
               </div>
             </div>
+
+            {participant.custom_data &&
+              Object.keys(participant.custom_data).length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                    Additional Information
+                  </h3>
+
+                  <div className="mt-4 border border-gray-100 rounded-2xl overflow-hidden">
+                    {Object.entries(participant.custom_data).map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-semibold text-gray-700 capitalize">
+                          {key.replace(/_/g, " ")}
+                        </div>
+
+                        <div className="md:col-span-2 text-gray-600">
+                          {Array.isArray(value) ? value.join(", ") : value || "-"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
         </div>
 

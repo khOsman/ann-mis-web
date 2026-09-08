@@ -10,6 +10,7 @@ import {
   List,
   Users,
   Trophy,
+  Database,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
@@ -185,6 +186,13 @@ export const ADMIN_MENU_ITEMS = [
     path: "/admin/users",
     icon: Users,
     permission: "users",
+  },
+
+  {
+    label: "Database",
+    path: ROUTES.database,
+    icon: Database,
+    permission: "database",
   },
 
   {

@@ -23,6 +23,7 @@ export const DEFAULT_PERMISSIONS = {
   projects: false,
   reports: false,
   users: false,
+  database: false,
 };
 
 export const ROLE_PERMISSIONS = {
@@ -38,6 +39,7 @@ export const ROLE_PERMISSIONS = {
     projects: true,
     reports: true,
     users: true,
+    database: true,
   },
 
   admin: {
@@ -52,6 +54,7 @@ export const ROLE_PERMISSIONS = {
     projects: true,
     reports: true,
     users: false,
+    database: true,
   },
 
   viewer: {
@@ -66,6 +69,7 @@ export const ROLE_PERMISSIONS = {
     projects: true,
     reports: true,
     users: false,
+    database: false,
   },
 
   pending: {

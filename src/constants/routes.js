@@ -40,4 +40,7 @@ export const ROUTES = {
   projects: "/admin/projects",
   reports: "/admin/reports",
   settings: "/admin/settings",
+
+  database: "/admin/database",
+  databaseDetail: "/admin/database/:databaseId",
 };

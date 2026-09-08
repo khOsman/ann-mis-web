@@ -32,7 +32,14 @@ import { FIELD_TYPES } from "../../constants/fieldTypes";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { isSlugAvailable } from "../../services/formService";
 import { deduplicateCohortParticipants } from "../../services/participantService";
-import { useForm as useFormDoc, useFormFields } from "../../hooks";
+import { backfillMappedFieldsForForm } from "../../services/dataFieldBackfillService";
+import {
+  useForm as useFormDoc,
+  useFormFields,
+  useDatabases,
+  useDataPoints,
+  useDataPointsByDatabase,
+} from "../../hooks";
 
 function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -113,6 +120,13 @@ export default function FormBuilder() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+
+  const { data: databases } = useDatabases();
+  const { data: allDataPoints } = useDataPoints();
+  const [mappingDatabaseId, setMappingDatabaseId] = useState("");
+  const { data: dataPointsInMappingDatabase, loading: loadingMappingDataPoints } =
+    useDataPointsByDatabase(mappingDatabaseId || null);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -151,6 +165,48 @@ export default function FormBuilder() {
   const commitOptions = (nextOptions) => {
     if (!selectedField) return;
     handleUpdateField(selectedField.id, { options: nextOptions });
+  };
+
+  // The Database select is local-only UI state (the field doc only stores
+  // the resolved data_point_id) — re-sync it to whichever database the
+  // field's current mapping (if any) actually belongs to whenever the
+  // selection changes, same pattern as optionsDraft above.
+  useEffect(() => {
+    if (selectedField?.data_point_id) {
+      const current = allDataPoints.find(
+        (dataPoint) => dataPoint.id === selectedField.data_point_id
+      );
+      setMappingDatabaseId(current?.database_id || "");
+    } else {
+      setMappingDatabaseId("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFieldId]);
+
+  const handleSelectDataPoint = (dataPointId) => {
+    if (!selectedField) return;
+
+    if (!dataPointId) {
+      handleUpdateField(selectedField.id, {
+        data_point_id: null,
+        data_point_label: null,
+        data_point_key: null,
+        mapped_participant_field: null,
+      });
+      return;
+    }
+
+    const dataPoint = dataPointsInMappingDatabase.find(
+      (item) => item.id === dataPointId
+    );
+    if (!dataPoint) return;
+
+    handleUpdateField(selectedField.id, {
+      data_point_id: dataPoint.id,
+      data_point_label: dataPoint.label_en,
+      data_point_key: dataPoint.key,
+      mapped_participant_field: dataPoint.system_field_key || null,
+    });
   };
 
   // Fields whose answer can drive another field's visibility — only
@@ -421,6 +477,27 @@ export default function FormBuilder() {
       }
     };
 
+    const handleBackfillMappedFields = async () => {
+      setBackfilling(true);
+
+      try {
+        const result = await backfillMappedFieldsForForm(id);
+
+        if (result.updatedCount === 0) {
+          showAlert("success", "No blank mapped fields found to backfill.");
+        } else {
+          showAlert(
+            "success",
+            `Backfilled ${result.updatedCount} participant(s) — filled: ${result.fieldsBackfilled.join(", ")}.`
+          );
+        }
+      } catch (error) {
+        showAlert("error", error.message || "Failed to backfill mapped fields.");
+      } finally {
+        setBackfilling(false);
+      }
+    };
+
     const handleUpdateFormStatus = async (nextStatus) => {
     const allowedTransition =
       (nextStatus === "Published" && canPublish) ||
@@ -669,6 +746,16 @@ const handleCopyLink = async () => {
             title="Runs the same duplicate-registration cleanup that happens automatically when the form is closed."
             >
             {checkingDuplicates ? "Checking..." : "Check for Duplicates"}
+            </button>
+
+            <button
+            type="button"
+            disabled={backfilling}
+            onClick={handleBackfillMappedFields}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+            title="Fills currently-blank mapped fields (e.g. Institution) for participants who registered before this question was mapped to a Data Point. Never overwrites an existing value."
+            >
+            {backfilling ? "Backfilling..." : "Backfill Mapped Fields"}
             </button>
         </div>
         </div>
@@ -1085,6 +1172,69 @@ const handleCopyLink = async () => {
                     <p className="text-xs text-gray-500 mt-2">
                       Add, remove, or edit as many options as you need. Changes save when you click away from an option.
                     </p>
+                  </div>
+                )}
+
+                {selectedField.field_type !== "section" && (
+                  <div className="border border-gray-200 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-[var(--ann-text-dark)]">
+                      Map to Data Point
+                    </h4>
+
+                    <p className="text-xs text-gray-500">
+                      Connect this question to a reusable data point so its answer
+                      reliably fills the right participant field, instead of
+                      guessing from the question wording.
+                    </p>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Database
+                      </label>
+                      <select
+                        value={mappingDatabaseId}
+                        onChange={(e) => setMappingDatabaseId(e.target.value)}
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
+                      >
+                        <option value="">Select database...</option>
+                        {databases.map((database) => (
+                          <option key={database.id} value={database.id}>
+                            {database.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Data Point
+                      </label>
+                      <select
+                        value={selectedField.data_point_id || ""}
+                        onChange={(e) => handleSelectDataPoint(e.target.value)}
+                        disabled={!mappingDatabaseId || loadingMappingDataPoints}
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)] disabled:opacity-50"
+                      >
+                        <option value="">
+                          {loadingMappingDataPoints
+                            ? "Loading..."
+                            : "Unmapped (use default detection)"}
+                        </option>
+                        {dataPointsInMappingDatabase.map((dataPoint) => (
+                          <option key={dataPoint.id} value={dataPoint.id}>
+                            {dataPoint.label_en}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/admin/database")}
+                      className="text-xs font-semibold text-[var(--ann-pink)]"
+                    >
+                      + Manage Databases &amp; Data Points
+                    </button>
                   </div>
                 )}
 

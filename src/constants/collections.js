@@ -9,4 +9,6 @@ export const COLLECTIONS = {
   CHAMPIONS_POOL: "champions_pool",
   PARTICIPANT_EVALUATIONS: "participant_evaluations",
   FGD_CHANGE_REQUESTS: "fgd_change_requests",
+  DATABASES: "databases",
+  DATA_POINTS: "data_points",
 };
