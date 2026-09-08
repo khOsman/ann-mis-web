@@ -438,6 +438,12 @@ export const updateFGDStatus = async (fgdId, status) => {
   }
 };
 
+// Grace period after the scheduled end time before an FGD is considered
+// over — a discussion that was supposed to end at 7:30pm might genuinely
+// still be running a few minutes late, so auto-completing right at 7:30pm
+// sharp would be premature.
+const FGD_END_BUFFER_MINUTES = 30;
+
 // session_date/session_start_time/session_end_time come from plain
 // <input type="date"> / <input type="time"> fields, so they're always
 // "YYYY-MM-DD" / "HH:MM" — safe to concatenate into an ISO-ish datetime
@@ -446,7 +452,10 @@ export const hasFGDScheduleEnded = (fgd) => {
   if (!fgd?.session_date || !fgd?.session_end_time) return false;
 
   const end = new Date(`${fgd.session_date}T${fgd.session_end_time}`);
-  return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
+  if (Number.isNaN(end.getTime())) return false;
+
+  const bufferedEnd = end.getTime() + FGD_END_BUFFER_MINUTES * 60 * 1000;
+  return bufferedEnd < Date.now();
 };
 
 // No scheduled-job infrastructure exists to flip FGDs to Completed the
