@@ -121,6 +121,18 @@ export default function FormBuilder() {
     [fields, selectedFieldId]
   );
 
+  // Draft -> Published -> Closed is a one-way lifecycle from either end's
+  // perspective: a Closed form can only go back to Draft (never straight to
+  // Published) before it can be published again, matching the confirmed
+  // status-button rules.
+  const formStatus = formMeta?.status || "Draft";
+  const isDraft = formStatus === "Draft";
+  const isPublished = formStatus === "Published";
+  const isClosed = formStatus === "Closed";
+  const canPublish = isDraft;
+  const canClose = isPublished;
+  const canMoveToDraft = isPublished || isClosed;
+
   // Local draft of the selected field's options — editing here never writes
   // to Firestore on every keystroke (that raced against the live-listener
   // echo and could revert characters the admin had just typed). Only
@@ -410,6 +422,13 @@ export default function FormBuilder() {
     };
 
     const handleUpdateFormStatus = async (nextStatus) => {
+    const allowedTransition =
+      (nextStatus === "Published" && canPublish) ||
+      (nextStatus === "Closed" && canClose) ||
+      (nextStatus === "Draft" && canMoveToDraft);
+
+    if (!allowedTransition) return;
+
     if (nextStatus === "Published") {
         const slugAvailable = await isSlugAvailable(formMeta.public_slug, formMeta.id);
 
@@ -590,24 +609,54 @@ const handleCopyLink = async () => {
         <div className="flex flex-wrap gap-3">
             <button
             type="button"
+            disabled={!canPublish}
             onClick={() => handleUpdateFormStatus("Published")}
-            className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+            title={
+              isPublished
+                ? "This form is already published."
+                : isClosed
+                ? "Move the form back to Draft before publishing it again."
+                : undefined
+            }
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+              canPublish
+                ? "bg-[var(--ann-pink)] text-white hover:opacity-90"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
             >
             Publish
             </button>
 
             <button
             type="button"
+            disabled={!canClose}
             onClick={() => handleUpdateFormStatus("Closed")}
-            className=" border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            title={
+              isDraft
+                ? "Publish the form before closing registration."
+                : isClosed
+                ? "This form is already closed."
+                : undefined
+            }
+            className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
+              canClose
+                ? "border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                : "border-gray-200 text-gray-300 cursor-not-allowed"
+            }`}
             >
             Close
             </button>
 
             <button
             type="button"
+            disabled={!canMoveToDraft}
             onClick={() => handleUpdateFormStatus("Draft")}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+            title={isDraft ? "This form is already in Draft." : undefined}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
+              canMoveToDraft
+                ? "border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                : "border-gray-200 text-gray-300 cursor-not-allowed"
+            }`}
             >
             Move to Draft
             </button>
