@@ -31,6 +31,7 @@ import { ROUTES } from "../../constants/routes";
 import { FIELD_TYPES } from "../../constants/fieldTypes";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { isSlugAvailable } from "../../services/formService";
+import { deduplicateCohortParticipants } from "../../services/participantService";
 import { useForm as useFormDoc, useFormFields } from "../../hooks";
 
 function SortableField({ field, index, selectedFieldId, setSelectedFieldId, renderFieldPreview }) {
@@ -111,6 +112,7 @@ export default function FormBuilder() {
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -360,6 +362,53 @@ export default function FormBuilder() {
     );
   };
 
+    // Composes one alert out of a dedup pass's result — reused by both the
+    // automatic run-on-Close and the standalone "Check for Duplicates" button.
+    const describeDedupResult = ({ removedCount, protectedDuplicates }) => {
+      if (removedCount === 0 && protectedDuplicates.length === 0) {
+        return { type: "success", text: "No duplicate registrations found." };
+      }
+
+      const parts = [];
+
+      if (removedCount > 0) {
+        parts.push(
+          `Removed ${removedCount} duplicate registration${
+            removedCount === 1 ? "" : "s"
+          }, keeping the most recent submission for each.`
+        );
+      }
+
+      if (protectedDuplicates.length > 0) {
+        parts.push(
+          `${protectedDuplicates.length} duplicate${
+            protectedDuplicates.length === 1 ? "" : "s"
+          } already assigned to an FGD or evaluated — left alone for manual review.`
+        );
+      }
+
+      return {
+        type: protectedDuplicates.length > 0 ? "warning" : "success",
+        text: parts.join(" "),
+      };
+    };
+
+    const handleCheckDuplicates = async () => {
+      if (!formMeta?.cohort_id) return;
+
+      setCheckingDuplicates(true);
+
+      try {
+        const result = await deduplicateCohortParticipants(formMeta.cohort_id);
+        const { type, text } = describeDedupResult(result);
+        showAlert(type, text);
+      } catch (error) {
+        showAlert("error", error.message || "Failed to check for duplicate registrations.");
+      } finally {
+        setCheckingDuplicates(false);
+      }
+    };
+
     const handleUpdateFormStatus = async (nextStatus) => {
     if (nextStatus === "Published") {
         const slugAvailable = await isSlugAvailable(formMeta.public_slug, formMeta.id);
@@ -368,7 +417,7 @@ export default function FormBuilder() {
           showAlert("warning", "This public slug is already used by another form.");
           return;
         }
-        
+
         if (!formMeta?.public_slug) {
         showAlert("warning", "Public slug is required before publishing.");
         return;
@@ -386,7 +435,17 @@ export default function FormBuilder() {
         updated_at: serverTimestamp(),
         });
 
-        showAlert("success", `Form status updated to ${nextStatus}.`);
+        // Closing registration is the natural point to clean up duplicate
+        // registrations — before FGD generation or evaluation typically
+        // starts pulling from this cohort's participant list. Combined into
+        // one alert — the toast only ever shows the most recent call.
+        if (nextStatus === "Closed" && formMeta?.cohort_id) {
+          const result = await deduplicateCohortParticipants(formMeta.cohort_id);
+          const { type, text } = describeDedupResult(result);
+          showAlert(type, `Form closed. ${text}`);
+        } else {
+          showAlert("success", `Form status updated to ${nextStatus}.`);
+        }
     } catch (error) {
         showAlert("error", error.message || "Failed to update form status.");
     }
@@ -551,6 +610,16 @@ const handleCopyLink = async () => {
             className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
             >
             Move to Draft
+            </button>
+
+            <button
+            type="button"
+            disabled={checkingDuplicates}
+            onClick={handleCheckDuplicates}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+            title="Runs the same duplicate-registration cleanup that happens automatically when the form is closed."
+            >
+            {checkingDuplicates ? "Checking..." : "Check for Duplicates"}
             </button>
         </div>
         </div>
