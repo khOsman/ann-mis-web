@@ -1,6 +1,11 @@
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase";
-import { getParticipantMasterDataset } from "./reportDatasets";
+import {
+  getParticipantMasterDataset,
+  getCohortJourneyDataset,
+  getFGDReportDataset,
+  getChampionsActivityDataset,
+} from "./reportDatasets";
 import { REPORT_SOURCES } from "../constants/reportColumns";
 import { getDataPoints } from "./dataPointService";
 import { flattenCustomDataPoints } from "./dataPointColumns";
@@ -60,11 +65,28 @@ const normalizeParticipant = (participant) => {
 };
 
 export const getReportData = async (sourceKey) => {
-  
+
    if (sourceKey === "participant_master") {
     return await getParticipantMasterDataset();
    }
-  
+
+   // Cohorts/FGDs/Champions are aggregated datasets (fresh joins against a
+   // child collection), not a plain single-collection read — and none of
+   // them have a `submitted_at` field, so falling through to the generic
+   // branch below would silently return zero rows (Firestore's orderBy
+   // drops any doc missing the sorted field).
+   if (sourceKey === "cohorts") {
+    return await getCohortJourneyDataset();
+   }
+
+   if (sourceKey === "fgds") {
+    return await getFGDReportDataset();
+   }
+
+   if (sourceKey === "champions") {
+    return await getChampionsActivityDataset();
+   }
+
     const source = REPORT_SOURCES[sourceKey];
 
   if (!source) {

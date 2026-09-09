@@ -9,6 +9,7 @@ import {
 import { getReportData } from "../../services/reportService";
 import { getCustomDataPointColumns } from "../../services/dataPointColumns";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 import { exportCSV, exportExcel } from "../../services/exportService";
 import { useDataPoints } from "../../hooks";
 
@@ -69,8 +70,17 @@ const parseDate = (value) => {
 
 export default function CustomReportBuilder() {
   const { showAlert } = useAlert();
+  const { isAdmin } = useAuth();
 
   const { data: dataPoints } = useDataPoints();
+
+  // champions_pool's Firestore read rule is isAdmin()-only (stricter than
+  // the isSelectionUser() every other report source relies on, which a
+  // viewer already satisfies) — hide the source here rather than let a
+  // viewer hit a permission-denied error after picking it.
+  const visibleReportSources = Object.entries(REPORT_SOURCES).filter(
+    ([, source]) => !source.adminOnly || isAdmin
+  );
 
   const [sourceKey, setSourceKey] = useState("participants");
   const [columnSearch, setColumnSearch] = useState("");
@@ -85,11 +95,14 @@ export default function CustomReportBuilder() {
   // on top of whatever the source itself already returns, so they're
   // pickable immediately — no need to "Run Report" first to see them.
   // system data points are skipped here since they're already covered by
-  // each source's own dedicated columns (name/email/phone/etc.).
-  const customDataColumns = useMemo(
-    () => getCustomDataPointColumns(dataPoints),
-    [dataPoints]
-  );
+  // each source's own dedicated columns (name/email/phone/etc.). Only
+  // participant-shaped sources carry custom_data at all (it's populated
+  // from registration form answers) — Cohorts/FGDs/Champions don't, so
+  // merging these in there would just add permanently-empty columns.
+  const customDataColumns = useMemo(() => {
+    if (!REPORT_SOURCES[sourceKey]?.supportsCustomDataPoints) return [];
+    return getCustomDataPointColumns(dataPoints);
+  }, [dataPoints, sourceKey]);
 
   const mergeCustomColumns = (base, custom) => {
     const existingKeys = new Set(base.map((column) => column.key));
@@ -472,7 +485,7 @@ export default function CustomReportBuilder() {
               onChange={(e) => handleSourceChange(e.target.value)}
               className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--ann-pink)]"
             >
-              {Object.entries(REPORT_SOURCES).map(([key, source]) => (
+              {visibleReportSources.map(([key, source]) => (
                 <option key={key} value={key}>
                   {source.label}
                 </option>
