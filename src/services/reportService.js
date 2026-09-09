@@ -2,6 +2,8 @@ import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase";
 import { getParticipantMasterDataset } from "./reportDatasets";
 import { REPORT_SOURCES } from "../constants/reportColumns";
+import { getDataPoints } from "./dataPointService";
+import { flattenCustomDataPoints } from "./dataPointColumns";
 
 const formatTimestamp = (value) => {
   if (!value?.toDate) return value || "";
@@ -82,8 +84,18 @@ export const getReportData = async (sourceKey) => {
     id: item.id,
   }));
 
+  // Custom (admin-created, non-system) data points aren't part of the
+  // static column/row shape above — both form_responses and participants
+  // docs carry a custom_data map (populated at registration time when a
+  // form field is mapped to one), flattened here into the same flat
+  // top-level keys the column pickers expose.
+  const dataPoints = await getDataPoints();
+
   if (sourceKey === "form_responses") {
-    const rows = rawData.map(flattenFormResponse);
+    const rows = rawData.map((response) => ({
+      ...flattenFormResponse(response),
+      ...flattenCustomDataPoints(response, dataPoints),
+    }));
 
     const dynamicColumns = Array.from(
       new Set(rows.flatMap((row) => Object.keys(row)))
@@ -101,7 +113,10 @@ export const getReportData = async (sourceKey) => {
   }
 
   return {
-    rows: rawData.map(normalizeParticipant),
+    rows: rawData.map((participant) => ({
+      ...normalizeParticipant(participant),
+      ...flattenCustomDataPoints(participant, dataPoints),
+    })),
     columns: source.columns,
   };
 };

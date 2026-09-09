@@ -1,6 +1,8 @@
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { formatBDPhone } from "../utils/phone";
+import { getDataPoints } from "./dataPointService";
+import { flattenCustomDataPoints } from "./dataPointColumns";
 
 const formatTimestamp = (value) => {
   if (!value?.toDate) return value || "";
@@ -45,6 +47,7 @@ const flattenAnswers = (answers = []) => {
 export const getParticipantMasterDataset = async () => {
   const participantSnapshot = await getDocs(collection(db, "participants"));
   const responseSnapshot = await getDocs(collection(db, "form_responses"));
+  const dataPoints = await getDataPoints();
 
   const responsesById = {};
 
@@ -90,6 +93,7 @@ export const getParticipantMasterDataset = async () => {
       updated_at: formatTimestamp(participant.updated_at),
 
       ...formAnswers,
+      ...flattenCustomDataPoints(participant, dataPoints),
     };
   });
 

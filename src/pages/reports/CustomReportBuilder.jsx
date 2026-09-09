@@ -7,8 +7,10 @@ import {
   textFilter,
 } from "../../constants/reportColumns";
 import { getReportData } from "../../services/reportService";
+import { getCustomDataPointColumns } from "../../services/dataPointColumns";
 import { useAlert } from "../../context/AlertContext";
 import { exportCSV, exportExcel } from "../../services/exportService";
+import { useDataPoints } from "../../hooks";
 
 const OPERATOR_MAP = {
   [FILTER_TYPES.TEXT]: [
@@ -68,13 +70,36 @@ const parseDate = (value) => {
 export default function CustomReportBuilder() {
   const { showAlert } = useAlert();
 
+  const { data: dataPoints } = useDataPoints();
+
   const [sourceKey, setSourceKey] = useState("participants");
   const [columnSearch, setColumnSearch] = useState("");
-  const [availableColumns, setAvailableColumns] = useState(
+  const [baseColumns, setBaseColumns] = useState(
     REPORT_SOURCES.participants.columns
   );
   const [selectedColumns, setSelectedColumns] = useState(
     REPORT_SOURCES.participants.defaultColumns
+  );
+
+  // Custom (admin-created) data points are always offered as extra columns
+  // on top of whatever the source itself already returns, so they're
+  // pickable immediately — no need to "Run Report" first to see them.
+  // system data points are skipped here since they're already covered by
+  // each source's own dedicated columns (name/email/phone/etc.).
+  const customDataColumns = useMemo(
+    () => getCustomDataPointColumns(dataPoints),
+    [dataPoints]
+  );
+
+  const mergeCustomColumns = (base, custom) => {
+    const existingKeys = new Set(base.map((column) => column.key));
+    const extraColumns = custom.filter((column) => !existingKeys.has(column.key));
+    return [...base, ...extraColumns];
+  };
+
+  const availableColumns = useMemo(
+    () => mergeCustomColumns(baseColumns, customDataColumns),
+    [baseColumns, customDataColumns]
   );
   const [rows, setRows] = useState([]);
   const [advancedFilters, setAdvancedFilters] = useState([]);
@@ -228,7 +253,7 @@ export default function CustomReportBuilder() {
     setRows([]);
     setColumnSearch("");
     setAdvancedFilters([]);
-    setAvailableColumns(source.columns);
+    setBaseColumns(source.columns);
     setSelectedColumns(source.defaultColumns);
   };
 
@@ -313,15 +338,17 @@ export default function CustomReportBuilder() {
         filter: column.filter || textFilter,
       }));
 
+      const mergedColumns = mergeCustomColumns(columnsWithFilter, customDataColumns);
+
       setRows(result.rows);
-      setAvailableColumns(columnsWithFilter);
+      setBaseColumns(columnsWithFilter);
 
       const validSelected = selectedColumns.filter((key) =>
-        columnsWithFilter.some((column) => column.key === key)
+        mergedColumns.some((column) => column.key === key)
       );
 
       const fallbackColumns = REPORT_SOURCES[sourceKey].defaultColumns.filter(
-        (key) => columnsWithFilter.some((column) => column.key === key)
+        (key) => mergedColumns.some((column) => column.key === key)
       );
 
       setSelectedColumns(
