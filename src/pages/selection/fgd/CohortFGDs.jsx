@@ -48,6 +48,7 @@ const FGD_PARTICIPANT_EXPORT_COLUMNS = [
 // (same dead-field issue already fixed on the FGD Details page).
 function FGDListRow({
   fgd,
+  no,
   isViewer,
   onOpenAttachModal,
   onRemoveTarget,
@@ -73,6 +74,7 @@ function FGDListRow({
 
   return (
     <tr className="border-t border-gray-100 hover:bg-gray-50">
+      <td className="px-6 py-5 text-gray-500">{no}</td>
       <td className="px-6 py-5 font-semibold">{fgd.fgd_code}</td>
 
       <td className="px-6 py-5">{fgd.fgd_name}</td>
@@ -547,6 +549,7 @@ export default function CohortFGDs() {
               <table className="w-full min-w-[1150px] text-sm">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
+                    <th className="text-left px-6 py-4">No.</th>
                     <th className="text-left px-6 py-4">FGD Code</th>
                     <th className="text-left px-6 py-4">Name</th>
                     <th className="text-center px-6 py-4">FGD Date</th>
@@ -561,10 +564,11 @@ export default function CohortFGDs() {
                 </thead>
 
                 <tbody>
-                  {fgds.map((fgd) => (
+                  {fgds.map((fgd, index) => (
                     <FGDListRow
                       key={fgd.id}
                       fgd={fgd}
+                      no={index + 1}
                       isViewer={isViewer}
                       onOpenAttachModal={openAttachModal}
                       onRemoveTarget={setRemoveTargetId}

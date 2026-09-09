@@ -444,6 +444,8 @@ export default function AllChampions() {
 
                   <tr className="text-left text-sm font-semibold text-gray-700">
 
+                    <th className="px-6 py-4">No.</th>
+
                     <th className="px-6 py-4">Champion ID</th>
 
                     <th className="px-6 py-4">Name</th>
@@ -469,18 +471,19 @@ export default function AllChampions() {
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="py-16 text-center text-gray-500"
                       >
                         No Champions found for this filter.
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((champion) => (
+                    filteredData.map((champion, index) => (
                       <tr
                         key={champion.id}
                         className="border-b hover:bg-gray-50 transition"
                       >
+                        <td className="px-6 py-4 text-gray-500">{index + 1}</td>
                         <td className="px-6 py-4 font-semibold">
                           {champion.champion_code}
                         </td>

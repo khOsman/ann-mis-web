@@ -157,6 +157,7 @@ export default function AllForms() {
             <table className="w-full min-w-[1050px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">Form</th>
                   <th className="text-left p-4">Cohort</th>
                   <th className="text-left p-4">Type</th>
@@ -172,19 +173,20 @@ export default function AllForms() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-gray-500">
+                    <td colSpan="10" className="p-6 text-center text-gray-500">
                       Loading forms...
                     </td>
                   </tr>
                 ) : filteredForms.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-gray-500">
+                    <td colSpan="10" className="p-6 text-center text-gray-500">
                       No form found.
                     </td>
                   </tr>
                 ) : (
-                  filteredForms.map((form) => (
+                  filteredForms.map((form, index) => (
                     <tr key={form.id} className="border-t border-gray-100">
+                      <td className="p-4 text-gray-500">{index + 1}</td>
                       <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                         <div>{form.form_title || "-"}</div>
                         <div className="text-xs text-gray-400">

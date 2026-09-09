@@ -209,6 +209,7 @@ export default function DatabaseDetail() {
             <table className="w-full min-w-[700px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">Label</th>
                   <th className="text-left p-4">Key</th>
                   <th className="text-left p-4">Type</th>
@@ -219,19 +220,20 @@ export default function DatabaseDetail() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="4" className="p-6 text-center text-gray-500">
+                    <td colSpan="5" className="p-6 text-center text-gray-500">
                       Loading data points...
                     </td>
                   </tr>
                 ) : dataPoints.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="p-6 text-center text-gray-500">
+                    <td colSpan="5" className="p-6 text-center text-gray-500">
                       No data point found.
                     </td>
                   </tr>
                 ) : (
-                  dataPoints.map((dataPoint) => (
+                  dataPoints.map((dataPoint, index) => (
                     <tr key={dataPoint.id} className="border-t border-gray-100">
+                      <td className="p-4 text-gray-500">{index + 1}</td>
                       <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                         <div>{dataPoint.label_en}</div>
                         {dataPoint.is_system && (

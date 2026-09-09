@@ -439,6 +439,7 @@ export default function ChampionFGDDetail() {
               <table className="w-full min-w-[1020px] text-sm">
                 <thead className="bg-[#F9FAFB] text-gray-500">
                   <tr>
+                    <th className="text-left p-3">No.</th>
                     <th className="text-left p-3">Name</th>
                     <th className="text-left p-3">Email</th>
                     <th className="text-left p-3">Mobile</th>
@@ -450,7 +451,7 @@ export default function ChampionFGDDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  {participants.map((participant) => {
+                  {participants.map((participant, index) => {
                     const isAbsent = participant.fgd_attendance_status === "Absent";
                     const attendanceStatus = participant.fgd_attendance_status || "Pending";
                     const isEvaluatedByMe = evaluatedParticipantIds.has(participant.id);
@@ -464,6 +465,7 @@ export default function ChampionFGDDetail() {
                           isAbsent ? "bg-red-50" : ""
                         }`}
                       >
+                        <td className="p-3 text-gray-500">{index + 1}</td>
                         <td className={`p-3 font-semibold ${isAbsent ? "text-red-700" : ""}`}>
                           {participant.name || "-"}
                         </td>

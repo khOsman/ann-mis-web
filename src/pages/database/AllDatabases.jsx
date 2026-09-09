@@ -141,6 +141,7 @@ export default function AllDatabases() {
             <table className="w-full min-w-[700px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">Database</th>
                   <th className="text-left p-4">Description</th>
                   <th className="text-left p-4">Data Points</th>
@@ -151,19 +152,20 @@ export default function AllDatabases() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="4" className="p-6 text-center text-gray-500">
+                    <td colSpan="5" className="p-6 text-center text-gray-500">
                       Loading databases...
                     </td>
                   </tr>
                 ) : databases.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="p-6 text-center text-gray-500">
+                    <td colSpan="5" className="p-6 text-center text-gray-500">
                       No database found.
                     </td>
                   </tr>
                 ) : (
-                  databases.map((database) => (
+                  databases.map((database, index) => (
                     <tr key={database.id} className="border-t border-gray-100">
+                      <td className="p-4 text-gray-500">{index + 1}</td>
                       <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                         <div>{database.name}</div>
                         {database.is_system && (

@@ -131,6 +131,7 @@ export default function AllUsers() {
             <table className="w-full min-w-[950px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">User</th>
                   <th className="text-left p-4">Email</th>
                   <th className="text-left p-4">Role</th>
@@ -143,19 +144,20 @@ export default function AllUsers() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="p-6 text-center text-gray-500">
+                    <td colSpan="7" className="p-6 text-center text-gray-500">
                       Loading users...
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="p-6 text-center text-gray-500">
+                    <td colSpan="7" className="p-6 text-center text-gray-500">
                       No user found.
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
+                  filteredUsers.map((user, index) => (
                     <tr key={user.id} className="border-t border-gray-100">
+                      <td className="p-4 text-gray-500">{index + 1}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           {user.photo_url ? (

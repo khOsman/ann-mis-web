@@ -432,6 +432,7 @@ export default function ParticipantProfile() {
               <table className="w-full min-w-[900px] text-sm">
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
+                    <th className="text-left p-3">No.</th>
                     <th className="text-left p-3">Evaluator</th>
                     {isSuperAdmin && <th className="text-center p-3">Status</th>}
                     <th className="text-center p-3">Rubric Score</th>
@@ -446,8 +447,9 @@ export default function ParticipantProfile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {evaluations.map((evaluation) => (
+                  {evaluations.map((evaluation, index) => (
                     <tr key={evaluation.id} className="border-t border-gray-100">
+                      <td className="p-3 text-gray-500">{index + 1}</td>
                       <td className="p-3 font-semibold text-gray-800">
                         {evaluation.evaluator_name || "-"}
                       </td>

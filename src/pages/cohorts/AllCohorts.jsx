@@ -183,6 +183,7 @@ export default function AllCohorts() {
             <table className="w-full min-w-[1250px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">Code</th>
                   <th className="text-left p-4">Cohort</th>
                   <th className="text-left p-4">Location</th>
@@ -200,19 +201,20 @@ export default function AllCohorts() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="11" className="p-6 text-center text-gray-500">
+                    <td colSpan="12" className="p-6 text-center text-gray-500">
                       Loading cohorts...
                     </td>
                   </tr>
                 ) : filteredCohorts.length === 0 ? (
                   <tr>
-                    <td colSpan="11" className="p-6 text-center text-gray-500">
+                    <td colSpan="12" className="p-6 text-center text-gray-500">
                       No cohort found.
                     </td>
                   </tr>
                 ) : (
-                  filteredCohorts.map((cohort) => (
+                  filteredCohorts.map((cohort, index) => (
                     <tr key={cohort.id} className="border-t border-gray-100">
+                      <td className="p-4 text-gray-500">{index + 1}</td>
                       <td className="p-4 font-bold text-[var(--ann-purple)]">
                         {cohort.cohort_code || "-"}
                       </td>

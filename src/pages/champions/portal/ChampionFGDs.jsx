@@ -39,6 +39,7 @@ export default function ChampionFGDs() {
               <table className="w-full min-w-[780px] text-sm">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
+                    <th className="text-left px-6 py-4">No.</th>
                     <th className="text-left px-6 py-4">FGD Code</th>
                     <th className="text-left px-6 py-4">Name</th>
                     <th className="text-left px-6 py-4">Cohort</th>
@@ -49,8 +50,9 @@ export default function ChampionFGDs() {
                 </thead>
 
                 <tbody>
-                  {assignedFgds.map((fgd) => (
+                  {assignedFgds.map((fgd, index) => (
                     <tr key={fgd.fgd_id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-6 py-5 text-gray-500">{index + 1}</td>
                       <td className="px-6 py-5 font-semibold">{fgd.fgd_code}</td>
                       <td className="px-6 py-5">{fgd.fgd_name}</td>
                       <td className="px-6 py-5">{fgd.cohort_name || "-"}</td>

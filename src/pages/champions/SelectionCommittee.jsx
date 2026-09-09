@@ -216,6 +216,7 @@ export default function SelectionCommittee() {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr className="text-left font-semibold text-gray-700">
+                    <th className="px-6 py-4">No.</th>
                     <th className="px-6 py-4">Committee Code</th>
                     <th className="px-6 py-4">Name</th>
                     <th className="px-6 py-4">Institution</th>
@@ -229,13 +230,14 @@ export default function SelectionCommittee() {
                 <tbody>
                   {approvedCommitteeMembers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-16 text-center text-gray-500">
+                      <td colSpan={8} className="py-16 text-center text-gray-500">
                         No approved Selection Committee members found.
                       </td>
                     </tr>
                   ) : (
-                    approvedCommitteeMembers.map((champion) => (
+                    approvedCommitteeMembers.map((champion, index) => (
                       <tr key={champion.id} className="border-b hover:bg-gray-50">
+                        <td className="px-6 py-4 text-gray-500">{index + 1}</td>
                         <td className="px-6 py-4 font-semibold">
                           {champion.champion_code}
                         </td>

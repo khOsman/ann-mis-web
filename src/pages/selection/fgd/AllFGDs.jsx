@@ -80,6 +80,7 @@ export default function AllFGDs() {
               <table className="w-full">
                 <thead className="bg-gray-50 text-sm text-gray-600">
                   <tr>
+                    <th className="text-left px-6 py-4">No.</th>
                     <th className="text-left px-6 py-4">Cohort</th>
                     <th className="text-center px-6 py-4">Registered</th>
                     <th className="text-center px-6 py-4">FGDs</th>
@@ -89,11 +90,12 @@ export default function AllFGDs() {
                 </thead>
 
                 <tbody>
-                  {activeCohorts.map((cohort) => (
+                  {activeCohorts.map((cohort, index) => (
                     <tr
                       key={cohort.id}
                       className="border-t border-gray-100 hover:bg-gray-50"
                     >
+                      <td className="px-6 py-5 text-gray-500">{index + 1}</td>
                       <td className="px-6 py-5">
                         <p className="font-semibold">
                           {cohort.cohort_name}

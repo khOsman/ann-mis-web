@@ -283,6 +283,7 @@ export default function BulkImportParticipants() {
                   <table className="w-full min-w-[880px] text-sm">
                     <thead className="bg-[#F9FAFB] text-gray-500 sticky top-0">
                       <tr>
+                        <th className="text-left p-3">No.</th>
                         <th className="text-left p-3">Name</th>
                         <th className="text-left p-3">Email</th>
                         <th className="text-left p-3">Phone</th>
@@ -293,13 +294,14 @@ export default function BulkImportParticipants() {
                       </tr>
                     </thead>
                     <tbody>
-                      {group.rows.map((row) => (
+                      {group.rows.map((row, index) => (
                         <tr
                           key={row.rowIndex}
                           className={`border-t border-gray-100 ${
                             row.isDuplicate ? "bg-yellow-50" : ""
                           }`}
                         >
+                          <td className="p-3 text-gray-500">{index + 1}</td>
                           <td className="p-3 font-semibold">{row.name || "-"}</td>
                           <td className="p-3">{row.email || "-"}</td>
                           <td className="p-3">{formatBDPhone(row.phone) || "-"}</td>

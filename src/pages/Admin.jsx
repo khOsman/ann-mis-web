@@ -135,6 +135,7 @@ export default function Admin() {
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-[#F9FAFB] text-gray-500">
                   <tr>
+                    <th className="text-left p-4">No.</th>
                     <th className="text-left p-4">Cohort</th>
                     <th className="text-left p-4">Registrations</th>
                     <th className="text-left p-4">Selected</th>
@@ -147,12 +148,12 @@ export default function Admin() {
                 <tbody>
                   {activeCohorts.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="p-6 text-center text-gray-500">
+                      <td colSpan="7" className="p-6 text-center text-gray-500">
                         No active cohort found.
                       </td>
                     </tr>
                   ) : (
-                    activeCohorts.map((cohort) => (
+                    activeCohorts.map((cohort, index) => (
                       <tr
                         key={cohort.id}
                         className="border-t border-gray-100 cursor-pointer hover:bg-gray-50"
@@ -162,6 +163,7 @@ export default function Admin() {
                           })
                         }
                       >
+                        <td className="p-4 text-gray-500">{index + 1}</td>
                         <td className="p-4 font-semibold text-[var(--ann-text-dark)]">
                           <div>{cohort.cohort_name || "-"}</div>
                           <div className="text-xs text-gray-400">

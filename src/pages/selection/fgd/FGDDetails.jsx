@@ -49,7 +49,7 @@ function AttendanceBadge({ status }) {
 
 // Its own component so each row can hold its own live subscription to that
 // participant's evaluations — hooks can't be called inside a .map() loop.
-function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCode }) {
+function ParticipantRow({ participant, no, isViewer, isSuperAdmin, onEvaluate, fgdCode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: allEvaluations, loading: loadingEvaluations } =
@@ -64,6 +64,7 @@ function ParticipantRow({ participant, isViewer, isSuperAdmin, onEvaluate, fgdCo
 
   return (
     <tr className="border-t border-gray-100">
+      <td className="p-4 text-gray-500">{no}</td>
       <td className="p-4 font-semibold">{participant.name || "-"}</td>
       <td className="p-4">{participant.email || "-"}</td>
       <td className="p-4">{formatBDPhone(participant.phone) || "-"}</td>
@@ -768,6 +769,7 @@ export default function FGDDetails() {
             <table className="w-full min-w-[1050px] text-sm">
               <thead className="bg-[#F9FAFB] text-gray-500">
                 <tr>
+                  <th className="text-left p-4">No.</th>
                   <th className="text-left p-4">Name</th>
                   <th className="text-left p-4">Email</th>
                   <th className="text-left p-4">Phone</th>
@@ -783,15 +785,16 @@ export default function FGDDetails() {
               <tbody>
                 {participants.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-gray-500">
+                    <td colSpan="10" className="p-6 text-center text-gray-500">
                       No participants found for this FGD.
                     </td>
                   </tr>
                 ) : (
-                  participants.map((participant) => (
+                  participants.map((participant, index) => (
                     <ParticipantRow
                       key={participant.id}
                       participant={participant}
+                      no={index + 1}
                       isViewer={isViewer}
                       isSuperAdmin={isSuperAdmin}
                       onEvaluate={setEvaluationTarget}
