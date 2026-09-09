@@ -52,9 +52,12 @@ const flattenAnswers = (answers = []) => {
 };
 
 export const getParticipantMasterDataset = async () => {
-  const participantSnapshot = await getDocs(collection(db, "participants"));
-  const responseSnapshot = await getDocs(collection(db, "form_responses"));
-  const dataPoints = await getDataPoints();
+  const [participantSnapshot, responseSnapshot, fgdSnapshot, dataPoints] = await Promise.all([
+    getDocs(collection(db, "participants")),
+    getDocs(collection(db, "form_responses")),
+    getDocs(collection(db, "fgds")),
+    getDataPoints(),
+  ]);
 
   const responsesById = {};
 
@@ -65,6 +68,16 @@ export const getParticipantMasterDataset = async () => {
     };
   });
 
+  // Master report = participant + their form answers (already joined
+  // above) + their FGD's own schedule/status + the champions assigned to
+  // that FGD — a participant only ever has one FGD, so this is a plain
+  // by-id lookup, not a group-by like the FGD/Champion report sources use.
+  const fgdsById = {};
+
+  fgdSnapshot.docs.forEach((item) => {
+    fgdsById[item.id] = { ...item.data(), id: item.id };
+  });
+
   const rows = participantSnapshot.docs.map((item) => {
     const participant = {
       ...item.data(),
@@ -73,6 +86,7 @@ export const getParticipantMasterDataset = async () => {
 
     const response = responsesById[participant.response_id];
     const formAnswers = flattenAnswers(response?.answers || []);
+    const fgd = participant.fgd_id ? fgdsById[participant.fgd_id] : null;
 
     return {
       id: participant.id,
@@ -94,6 +108,18 @@ export const getParticipantMasterDataset = async () => {
       enrollment_status: participant.enrollment_status || "",
       graduation_status: participant.graduation_status || "",
       project_status: participant.project_status || "",
+
+      fgd_code: participant.fgd_code || "",
+      fgd_attendance_status: participant.fgd_attendance_status || "",
+      fgd_session_date: fgd?.session_date || "",
+      fgd_session_start_time: fgd?.session_start_time || "",
+      fgd_session_end_time: fgd?.session_end_time || "",
+      fgd_venue: fgd?.venue || "",
+      fgd_status: fgd?.status || "",
+      assigned_champions: (fgd?.committee_members || [])
+        .map((member) => member.name)
+        .filter(Boolean)
+        .join(", "),
 
       submitted_at: formatTimestamp(participant.submitted_at),
       created_at: formatTimestamp(participant.created_at),
