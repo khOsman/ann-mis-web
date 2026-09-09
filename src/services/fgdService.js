@@ -480,3 +480,198 @@ export const syncFGDStatusIfEnded = async (fgd) => {
 
   await updateFGDStatus(fgd.id, FGD_STATUS.COMPLETED);
 };
+
+// Distributes participants being manually reassigned across a chosen set of
+// destination FGDs in a balanced way — distinct from
+// distributeParticipantsIntoFGDGroups above, which assumes empty groups of a
+// fixed target size. Here the destination FGDs already have different
+// current sizes (and possibly different participant_limit values), so this
+// greedily sends each next participant to whichever selected FGD currently
+// has the fewest — preferring one still under its participant_limit, but
+// falling back to the overall-lowest once every selected FGD is full so a
+// bulk reassignment never gets stuck without a placement.
+export const distributeAcrossFGDs = (participants, destinationFgds) => {
+  const runningCounts = new Map(
+    destinationFgds.map((fgd) => [fgd.id, Number(fgd.total_participants) || 0])
+  );
+
+  const pickDestination = () => {
+    const underCapacity = destinationFgds.filter((fgd) => {
+      const limit = Number(fgd.participant_limit) || Infinity;
+      return runningCounts.get(fgd.id) < limit;
+    });
+
+    const pool = underCapacity.length > 0 ? underCapacity : destinationFgds;
+
+    return pool.reduce(
+      (lowest, fgd) =>
+        runningCounts.get(fgd.id) < runningCounts.get(lowest.id) ? fgd : lowest,
+      pool[0]
+    );
+  };
+
+  return participants.map((participant) => {
+    const destinationFgd = pickDestination();
+    runningCounts.set(destinationFgd.id, runningCounts.get(destinationFgd.id) + 1);
+    return { participant, destinationFgd };
+  });
+};
+
+// Moves one or many participants into a (possibly different, per-participant)
+// destination FGD — the actual write behind Reassign Participants. Mirrors
+// what fresh FGD generation sets on a participant (fgdService.js above) since
+// conceptually this is "re-generate this one person into a new group", and
+// mirrors evaluationService.js's removeEvaluation for clearing stale
+// evaluations tied to the FGD they're leaving.
+export const reassignParticipants = async (pairs) => {
+  if (!pairs || pairs.length === 0) return { movedCount: 0 };
+
+  const CHUNK_SIZE = 200;
+  const participantIds = pairs.map((p) => p.participantId);
+
+  const participantSnaps = await Promise.all(
+    participantIds.map((id) => getDoc(doc(db, COLLECTIONS.PARTICIPANTS, id)))
+  );
+  const participantsById = new Map(
+    participantSnaps
+      .filter((snap) => snap.exists())
+      .map((snap) => [snap.id, { ...snap.data(), id: snap.id }])
+  );
+
+  const destinationFgdIds = [...new Set(pairs.map((p) => p.destinationFgdId))];
+  const sourceFgdIds = [...participantsById.values()]
+    .map((p) => p.fgd_id)
+    .filter(Boolean);
+  const allFgdIds = [...new Set([...destinationFgdIds, ...sourceFgdIds])];
+
+  const fgdSnaps = await Promise.all(
+    allFgdIds.map((id) => getDoc(doc(db, COLLECTIONS.FGDS, id)))
+  );
+  const fgdsById = new Map(
+    fgdSnaps
+      .filter((snap) => snap.exists())
+      .map((snap) => [snap.id, { ...snap.data(), id: snap.id }])
+  );
+
+  const evaluationIdLists = await Promise.all(
+    participantIds.map(async (participantId) => {
+      const snap = await getDocs(
+        query(
+          collection(db, COLLECTIONS.PARTICIPANT_EVALUATIONS),
+          where("participant_id", "==", participantId)
+        )
+      );
+      return snap.docs.map((item) => item.id);
+    })
+  );
+  const evaluationIds = evaluationIdLists.flat();
+
+  const destinationDeltas = new Map();
+  const sourceDeltas = new Map();
+  const selectedCohortIds = new Set();
+
+  const validPairs = pairs.filter(
+    ({ participantId, destinationFgdId }) =>
+      participantsById.has(participantId) && fgdsById.has(destinationFgdId)
+  );
+
+  for (let i = 0; i < validPairs.length; i += CHUNK_SIZE) {
+    const batch = writeBatch(db);
+
+    validPairs.slice(i, i + CHUNK_SIZE).forEach(({ participantId, destinationFgdId }) => {
+      const participant = participantsById.get(participantId);
+      const destinationFgd = fgdsById.get(destinationFgdId);
+
+      batch.update(doc(db, COLLECTIONS.PARTICIPANTS, participantId), {
+        fgd_id: destinationFgdId,
+        fgd_code: destinationFgd.fgd_code,
+        fgd_name: destinationFgd.fgd_name,
+        fgd_attendance_status: FGD_ATTENDANCE_STATUS.PENDING,
+        fgd_feedback: "",
+        fgd_score: "",
+        selection_committee_feedback: "",
+        evaluation_count: 0,
+        average_evaluation_score: null,
+        selection_status: SELECTION_STATUS.PENDING,
+        updated_at: serverTimestamp(),
+      });
+
+      destinationDeltas.set(
+        destinationFgdId,
+        (destinationDeltas.get(destinationFgdId) || 0) + 1
+      );
+
+      if (participant.fgd_id && participant.fgd_id !== destinationFgdId) {
+        sourceDeltas.set(
+          participant.fgd_id,
+          (sourceDeltas.get(participant.fgd_id) || 0) + 1
+        );
+      }
+
+      if (
+        participant.selection_status === SELECTION_STATUS.SELECTED &&
+        participant.cohort_id
+      ) {
+        selectedCohortIds.add(participant.cohort_id);
+      }
+    });
+
+    await batch.commit();
+  }
+
+  for (let i = 0; i < evaluationIds.length; i += CHUNK_SIZE) {
+    const batch = writeBatch(db);
+    evaluationIds
+      .slice(i, i + CHUNK_SIZE)
+      .forEach((evaluationId) =>
+        batch.delete(doc(db, COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationId))
+      );
+    await batch.commit();
+  }
+
+  // Distinct-FGD counter updates are naturally few (bounded by how many
+  // source/destination FGDs were actually touched, not by participant
+  // count) — one small batch covers both directions.
+  const counterBatch = writeBatch(db);
+
+  destinationDeltas.forEach((delta, fgdId) => {
+    const fgd = fgdsById.get(fgdId);
+    counterBatch.update(doc(db, COLLECTIONS.FGDS, fgdId), {
+      total_participants: (Number(fgd.total_participants) || 0) + delta,
+      updated_at: serverTimestamp(),
+    });
+  });
+
+  sourceDeltas.forEach((delta, fgdId) => {
+    const fgd = fgdsById.get(fgdId);
+    counterBatch.update(doc(db, COLLECTIONS.FGDS, fgdId), {
+      total_participants: Math.max(0, (Number(fgd.total_participants) || 0) - delta),
+      updated_at: serverTimestamp(),
+    });
+  });
+
+  if (destinationDeltas.size > 0 || sourceDeltas.size > 0) {
+    await counterBatch.commit();
+  }
+
+  // total_selected has no trigger keeping it in sync — recomputed per
+  // affected cohort, mirroring updateFGDParticipant/removeEvaluation.
+  await Promise.all(
+    [...selectedCohortIds].map(async (cohortId) => {
+      const selectedSnap = await getDocs(
+        query(
+          collection(db, COLLECTIONS.PARTICIPANTS),
+          where("cohort_id", "==", cohortId),
+          where("selection_status", "==", SELECTION_STATUS.SELECTED)
+        )
+      );
+
+      await updateDoc(doc(db, COLLECTIONS.COHORTS, cohortId), {
+        total_selected: selectedSnap.size,
+        updated_at: serverTimestamp(),
+      });
+    })
+  );
+
+  return { movedCount: validPairs.length };
+};

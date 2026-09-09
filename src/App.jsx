@@ -42,6 +42,8 @@ import ChampionProjectDetail from "./pages/champions/portal/ChampionProjectDetai
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import AllRosters from "./pages/selection/fgd/AllRosters";
 import RosterDetail from "./pages/selection/fgd/RosterDetail";
+import AllReassign from "./pages/selection/fgd/AllReassign";
+import ReassignParticipants from "./pages/selection/fgd/ReassignParticipants";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
 import FGDDetails from "./pages/selection/fgd/FGDDetails";
 import ImpersonationSession from "./pages/system/ImpersonationSession";
@@ -210,6 +212,24 @@ export default function App() {
             element={
               <ProtectedRoute permission="selection">
                 <RosterDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionReassign}
+            element={
+              <ProtectedRoute permission="selection">
+                <AllReassign />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionReassignCohort}
+            element={
+              <ProtectedRoute permission="selection">
+                <ReassignParticipants />
               </ProtectedRoute>
             }
           />

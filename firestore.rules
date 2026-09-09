@@ -138,6 +138,21 @@ service cloud.firestore {
       // Any status field on a participant (selection/attendance/enrollment/
       // graduation/etc.) is super-admin-only, not just isAdmin().
       allow update: if isSuperAdmin();
+
+      // Reassign Participants (Selection > Reassign Participants) needs
+      // admin, not just super-admin, per the confirmed feature scope —
+      // scoped to exactly the fields that action touches so every other
+      // participant field (enrollment/graduation/payment/project/etc.)
+      // stays super-admin-only via the clause above.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "fgd_id", "fgd_code", "fgd_name", "fgd_attendance_status",
+            "fgd_feedback", "fgd_score", "selection_committee_feedback",
+            "evaluation_count", "average_evaluation_score", "selection_status",
+            "updated_at"
+          ]);
+
       allow delete: if isSuperAdmin();
     }
 
@@ -204,11 +219,14 @@ service cloud.firestore {
 
     match /participant_evaluations/{evaluationId} {
       allow read: if isAdmin() || isActiveChampion();
-      allow delete: if isSuperAdmin();
       // Create/update only happen via the backend's Admin SDK
       // (requireActiveChampion verifies the evaluator is actually assigned
-      // to the participant's FGD). Delete is super-admin-only so a regular
-      // admin can't bulk-purge a cohort's data from the client.
+      // to the participant's FGD). Delete was super-admin-only to stop a
+      // regular admin bulk-purging a cohort's data from the client; widened
+      // to isAdmin() for Reassign Participants, which only ever deletes the
+      // handful (<= REQUIRED_EVALUATIONS) of evaluation docs tied to one
+      // participant being moved — not a bulk-purge vector.
+      allow delete: if isAdmin();
     }
 
     match /fgd_change_requests/{requestId} {

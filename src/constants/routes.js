@@ -34,6 +34,8 @@ export const ROUTES = {
   selectionFGDDetails: "/admin/participants/selection/fgds/details/:fgdId",
   selectionRosters: "/admin/participants/selection/rosters",
   selectionRosterDetail: "/admin/participants/selection/rosters/:cohortId",
+  selectionReassign: "/admin/participants/selection/reassign",
+  selectionReassignCohort: "/admin/participants/selection/reassign/:cohortId",
 
   participants: "/admin/participants",
   bulkImportParticipants: "/admin/participants/bulk-import",
