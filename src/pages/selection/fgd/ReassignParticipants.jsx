@@ -168,6 +168,11 @@ export default function ReassignParticipants() {
     selectedIds.includes(p.id)
   );
 
+  const totalParticipantsInActiveFgds = activeFgds.reduce(
+    (sum, fgd) => sum + (Number(fgd.total_participants) || 0),
+    0
+  );
+
   return (
     <AdminLayout
       title="Reassign Participants"
@@ -180,6 +185,41 @@ export default function ReassignParticipants() {
         >
           ← Back to Cohorts
         </button>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-gray-500 text-sm">Active FGDs Remaining</p>
+            <h3 className="text-2xl font-bold text-[var(--ann-text-dark)]">
+              {activeFgds.length}
+            </h3>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-gray-500 text-sm">Participants Currently in Active FGDs</p>
+            <h3 className="text-2xl font-bold text-[var(--ann-text-dark)]">
+              {totalParticipantsInActiveFgds}
+            </h3>
+          </div>
+        </div>
+
+        {activeFgds.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+            <p className="text-sm font-semibold text-gray-700 mb-3">
+              Active FGD capacity
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {activeFgds.map((fgd) => (
+                <span
+                  key={fgd.id}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-gray-50 text-gray-700"
+                >
+                  {fgd.fgd_code} — {fgd.total_participants || 0}/
+                  {fgd.participant_limit || "-"}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
