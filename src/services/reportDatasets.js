@@ -35,10 +35,20 @@ const normalizeAnswerKey = (answer) => {
     .trim();
 };
 
-const flattenAnswers = (answers = []) => {
+// A question mapped to a Data Point (system or custom, via Form Builder →
+// "Map to Data Point") already has its own dedicated column elsewhere in
+// the row — the system ones as a real top-level field (name/email/phone/
+// gender/date_of_birth/institution), custom ones via
+// flattenCustomDataPoints(). Flattening its raw answer here too would show
+// the exact same value twice under two different-looking column names, so
+// any mapped field is skipped — only genuinely unmapped questions become
+// these ad-hoc, label-keyed "catch-all" columns.
+const flattenAnswers = (answers = [], mappedFieldIds = new Set()) => {
   const result = {};
 
   answers.forEach((answer) => {
+    if (mappedFieldIds.has(answer.field_id)) return;
+
     const key = normalizeAnswerKey(answer);
 
     if (!key) return;
@@ -51,13 +61,31 @@ const flattenAnswers = (answers = []) => {
   return result;
 };
 
+// Builds the set of form_field IDs currently mapped to any Data Point —
+// shared by every dataset/report source that flattens raw form answers.
+export const getMappedFieldIds = async () => {
+  const snapshot = await getDocs(collection(db, "form_fields"));
+  const mappedFieldIds = new Set();
+
+  snapshot.docs.forEach((item) => {
+    const data = item.data();
+    if (data.mapped_participant_field || data.data_point_id) {
+      mappedFieldIds.add(item.id);
+    }
+  });
+
+  return mappedFieldIds;
+};
+
 export const getParticipantMasterDataset = async () => {
-  const [participantSnapshot, responseSnapshot, fgdSnapshot, dataPoints] = await Promise.all([
-    getDocs(collection(db, "participants")),
-    getDocs(collection(db, "form_responses")),
-    getDocs(collection(db, "fgds")),
-    getDataPoints(),
-  ]);
+  const [participantSnapshot, responseSnapshot, fgdSnapshot, dataPoints, mappedFieldIds] =
+    await Promise.all([
+      getDocs(collection(db, "participants")),
+      getDocs(collection(db, "form_responses")),
+      getDocs(collection(db, "fgds")),
+      getDataPoints(),
+      getMappedFieldIds(),
+    ]);
 
   const responsesById = {};
 
@@ -85,7 +113,7 @@ export const getParticipantMasterDataset = async () => {
     };
 
     const response = responsesById[participant.response_id];
-    const formAnswers = flattenAnswers(response?.answers || []);
+    const formAnswers = flattenAnswers(response?.answers || [], mappedFieldIds);
     const fgd = participant.fgd_id ? fgdsById[participant.fgd_id] : null;
 
     return {
@@ -98,6 +126,7 @@ export const getParticipantMasterDataset = async () => {
       gender: participant.gender || "",
       date_of_birth: participant.date_of_birth || "",
       age: participant.age || "",
+      institution: participant.institution || "",
 
       cohort_name: participant.cohort_name || "",
       cohort_code: participant.cohort_code || "",

@@ -5,6 +5,7 @@ import {
   getCohortJourneyDataset,
   getFGDReportDataset,
   getChampionsActivityDataset,
+  getMappedFieldIds,
 } from "./reportDatasets";
 import { REPORT_SOURCES } from "../constants/reportColumns";
 import { getDataPoints } from "./dataPointService";
@@ -23,7 +24,12 @@ const formatTimestamp = (value) => {
   });
 };
 
-const flattenFormResponse = (response) => {
+// A question mapped to a Data Point (system or custom) already has its own
+// dedicated column elsewhere in the row (search_name/search_email/etc. for
+// system fields, or flattenCustomDataPoints()'s columns for custom ones) —
+// skip it here so its answer doesn't show up a second time under its raw
+// question-label text. Mirrors reportDatasets.js's identical guard.
+const flattenFormResponse = (response, mappedFieldIds = new Set()) => {
   const base = {
     id: response.id,
     participant_code: response.participant_code || "",
@@ -39,6 +45,8 @@ const flattenFormResponse = (response) => {
   const dynamicAnswers = {};
 
   (response.answers || []).forEach((answer) => {
+    if (mappedFieldIds.has(answer.field_id)) return;
+
     const key =
       answer.field_label_en ||
       answer.field_label_bn ||
@@ -114,8 +122,10 @@ export const getReportData = async (sourceKey) => {
   const dataPoints = await getDataPoints();
 
   if (sourceKey === "form_responses") {
+    const mappedFieldIds = await getMappedFieldIds();
+
     const rows = rawData.map((response) => ({
-      ...flattenFormResponse(response),
+      ...flattenFormResponse(response, mappedFieldIds),
       ...flattenCustomDataPoints(response, dataPoints),
     }));
 

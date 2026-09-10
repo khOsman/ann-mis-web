@@ -203,6 +203,7 @@ export const REPORT_SOURCES = {
       "gender",
       "date_of_birth",
       "age",
+      "institution",
       "cohort_name",
       "registration_status",
       "selection_status",
