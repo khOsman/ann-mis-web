@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import {
@@ -259,16 +259,59 @@ export default function CustomReportBuilder() {
     });
   }, [rows, advancedFilters, availableColumns]);
 
-  const handleSourceChange = (value) => {
-    const source = REPORT_SOURCES[value];
+  // Dataset/dynamic sources (participant_master, form_responses, cohorts,
+  // fgds, champions) derive their real column set from the actual fetched
+  // rows (joined/enriched fields, per-question form-answer columns) — the
+  // static REPORT_SOURCES[key].columns list is only a subset used as the
+  // pre-load placeholder. Loading the full data right when a source is
+  // picked (rather than waiting for an explicit "Run Report" click) is what
+  // makes every data point actually show up in the column picker and filter
+  // field list immediately, since both read from `availableColumns`.
+  const loadReportColumns = async (key) => {
+    setLoading(true);
 
+    try {
+      const result = await getReportData(key);
+
+      const columnsWithFilter = result.columns.map((column) => ({
+        ...column,
+        filter: column.filter || textFilter,
+      }));
+
+      const custom = REPORT_SOURCES[key]?.supportsCustomDataPoints
+        ? getCustomDataPointColumns(dataPoints)
+        : [];
+
+      const mergedColumns = mergeCustomColumns(columnsWithFilter, custom);
+
+      setRows(result.rows);
+      setBaseColumns(columnsWithFilter);
+
+      const fallbackColumns = REPORT_SOURCES[key].defaultColumns.filter(
+        (colKey) => mergedColumns.some((column) => column.key === colKey)
+      );
+
+      setSelectedColumns(fallbackColumns);
+    } catch (error) {
+      showAlert("error", error.message || "Failed to load report columns.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSourceChange = (value) => {
     setSourceKey(value);
-    setRows([]);
     setColumnSearch("");
     setAdvancedFilters([]);
-    setBaseColumns(source.columns);
-    setSelectedColumns(source.defaultColumns);
+    loadReportColumns(value);
   };
+
+  useEffect(() => {
+    loadReportColumns(sourceKey);
+    // Only ever meant to run once, for the initial default source — every
+    // later source switch goes through handleSourceChange instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleColumn = (key) => {
     setSelectedColumns((prev) =>
@@ -356,6 +399,8 @@ export default function CustomReportBuilder() {
       setRows(result.rows);
       setBaseColumns(columnsWithFilter);
 
+      // Re-running preserves whatever the admin already picked, unlike the
+      // initial source-load (loadReportColumns) which resets to defaults.
       const validSelected = selectedColumns.filter((key) =>
         mergedColumns.some((column) => column.key === key)
       );
