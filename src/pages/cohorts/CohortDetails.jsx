@@ -54,6 +54,7 @@ export default function CohortDetails() {
     [cohortParticipants]
   );
 
+  const [duplicatesChecked, setDuplicatesChecked] = useState(false);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
   const [participantPreview, setParticipantPreview] = useState(null);
   const [loadingParticipantPreview, setLoadingParticipantPreview] = useState(false);
@@ -77,7 +78,12 @@ export default function CohortDetails() {
     );
   };
 
-  const selectDuplicateParticipants = () => {
+  // Flags every extra copy in a duplicate group (same email or phone) for
+  // review, keeping the most-recently-submitted one per group untouched and
+  // unflagged as the "original" — matches findDuplicateParticipants'
+  // preselectIds, which already excludes that one.
+  const checkForDuplicates = () => {
+    setDuplicatesChecked(true);
     setSelectedParticipantIds([...preselectIds]);
   };
 
@@ -350,15 +356,13 @@ export default function CohortDetails() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {preselectIds.size > 0 && (
-                  <button
-                    type="button"
-                    onClick={selectDuplicateParticipants}
-                    className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-gray-400"
-                  >
-                    Select Duplicates ({preselectIds.size})
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={checkForDuplicates}
+                  className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-gray-400"
+                >
+                  Check for Duplicates
+                </button>
 
                 <button
                   type="button"
@@ -370,6 +374,14 @@ export default function CohortDetails() {
                 </button>
               </div>
             </div>
+
+            {duplicatesChecked && (
+              <p className="text-sm text-gray-600 mb-4">
+                {preselectIds.size > 0
+                  ? `Found ${preselectIds.size} duplicate participant(s), pre-selected below — the most recently submitted entry in each group is kept as the original and left unselected.`
+                  : "No duplicates found."}
+              </p>
+            )}
 
             {participantPreview && (
               <div className="space-y-4 bg-red-50 rounded-xl p-4 mb-4">
@@ -483,11 +495,18 @@ export default function CohortDetails() {
                         <td className="p-3">{participant.participant_code || "-"}</td>
                         <td className="p-3">
                           {participant.name || "-"}
-                          {duplicateIds.has(participant.id) && (
+                          {duplicatesChecked && preselectIds.has(participant.id) && (
                             <span className="ml-2 inline-block bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                               Duplicate
                             </span>
                           )}
+                          {duplicatesChecked &&
+                            !preselectIds.has(participant.id) &&
+                            duplicateIds.has(participant.id) && (
+                              <span className="ml-2 inline-block bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                Original
+                              </span>
+                            )}
                         </td>
                         <td className="p-3">{participant.email || "-"}</td>
                         <td className="p-3">{formatBDPhone(participant.phone) || "-"}</td>
