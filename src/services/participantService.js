@@ -83,6 +83,29 @@ const groupDuplicates = (participants, keyFn) => {
   return [...groups.values()].filter((group) => group.length > 1);
 };
 
+// Read-only duplicate detection, shared by the Cohort Details participant
+// panel — unlike deduplicateCohortParticipants below, this never deletes
+// anything itself, so it can safely flag EVERY duplicate (including anyone
+// already assigned to an FGD or evaluated) for a super admin to review and
+// decide on individually, rather than silently skipping them.
+export const findDuplicateParticipants = (participants) => {
+  const duplicateGroups = [
+    ...groupDuplicates(participants, (p) => normalizeEmail(p.email)),
+    ...groupDuplicates(participants, (p) => normalizePhone(p.phone)),
+  ];
+
+  const duplicateIds = new Set();
+  const preselectIds = new Set(); // every id except the most-recently-submitted per group
+
+  duplicateGroups.forEach((group) => {
+    const sorted = [...group].sort((a, b) => submittedAtMillis(b) - submittedAtMillis(a));
+    sorted.forEach((p) => duplicateIds.add(p.id));
+    sorted.slice(1).forEach((p) => preselectIds.add(p.id));
+  });
+
+  return { duplicateIds, preselectIds };
+};
+
 // Scans every participant in a cohort for duplicate email/phone, keeps the
 // most recently submitted registration per duplicate group, and removes the
 // rest (their participant + form_response docs) — used when registration

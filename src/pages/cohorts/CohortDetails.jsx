@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
@@ -7,13 +7,19 @@ import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../constants/routes";
 import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-import { useCohort } from "../../hooks";
+import { useCohort, useParticipants } from "../../hooks";
 import ParticipantImportBox from "../../components/cohorts/ParticipantImportBox";
 import CohortJourney from "../../components/cohorts/CohortJourney";
 import {
   previewCohortDataDeletion,
   deleteAllCohortData,
 } from "../../services/cohortDataDeletionService";
+import {
+  previewParticipantDelete,
+  hardDeleteParticipants,
+} from "../../services/participantDeletionService";
+import { findDuplicateParticipants } from "../../services/participantService";
+import { formatBDPhone } from "../../utils/phone";
 
 export default function CohortDetails() {
   const { id } = useParams();
@@ -29,6 +35,7 @@ export default function CohortDetails() {
   const backLabel = location.state?.fromLabel || "Cohorts";
 
   const { data: cohort, loading, error } = useCohort(id);
+  const { data: allParticipants, loading: participantsLoading } = useParticipants();
 
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -36,6 +43,82 @@ export default function CohortDetails() {
   const [confirmText, setConfirmText] = useState("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const cohortParticipants = useMemo(
+    () => allParticipants.filter((p) => p.cohort_id === id),
+    [allParticipants, id]
+  );
+
+  const { duplicateIds, preselectIds } = useMemo(
+    () => findDuplicateParticipants(cohortParticipants),
+    [cohortParticipants]
+  );
+
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
+  const [participantPreview, setParticipantPreview] = useState(null);
+  const [loadingParticipantPreview, setLoadingParticipantPreview] = useState(false);
+  const [participantConfirmText, setParticipantConfirmText] = useState("");
+  const [showParticipantConfirmDialog, setShowParticipantConfirmDialog] = useState(false);
+  const [deletingParticipants, setDeletingParticipants] = useState(false);
+
+  const toggleParticipantSelection = (participantId) => {
+    setSelectedParticipantIds((prev) =>
+      prev.includes(participantId)
+        ? prev.filter((id) => id !== participantId)
+        : [...prev, participantId]
+    );
+  };
+
+  const toggleSelectAllParticipants = () => {
+    setSelectedParticipantIds((prev) =>
+      prev.length === cohortParticipants.length
+        ? []
+        : cohortParticipants.map((p) => p.id)
+    );
+  };
+
+  const selectDuplicateParticipants = () => {
+    setSelectedParticipantIds([...preselectIds]);
+  };
+
+  const openParticipantDeletePreview = async () => {
+    setLoadingParticipantPreview(true);
+
+    try {
+      const data = await previewParticipantDelete(selectedParticipantIds);
+      setParticipantPreview(data);
+    } catch (err) {
+      showAlert("error", err.message || "Failed to load delete preview.");
+    } finally {
+      setLoadingParticipantPreview(false);
+    }
+  };
+
+  const closeParticipantDeletePreview = () => {
+    setParticipantPreview(null);
+    setParticipantConfirmText("");
+  };
+
+  const handleDeleteParticipants = async () => {
+    setShowParticipantConfirmDialog(false);
+    setDeletingParticipants(true);
+
+    try {
+      const result = await hardDeleteParticipants(selectedParticipantIds);
+
+      showAlert(
+        "success",
+        `Deleted ${result.deletedCount} participant(s), ${result.deletedResponses} response(s), and ${result.deletedEvaluations} evaluation(s).`
+      );
+
+      setSelectedParticipantIds([]);
+      closeParticipantDeletePreview();
+    } catch (err) {
+      showAlert("error", err.message || "Failed to delete participants.");
+    } finally {
+      setDeletingParticipants(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !cohort) {
@@ -254,6 +337,171 @@ export default function CohortDetails() {
         <CohortJourney cohort={cohort} />
 
         {isSuperAdmin && (
+          <div className="bg-white rounded-2xl border p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-bold">Participants</h3>
+                <p className="text-sm text-gray-600">
+                  Check for duplicates (matched by email or phone) and
+                  permanently remove selected participants — super admin
+                  only. Removal updates this cohort's stats, any assigned
+                  FGD's count, and everywhere else that reads this data.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {preselectIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={selectDuplicateParticipants}
+                    className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-gray-400"
+                  >
+                    Select Duplicates ({preselectIds.size})
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={selectedParticipantIds.length === 0}
+                  onClick={openParticipantDeletePreview}
+                  className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Delete Selected ({selectedParticipantIds.length})
+                </button>
+              </div>
+            </div>
+
+            {participantPreview && (
+              <div className="space-y-4 bg-red-50 rounded-xl p-4 mb-4">
+                {loadingParticipantPreview ? (
+                  <p className="text-sm text-gray-500">Loading counts...</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Participants</p>
+                      <p className="font-bold text-lg text-red-700">
+                        {participantPreview.participantCount}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Form Responses</p>
+                      <p className="font-bold text-lg text-red-700">
+                        {participantPreview.responseCount}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Evaluations</p>
+                      <p className="font-bold text-lg text-red-700">
+                        {participantPreview.evaluationCount}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Type <span className="font-mono text-red-600">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={participantConfirmText}
+                    onChange={(e) => setParticipantConfirmText(e.target.value)}
+                    placeholder="DELETE"
+                    className="w-full max-w-sm border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-400"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeParticipantDeletePreview}
+                    className="border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold hover:border-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      participantConfirmText !== "DELETE" ||
+                      deletingParticipants ||
+                      loadingParticipantPreview
+                    }
+                    onClick={() => setShowParticipantConfirmDialog(true)}
+                    className="bg-red-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {deletingParticipants ? "Deleting..." : "Delete Participants"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-x-auto rounded-2xl border border-gray-100">
+              <table className="w-full min-w-[700px] text-sm">
+                <thead className="bg-[#F9FAFB] text-gray-500">
+                  <tr>
+                    <th className="text-left p-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={
+                          cohortParticipants.length > 0 &&
+                          selectedParticipantIds.length === cohortParticipants.length
+                        }
+                        onChange={toggleSelectAllParticipants}
+                      />
+                    </th>
+                    <th className="text-left p-3">Participant Code</th>
+                    <th className="text-left p-3">Name</th>
+                    <th className="text-left p-3">Email</th>
+                    <th className="text-left p-3">Phone</th>
+                    <th className="text-left p-3">Status</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {participantsLoading ? (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-gray-500">
+                        Loading participants...
+                      </td>
+                    </tr>
+                  ) : cohortParticipants.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-gray-500">
+                        No participants in this cohort.
+                      </td>
+                    </tr>
+                  ) : (
+                    cohortParticipants.map((participant) => (
+                      <tr key={participant.id} className="border-t border-gray-100">
+                        <td className="p-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedParticipantIds.includes(participant.id)}
+                            onChange={() => toggleParticipantSelection(participant.id)}
+                          />
+                        </td>
+                        <td className="p-3">{participant.participant_code || "-"}</td>
+                        <td className="p-3">
+                          {participant.name || "-"}
+                          {duplicateIds.has(participant.id) && (
+                            <span className="ml-2 inline-block bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                              Duplicate
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3">{participant.email || "-"}</td>
+                        <td className="p-3">{formatBDPhone(participant.phone) || "-"}</td>
+                        <td className="p-3">{participant.selection_status || "-"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {isSuperAdmin && (
           <div className="bg-white rounded-2xl border border-red-200 p-6">
             <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
             <p className="text-sm text-gray-600 mb-4">
@@ -354,6 +602,17 @@ export default function CohortDetails() {
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setShowConfirmDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={showParticipantConfirmDialog}
+        title={`Delete ${selectedParticipantIds.length} participant(s)?`}
+        message={`This will permanently delete ${participantPreview?.participantCount || 0} participant(s), ${participantPreview?.responseCount || 0} form response(s), and ${participantPreview?.evaluationCount || 0} evaluation(s), and update this cohort's and any assigned FGD's counts. This cannot be undone.`}
+        confirmText="Delete Participants"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteParticipants}
+        onCancel={() => setShowParticipantConfirmDialog(false)}
       />
     </AdminLayout>
   );
