@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getDocs } from "firebase/firestore";
 import { useForms, useFormFields, useFGDsByCohort, useParticipants } from "../../hooks";
 import { ROUTES } from "../../constants/routes";
 import { ENROLLMENT_STATUS, GRADUATION_STATUS } from "../../constants/status";
-import { exportCSV, exportExcel, exportFormFieldsPDF } from "../../services/exportService";
+import {
+  exportCSV,
+  exportExcel,
+  exportFormFieldsPDF,
+  exportRegistrationTemplateXLSX,
+} from "../../services/exportService";
+import { formFieldsQuery } from "../../services/formService";
 import { syncFGDStatusIfEnded } from "../../services/fgdService";
+import { useAlert } from "../../context/AlertContext";
 import { formatBDPhone } from "../../utils/phone";
 
 const PARTICIPANT_COLUMNS = [
@@ -119,13 +127,64 @@ const RegistrationFormSection = ({ cohort }) => {
 };
 
 const FormRow = ({ form, cohort, expanded, onToggle }) => {
+  const { showAlert } = useAlert();
   const { data: fields, loading: loadingFields } = useFormFields(
     expanded ? form.id : null
   );
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingTemplate, setExportingTemplate] = useState(false);
+
+  // Fetched fresh on click rather than reused from `fields` above, since
+  // that only loads once this row has been expanded — exporting before
+  // ever clicking "View Questions" would otherwise silently produce an
+  // empty file.
+  const fetchFields = async () => {
+    const snapshot = await getDocs(formFieldsQuery(form.id));
+    return snapshot.docs
+      .map((item) => ({ ...item.data(), id: item.id }))
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  };
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+
+    try {
+      const freshFields = await fetchFields();
+
+      await exportFormFieldsPDF({
+        formTitle: form.form_title,
+        cohortName: cohort.cohort_name,
+        cohortCode: cohort.cohort_code,
+        fields: freshFields,
+      });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to export PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportTemplate = async () => {
+    setExportingTemplate(true);
+
+    try {
+      const freshFields = await fetchFields();
+
+      exportRegistrationTemplateXLSX({
+        cohortCode: cohort.cohort_code,
+        formTitle: form.form_title,
+        fields: freshFields,
+      });
+    } catch (error) {
+      showAlert("error", error.message || "Failed to export template.");
+    } finally {
+      setExportingTemplate(false);
+    }
+  };
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between gap-3 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div>
           <p className="font-semibold text-[var(--ann-text-dark)]">
             {form.form_title || "Untitled Form"}
@@ -138,18 +197,20 @@ const FormRow = ({ form, cohort, expanded, onToggle }) => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={loadingFields}
-            onClick={() =>
-              exportFormFieldsPDF({
-                formTitle: form.form_title,
-                cohortName: cohort.cohort_name,
-                cohortCode: cohort.cohort_code,
-                fields,
-              })
-            }
+            disabled={exportingPdf}
+            onClick={handleExportPdf}
             className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Export PDF
+            {exportingPdf ? "Exporting..." : "Export PDF"}
+          </button>
+          <button
+            type="button"
+            disabled={exportingTemplate}
+            onClick={handleExportTemplate}
+            title="Download a blank spreadsheet matching this form's questions, for manual/offline data collection"
+            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {exportingTemplate ? "Exporting..." : "Download Data Collection Template"}
           </button>
           <button
             type="button"
@@ -160,6 +221,11 @@ const FormRow = ({ form, cohort, expanded, onToggle }) => {
           </button>
         </div>
       </div>
+
+      <p className="px-4 pb-3 -mt-2 text-xs text-gray-400">
+        Fill the downloaded template in and upload it via Participants →
+        Bulk Import (super admin).
+      </p>
 
       {expanded && (
         <div className="border-t border-gray-100 p-4 bg-gray-50/50">

@@ -95,7 +95,7 @@ export const ADMIN_MENU_ITEMS = [
             permission: "selection",
           },
           {
-            label: "Reassign Participants",
+            label: "Reassign / Assign Participants",
             path: ROUTES.selectionReassign,
             icon: List,
             permission: "selection",

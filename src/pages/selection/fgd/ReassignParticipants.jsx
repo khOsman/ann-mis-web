@@ -18,13 +18,19 @@ import { formatBDPhone } from "../../../utils/phone";
 const isAbsent = (p) => p.fgd_attendance_status === FGD_ATTENDANCE_STATUS.ABSENT;
 const isRejected = (p) => p.selection_status === SELECTION_STATUS.REJECTED;
 const isWaitlisted = (p) => p.selection_status === SELECTION_STATUS.WAITLISTED;
-const isEligible = (p) => isAbsent(p) || isRejected(p) || isWaitlisted(p);
+// Never been placed into any FGD at all — e.g. bulk-imported after this
+// cohort's FGDs were already generated. distributeAcrossFGDs/
+// reassignParticipants (fgdService.js) don't assume any prior fgd_id, so
+// this category can reuse the exact same reassignment flow as the others.
+const isUnassigned = (p) => !p.fgd_id;
+const isEligible = (p) => isAbsent(p) || isRejected(p) || isWaitlisted(p) || isUnassigned(p);
 
 const CATEGORY_TABS = [
   { key: "all", label: "All", predicate: isEligible },
   { key: "absent", label: "Absent", predicate: isAbsent },
   { key: "rejected", label: "Rejected", predicate: isRejected },
   { key: "waitlisted", label: "Waitlisted", predicate: isWaitlisted },
+  { key: "unassigned", label: "Unassigned", predicate: isUnassigned },
 ];
 
 export default function ReassignParticipants() {
@@ -175,7 +181,7 @@ export default function ReassignParticipants() {
 
   return (
     <AdminLayout
-      title="Reassign Participants"
+      title="Reassign / Assign Participants"
       subtitle={cohort ? `${cohort.cohort_name} (${cohort.cohort_code})` : "Loading..."}
     >
       <PageContainer className="py-6 lg:py-8 space-y-6">
@@ -228,8 +234,8 @@ export default function ReassignParticipants() {
                 Participants needing reassignment
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Absent, Rejected, or Waitlisted participants can be moved into
-                another still-active FGD in this cohort.
+                Absent, Rejected, Waitlisted, or not-yet-assigned participants
+                can be moved into another still-active FGD in this cohort.
               </p>
             </div>
 
