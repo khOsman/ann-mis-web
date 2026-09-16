@@ -125,8 +125,21 @@ export function AuthProvider({ children }) {
     setAppUser(null);
   };
 
+  // A user's `permissions` map is a snapshot written whenever their role
+  // was last saved (UserProfile.jsx), not computed live from their role —
+  // so any permission key added after that (e.g. `manualEntry`) is simply
+  // absent from every already-existing account's stored doc, not `false`.
+  // Falling back to that role's current default only when the key is
+  // truly missing (not when an admin has deliberately unchecked it via
+  // UserProfile.jsx's per-permission toggles, which persists an explicit
+  // `false`) fixes every pre-existing account without a data migration,
+  // and does the same for any future permission key automatically.
   const hasPermission = (key) => {
-    return appUser?.permissions?.[key] === true;
+    const stored = appUser?.permissions?.[key];
+
+    if (stored !== undefined) return stored === true;
+
+    return getPermissionsByRole(appUser?.role)[key] === true;
   };
 
   const isChampion = appUser?.userType === "champion";
