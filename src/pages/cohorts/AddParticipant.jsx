@@ -9,6 +9,7 @@ import { submitPublicRegistration } from "../../services/publicRegistrationServi
 import DynamicFormFields, {
   isFieldVisible,
   validateField,
+  getLocalizedValue,
 } from "../../components/forms/DynamicFormFields";
 
 export default function AddParticipant() {
@@ -37,6 +38,7 @@ export default function AddParticipant() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleAnswerChange = (fieldId, value) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
@@ -56,12 +58,17 @@ export default function AddParticipant() {
     setErrors({});
   };
 
-  const handleSubmit = async (e) => {
+  const visibleFields = fields.filter((field) => isFieldVisible(field, answers));
+
+  // Validates and, if clean, opens the review modal instead of submitting
+  // straight away — the actual write happens only from handleConfirmSubmit
+  // once the admin/Youth Coordinator has reviewed the entered answers.
+  const handleReview = (e) => {
     e.preventDefault();
     if (!form) return;
 
     const nextErrors = {};
-    fields.filter((field) => isFieldVisible(field, answers)).forEach((field) => {
+    visibleFields.forEach((field) => {
       const error = validateField(field, answers[field.id], "en");
       if (error) nextErrors[field.id] = error;
     });
@@ -73,6 +80,10 @@ export default function AddParticipant() {
       return;
     }
 
+    setShowPreview(true);
+  };
+
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
 
     try {
@@ -85,6 +96,7 @@ export default function AddParticipant() {
 
       setLastSaved({ name });
       resetForm();
+      setShowPreview(false);
       showAlert("success", "Participant added successfully.");
     } catch (error) {
       console.error("Failed to add participant:", error);
@@ -150,7 +162,7 @@ export default function AddParticipant() {
               No registration form has been created for this cohort yet.
             </p>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleReview} className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-[var(--ann-text-dark)]">
                   {form.form_title}
@@ -179,12 +191,74 @@ export default function AddParticipant() {
                 disabled={submitting}
                 className="w-full bg-[var(--ann-pink)] text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {submitting ? "Saving..." : "Save Participant"}
+                Review & Save Participant
               </button>
             </form>
           )}
         </div>
       </PageContainer>
+
+      {showPreview && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+              Review before saving
+            </h3>
+            <p className="text-sm text-gray-500 mt-1 mb-5">
+              Double-check this participant's answers. Nothing is saved
+              until you confirm.
+            </p>
+
+            <div className="space-y-3">
+              {visibleFields
+                .filter((field) => field.field_type !== "section")
+                .map((field) => {
+                  const label = getLocalizedValue(
+                    field.label_en,
+                    field.label_bn,
+                    field.label,
+                    "en"
+                  );
+                  const value = answers[field.id];
+                  const displayValue = Array.isArray(value)
+                    ? value.join(", ")
+                    : value || "";
+
+                  return (
+                    <div
+                      key={field.id}
+                      className="flex justify-between gap-4 border-b border-gray-100 pb-2"
+                    >
+                      <span className="text-sm text-gray-500">{label}</span>
+                      <span className="text-sm font-semibold text-[var(--ann-text-dark)] text-right">
+                        {displayValue || "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                disabled={submitting}
+                className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:border-gray-400 disabled:opacity-50"
+              >
+                Back to Edit
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmit}
+                disabled={submitting}
+                className="px-5 py-2.5 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                {submitting ? "Saving..." : "Confirm & Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
