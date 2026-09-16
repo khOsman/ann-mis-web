@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../constants/routes";
 import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-import { useCohort, useParticipants } from "../../hooks";
+import { useCohort, useParticipants, useForms } from "../../hooks";
 import ParticipantImportBox from "../../components/cohorts/ParticipantImportBox";
 import CohortJourney from "../../components/cohorts/CohortJourney";
 import {
@@ -37,6 +37,16 @@ export default function CohortDetails() {
 
   const { data: cohort, loading, error } = useCohort(id);
   const { data: allParticipants, loading: participantsLoading } = useParticipants();
+  const { data: allForms } = useForms();
+
+  // "Add Participant" only makes sense while this cohort actually has a
+  // live (Published) registration form — a Closed/Draft-only form (e.g.
+  // registration has already moved into selection) would otherwise lead
+  // straight to a dead-end "no published form" message after clicking.
+  const hasPublishedForm = useMemo(
+    () => allForms.some((f) => f.cohort_id === id && f.status === "Published"),
+    [allForms, id]
+  );
 
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -334,7 +344,9 @@ export default function CohortDetails() {
           </div>
         </div>
 
-        {hasPermission("manualEntry") && cohort.status === COHORT_STATUS.ACTIVE && (
+        {hasPermission("manualEntry") &&
+          cohort.status === COHORT_STATUS.ACTIVE &&
+          hasPublishedForm && (
           <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
