@@ -27,7 +27,7 @@ export default function CohortDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showAlert } = useAlert();
-  const { isSuperAdmin, isViewer, hasPermission } = useAuth();
+  const { isAdmin, isSuperAdmin, isViewer, hasPermission } = useAuth();
 
   // Both the dashboard and AllCohorts.jsx link here — each passes where it
   // came from via navigation state so "Back" returns there instead of
@@ -39,12 +39,14 @@ export default function CohortDetails() {
   const { data: allParticipants, loading: participantsLoading } = useParticipants();
   const { data: allForms } = useForms();
 
-  // "Add Participant" only makes sense while this cohort actually has a
-  // live (Published) registration form — a Closed/Draft-only form (e.g.
-  // registration has already moved into selection) would otherwise lead
-  // straight to a dead-end "no published form" message after clicking.
-  const hasPublishedForm = useMemo(
-    () => allForms.some((f) => f.cohort_id === id && f.status === "Published"),
+  // "Add Participant" needs some registration form to exist for this
+  // cohort so there's something to render/submit against — but not
+  // specifically a Published one: a form is routinely marked Closed once
+  // the public registration window ends, while staff (Youth Coordinators
+  // especially) still need to key in a backlog of paper registrations for
+  // days afterward. Requiring Published would block exactly that.
+  const hasRegistrationForm = useMemo(
+    () => allForms.some((f) => f.cohort_id === id),
     [allForms, id]
   );
 
@@ -346,7 +348,7 @@ export default function CohortDetails() {
 
         {hasPermission("manualEntry") &&
           cohort.status === COHORT_STATUS.ACTIVE &&
-          hasPublishedForm && (
+          hasRegistrationForm && (
           <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
@@ -367,7 +369,11 @@ export default function CohortDetails() {
           </div>
         )}
 
-        {!isViewer && (
+        {/* Bulk CSV import is a broader capability than the narrow
+            single-participant manualEntry permission — Youth Coordinators
+            get the latter, not this, so this stays admin/super-admin only
+            (not just !isViewer, which youth_coordinator would pass too). */}
+        {isAdmin && (
           <ParticipantImportBox
             cohort={cohort}
             showAlert={showAlert}

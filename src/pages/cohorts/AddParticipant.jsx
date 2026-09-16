@@ -20,13 +20,16 @@ export default function AddParticipant() {
   const { data: allForms, loading: loadingForms } = useForms();
   const { data: fgds } = useFGDsByCohort(cohortId);
 
-  const form = useMemo(
-    () =>
-      allForms.find(
-        (f) => f.cohort_id === cohortId && f.status === "Published"
-      ),
-    [allForms, cohortId]
-  );
+  // Prefer the cohort's currently Published form (the live public link),
+  // but still fall back to its most recent form of any other status —
+  // registration commonly gets Closed to the public while staff keep
+  // entering a backlog of paper registrations for days afterward, and
+  // that shouldn't leave manual entry with nothing to submit against.
+  // useForms() already orders by created_at desc, so [0] is the newest.
+  const form = useMemo(() => {
+    const cohortForms = allForms.filter((f) => f.cohort_id === cohortId);
+    return cohortForms.find((f) => f.status === "Published") || cohortForms[0];
+  }, [allForms, cohortId]);
 
   const { data: fields, loading: loadingFields } = useFormFields(form?.id || null);
 
@@ -144,7 +147,7 @@ export default function AddParticipant() {
             <p className="text-gray-500">Loading form...</p>
           ) : !form ? (
             <p className="text-gray-500">
-              No published registration form for this cohort yet.
+              No registration form has been created for this cohort yet.
             </p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
