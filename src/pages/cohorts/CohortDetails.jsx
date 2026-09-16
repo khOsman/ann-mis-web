@@ -20,13 +20,14 @@ import {
 } from "../../services/participantDeletionService";
 import { findDuplicateParticipants } from "../../services/participantService";
 import { formatBDPhone } from "../../utils/phone";
+import { COHORT_STATUS } from "../../constants/status";
 
 export default function CohortDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { showAlert } = useAlert();
-  const { isSuperAdmin, isViewer } = useAuth();
+  const { isSuperAdmin, isViewer, hasPermission } = useAuth();
 
   // Both the dashboard and AllCohorts.jsx link here — each passes where it
   // came from via navigation state so "Back" returns there instead of
@@ -332,6 +333,27 @@ export default function CohortDetails() {
             </div>
           </div>
         </div>
+
+        {hasPermission("manualEntry") && cohort.status === COHORT_STATUS.ACTIVE && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
+                Add Participant
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Manually key in one participant's registration data — the
+                same form the public link uses.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(`/admin/cohorts/${id}/add-participant`)}
+              className="px-5 py-2.5 rounded-xl bg-[var(--ann-pink)] text-white text-sm font-semibold hover:opacity-90"
+            >
+              Add Participant
+            </button>
+          </div>
+        )}
 
         {!isViewer && (
           <ParticipantImportBox

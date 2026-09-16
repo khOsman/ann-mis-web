@@ -243,6 +243,7 @@ export default function UserProfile() {
                 >
                   <option value={USER_ROLES.PENDING}>Pending</option>
                   <option value={USER_ROLES.VIEWER}>Viewer</option>
+                  <option value={USER_ROLES.YOUTH_COORDINATOR}>Youth Coordinator</option>
                   <option value={USER_ROLES.ADMIN}>Admin</option>
                   <option value={USER_ROLES.SUPER_ADMIN}>Super Admin</option>
                 </select>

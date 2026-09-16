@@ -4,6 +4,12 @@ import { useParams } from "react-router-dom";
 import { db } from "../../firebase";
 import { submitPublicRegistration } from "../../services/publicRegistrationService";
 import { useAlert } from "../../context/AlertContext";
+import DynamicFormFields, {
+  hasContent,
+  getLocalizedValue,
+  isFieldVisible,
+  validateField,
+} from "../../components/forms/DynamicFormFields";
 
 export default function PublicForm() {
   const { slug } = useParams();
@@ -65,139 +71,9 @@ export default function PublicForm() {
     fetchPublicForm();
   }, [slug]);
 
-  const hasContent = (value) => {
-    if (!value) return false;
-
-    const textOnly = String(value)
-      .replace(/<[^>]*>/g, "")
-      .replace(/&nbsp;/g, "")
-      .replace(/\s/g, "")
-      .trim();
-
-    return textOnly.length > 0;
-  };
-
-  const getLocalizedValue = (enValue, bnValue, fallbackValue = "") => {
-    const hasEn = hasContent(enValue);
-    const hasBn = hasContent(bnValue);
-
-    if (hasEn && !hasBn) return enValue;
-    if (!hasEn && hasBn) return bnValue;
-    if (!hasEn && !hasBn) return fallbackValue || "";
-
-    return language === "bn" ? bnValue : enValue;
-  };
-
   const getFormDescription = () => {
     if (!formMeta) return "";
-    return getLocalizedValue(formMeta.description_en, formMeta.description_bn);
-  };
-
-  const getLabel = (field) => {
-    return getLocalizedValue(field.label_en, field.label_bn, field.label);
-  };
-
-  const getPlaceholder = (field) => {
-    return getLocalizedValue(
-      field.placeholder_en,
-      field.placeholder_bn,
-      field.placeholder
-    );
-  };
-
-  const getSectionDescription = (field) => {
-    return getLocalizedValue(field.description_en, field.description_bn);
-  };
-
-  const getValidationMessage = (field, fallbackEn, fallbackBn) => {
-    const validation = field.validation || {};
-
-    return language === "bn"
-      ? validation.error_message_bn || validation.error_message_en || fallbackBn
-      : validation.error_message_en || validation.error_message_bn || fallbackEn;
-  };
-
-  const calculateAge = (dateString) => {
-    if (!dateString) return null;
-
-    const today = new Date();
-    const birthDate = new Date(dateString);
-
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  };
-
-  const validateField = (field, value) => {
-    if (field.field_type === "section") return "";
-
-    if (field.required && !hasContent(value)) {
-      return language === "bn" ? "এই তথ্যটি আবশ্যক।" : "This field is required.";
-    }
-
-    if (!hasContent(value)) return "";
-
-    const validation = field.validation || {};
-
-    if (field.field_type === "date") {
-      const age = calculateAge(value);
-
-      if (validation.min_age && age < Number(validation.min_age)) {
-        return getValidationMessage(
-          field,
-          `Age must be at least ${validation.min_age} years.`,
-          `বয়স কমপক্ষে ${validation.min_age} বছর হতে হবে।`
-        );
-      }
-
-      if (validation.max_age && age > Number(validation.max_age)) {
-        return getValidationMessage(
-          field,
-          `Age must not exceed ${validation.max_age} years.`,
-          `বয়স ${validation.max_age} বছরের বেশি হতে পারবে না।`
-        );
-      }
-    }
-
-    if (field.field_type === "phone" && validation.pattern) {
-      const regex = new RegExp(validation.pattern);
-
-      if (!regex.test(value)) {
-        return getValidationMessage(
-          field,
-          "Please enter a valid mobile number.",
-          "সঠিক মোবাইল নম্বর লিখুন।"
-        );
-      }
-    }
-
-    return "";
-  };
-
-  const isFieldVisible = (field) => {
-    const condition = field.conditional_logic;
-
-    if (!condition || !condition.source_field_id) return true;
-
-    const matchValues = condition.match_values || [];
-
-    if (matchValues.length === 0) return false;
-
-    const sourceValue = answers[condition.source_field_id];
-
-    if (Array.isArray(sourceValue)) {
-      return sourceValue.some((value) => matchValues.includes(value));
-    }
-
-    return matchValues.includes(sourceValue);
+    return getLocalizedValue(formMeta.description_en, formMeta.description_bn, "", language);
   };
 
   // A field hidden by conditional logic shouldn't submit a stale answer
@@ -211,7 +87,7 @@ export default function PublicForm() {
       fields.forEach((field) => {
         if (
           field.conditional_logic &&
-          !isFieldVisible(field) &&
+          !isFieldVisible(field, prev) &&
           next[field.id] !== undefined
         ) {
           delete next[field.id];
@@ -251,8 +127,8 @@ export default function PublicForm() {
 
     const nextErrors = {};
 
-    fields.filter(isFieldVisible).forEach((field) => {
-      const error = validateField(field, answers[field.id]);
+    fields.filter((field) => isFieldVisible(field, answers)).forEach((field) => {
+      const error = validateField(field, answers[field.id], language);
 
       if (error) {
         nextErrors[field.id] = error;
@@ -287,123 +163,6 @@ export default function PublicForm() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const renderField = (field) => {
-    const label = getLabel(field);
-    const placeholder = getPlaceholder(field);
-
-    const inputClass = `w-full border rounded-xl px-4 py-3 text-sm focus:outline-none ${
-      errors[field.id]
-        ? "border-red-400 focus:border-red-500"
-        : "border-gray-300 focus:border-[#FF008C]"
-    }`;
-
-    if (field.field_type === "section") {
-      const sectionDescription = getSectionDescription(field);
-
-      return (
-        <div
-          key={field.id}
-          className="bg-[#2B2368] text-white rounded-2xl p-6 my-8"
-        >
-          {hasContent(label) && <h2 className="text-2xl font-bold">{label}</h2>}
-
-          {hasContent(sectionDescription) && (
-            <div
-              className="public-rich-text public-rich-text-dark mt-3 text-purple-100 leading-7"
-              dangerouslySetInnerHTML={{ __html: sectionDescription }}
-            />
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div key={field.id}>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {label}
-          {field.required && <span className="text-[#FF008C]"> *</span>}
-        </label>
-
-        {field.field_type === "textarea" && (
-          <textarea
-            placeholder={placeholder}
-            value={answers[field.id] || ""}
-            onChange={(e) => handleAnswerChange(field.id, e.target.value)}
-            className={`${inputClass} min-h-28`}
-          />
-        )}
-
-        {field.field_type === "dropdown" && (
-          <select
-            value={answers[field.id] || ""}
-            onChange={(e) => handleAnswerChange(field.id, e.target.value)}
-            className={inputClass}
-          >
-            <option value="">
-              {language === "bn" ? "নির্বাচন করুন" : "Select option"}
-            </option>
-            {(field.options || []).map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {field.field_type === "radio" && (
-          <div className="space-y-2">
-            {(field.options || []).map((option) => (
-              <label key={option} className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name={field.id}
-                  checked={answers[field.id] === option}
-                  onChange={() => handleAnswerChange(field.id, option)}
-                />
-                {option}
-              </label>
-            ))}
-          </div>
-        )}
-
-        {field.field_type === "checkbox" && (
-          <div className="space-y-2">
-            {(field.options || []).map((option) => (
-              <label key={option} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={(answers[field.id] || []).includes(option)}
-                  onChange={(e) =>
-                    handleCheckboxChange(field.id, option, e.target.checked)
-                  }
-                />
-                {option}
-              </label>
-            ))}
-          </div>
-        )}
-
-        {!["textarea", "dropdown", "radio", "checkbox"].includes(
-          field.field_type
-        ) && (
-          <input
-            type={field.field_type === "phone" ? "text" : field.field_type}
-            placeholder={placeholder}
-            value={answers[field.id] || ""}
-            onChange={(e) => handleAnswerChange(field.id, e.target.value)}
-            className={inputClass}
-          />
-        )}
-
-        {errors[field.id] && (
-          <p className="text-red-600 text-xs font-semibold mt-2">
-            {errors[field.id]}
-          </p>
-        )}
-      </div>
-    );
   };
 
   if (loading) {
@@ -513,7 +272,14 @@ export default function PublicForm() {
             {fields.length === 0 ? (
               <p className="text-gray-500">No fields found for this form.</p>
             ) : (
-              fields.filter(isFieldVisible).map((field) => renderField(field))
+              <DynamicFormFields
+                fields={fields}
+                answers={answers}
+                errors={errors}
+                language={language}
+                onAnswerChange={handleAnswerChange}
+                onCheckboxChange={handleCheckboxChange}
+              />
             )}
 
             <button

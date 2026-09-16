@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import CreateCohort from "./pages/cohorts/CreateCohort";
+import AddParticipant from "./pages/cohorts/AddParticipant";
 import AllCohorts from "./pages/cohorts/AllCohorts";
 import EditCohort from "./pages/cohorts/EditCohort";
 import CohortDetails from "./pages/cohorts/CohortDetails";
@@ -311,6 +312,15 @@ export default function App() {
             element={
               <ProtectedRoute permission="cohorts" adminOnly>
                 <EditCohort />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.addParticipant}
+            element={
+              <ProtectedRoute permission="manualEntry">
+                <AddParticipant />
               </ProtectedRoute>
             }
           />

@@ -39,6 +39,18 @@ service cloud.firestore {
         && get(currentUserDoc()).data.role == "super_admin";
     }
 
+    // Youth Coordinator: same read-only footprint as a plain viewer
+    // everywhere else, but allowed to manually key in a participant's
+    // registration data on an active cohort (AddParticipant.jsx), which
+    // calls the same submitPublicRegistration() transaction the public
+    // form uses. That transaction's participant/form_response writes are
+    // already open to everyone (see below), so this helper is only needed
+    // for the bounded cohort/form counter-increment clauses further down.
+    function isYouthCoordinator() {
+      return isActiveUser()
+        && get(currentUserDoc()).data.role == "youth_coordinator";
+    }
+
     function isActiveChampion() {
       return isSignedIn()
         && exists(currentChampionDoc())
@@ -99,6 +111,16 @@ service cloud.firestore {
         && request.resource.data.total_registrations == resource.data.total_registrations + 1
         && request.resource.data.current_participant_sequence
           == resource.data.get("current_participant_sequence", 0) + 1;
+
+      // Same bounded +1 as above, for a Youth Coordinator (or admin/super
+      // admin, already covered by isAdmin() above) manually submitting a
+      // registration from AddParticipant.jsx instead of the public form.
+      allow update: if isYouthCoordinator()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["total_registrations", "current_participant_sequence", "updated_at"])
+        && request.resource.data.total_registrations == resource.data.total_registrations + 1
+        && request.resource.data.current_participant_sequence
+          == resource.data.get("current_participant_sequence", 0) + 1;
     }
 
     match /forms/{formId} {
@@ -107,6 +129,12 @@ service cloud.firestore {
       // Same reasoning as cohorts above — bounded to the exact +1 the
       // public registration transaction performs.
       allow update: if request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["total_responses", "updated_at"])
+        && request.resource.data.total_responses == resource.data.total_responses + 1;
+
+      // Same bounded +1, for a Youth Coordinator's manual entry.
+      allow update: if isYouthCoordinator()
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["total_responses", "updated_at"])
         && request.resource.data.total_responses == resource.data.total_responses + 1;

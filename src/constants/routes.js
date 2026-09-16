@@ -5,6 +5,7 @@ export const ROUTES = {
   cohorts: "/admin/cohorts",
   createCohort: "/admin/cohorts/create",
   editCohort: "/admin/cohorts/:id/edit",
+  addParticipant: "/admin/cohorts/:id/add-participant",
 
   forms: "/admin/forms",
   createForm: "/admin/forms/create",
