@@ -128,6 +128,7 @@ export default function DynamicFormFields({
   language = "en",
   onAnswerChange,
   onCheckboxChange,
+  onFieldBlur,
 }) {
   const getLabel = (field) =>
     getLocalizedValue(field.label_en, field.label_bn, field.label, language);
@@ -242,6 +243,7 @@ export default function DynamicFormFields({
             placeholder={placeholder}
             value={answers[field.id] || ""}
             onChange={(e) => onAnswerChange(field.id, e.target.value)}
+            onBlur={(e) => onFieldBlur?.(field, e.target.value)}
             className={inputClass}
           />
         )}

@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -65,6 +66,26 @@ export const buildEmailLockData = (cohortId) => ({
   cohort_id: cohortId,
   created_at: serverTimestamp(),
 });
+
+// Fast "is this email already registered for this cohort?" lookup: one
+// document read by ID (the hashed lock), not a query or collection scan, so
+// it costs a single read however many registrations exist. Returns false
+// when the check can't be made (no email, no Web Crypto, or a read error) —
+// the registration transaction remains the real, race-safe guard.
+export const isEmailRegistered = async (cohortId, email) => {
+  try {
+    const lockId = await emailLockId(cohortId, email);
+
+    if (!lockId) return false;
+
+    const snapshot = await getDoc(emailLockRef(lockId));
+
+    return snapshot.exists();
+  } catch (error) {
+    console.warn("Email availability check failed:", error);
+    return false;
+  }
+};
 
 const commitInChunks = async (operations) => {
   for (let i = 0; i < operations.length; i += BATCH_SIZE) {

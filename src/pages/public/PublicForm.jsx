@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { useParams } from "react-router-dom";
 import { db } from "../../firebase";
 import { submitPublicRegistration } from "../../services/publicRegistrationService";
+import { isEmailRegistered, normalizeEmail } from "../../services/emailLockService";
 import { useAlert } from "../../context/AlertContext";
 import RegistrationSuccess from "../../components/forms/RegistrationSuccess";
 import DynamicFormFields, {
@@ -21,6 +22,7 @@ export default function PublicForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [participantCode, setParticipantCode] = useState("");
+  const emailCheckCache = useRef(new Map());
   const [formMeta, setFormMeta] = useState(null);
   const [fields, setFields] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -102,6 +104,38 @@ export default function PublicForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answers, fields]);
 
+  const duplicateEmailMessage = () =>
+    language === "bn"
+      ? "এই ইমেইল ঠিকানা দিয়ে ইতোমধ্যে রেজিস্ট্রেশন করা হয়েছে। অনুগ্রহ করে অন্য ইমেইল ঠিকানা ব্যবহার করুন।"
+      : "This email address has already been used to register. Please use a different email address.";
+
+  // Early feedback: as soon as the visitor leaves the email box, look the
+  // address up (one document read by ID — see isEmailRegistered) so a
+  // duplicate is flagged before they fill in the rest. Results are
+  // remembered per address so re-focusing the box costs nothing. Submitting
+  // still re-checks inside the registration transaction, which is what
+  // actually guarantees uniqueness.
+  const handleFieldBlur = async (field, value) => {
+    const emailField = findEmailField();
+
+    if (!emailField || field.id !== emailField.id || !formMeta) return;
+
+    const email = normalizeEmail(value);
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) return;
+
+    let registered = emailCheckCache.current.get(email);
+
+    if (registered === undefined) {
+      registered = await isEmailRegistered(formMeta.cohort_id, email);
+      emailCheckCache.current.set(email, registered);
+    }
+
+    if (registered) {
+      setErrors((prev) => ({ ...prev, [field.id]: duplicateEmailMessage() }));
+    }
+  };
+
   const handleAnswerChange = (fieldId, value) => {
     setAnswers((prev) => ({
       ...prev,
@@ -148,6 +182,15 @@ export default function PublicForm() {
       }
     });
 
+    // Already looked up and found registered while filling the form — no
+    // need to start the transaction just to be told the same thing.
+    const emailField = findEmailField();
+    const typedEmail = emailField ? normalizeEmail(answers[emailField.id]) : "";
+
+    if (typedEmail && emailCheckCache.current.get(typedEmail) === true) {
+      nextErrors[emailField.id] = duplicateEmailMessage();
+    }
+
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
@@ -169,10 +212,7 @@ export default function PublicForm() {
       window.scrollTo({ top: 0 });
     } catch (error) {
       if (error?.code === "duplicate-email") {
-        const message =
-          language === "bn"
-            ? "এই ইমেইল ঠিকানা দিয়ে ইতোমধ্যে রেজিস্ট্রেশন করা হয়েছে। অনুগ্রহ করে অন্য ইমেইল ঠিকানা ব্যবহার করুন।"
-            : "This email address has already been used to register. Please use a different email address.";
+        const message = duplicateEmailMessage();
         const emailField = findEmailField();
 
         if (emailField) {
@@ -305,6 +345,7 @@ export default function PublicForm() {
                 language={language}
                 onAnswerChange={handleAnswerChange}
                 onCheckboxChange={handleCheckboxChange}
+                onFieldBlur={handleFieldBlur}
               />
             )}
 
