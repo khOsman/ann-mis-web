@@ -8,6 +8,7 @@ import {
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { buildParticipantFromFactSheet } from "../builders";
+import { rebuildEmailLocksForCohort } from "./emailLockService";
 
 export const importParticipantsForCohort = async ({ rows, cohort }) => {
   if (!cohort?.id) {
@@ -47,6 +48,15 @@ export const importParticipantsForCohort = async ({ rows, cohort }) => {
   });
 
   await batch.commit();
+
+  // Imported participants bypass the public form, so register their emails
+  // for the one-registration-per-email check now. Best effort: the import
+  // itself has already succeeded.
+  try {
+    await rebuildEmailLocksForCohort(cohort.id);
+  } catch (error) {
+    console.error("Failed to index imported emails:", error);
+  }
 
   return {
     importedParticipants: rows.length,

@@ -13,6 +13,7 @@ import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { SELECTION_STATUS } from "../constants/status";
 import { apiClient } from "./apiClient";
+import { releaseEmailLocksForRemoved } from "./emailLockService";
 
 const DELETE_CHUNK_SIZE = 450; // stay under Firestore's 500-operation batch cap
 const WHERE_IN_CHUNK_SIZE = 30; // Firestore "in" query limit
@@ -96,6 +97,26 @@ export const hardDeleteParticipants = async (participantIds) => {
     batchDelete(COLLECTIONS.FORM_RESPONSES, responseIds),
     batchDelete(COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationIds),
   ]);
+
+  // Free each deleted participant's email for re-registration — unless
+  // another participant in the same cohort still holds it.
+  const removedByCohort = new Map();
+
+  participants.forEach((participant) => {
+    if (!participant.cohort_id) return;
+
+    if (!removedByCohort.has(participant.cohort_id)) {
+      removedByCohort.set(participant.cohort_id, []);
+    }
+
+    removedByCohort.get(participant.cohort_id).push(participant);
+  });
+
+  await Promise.all(
+    [...removedByCohort.entries()].map(([cohortId, removed]) =>
+      releaseEmailLocksForRemoved(cohortId, removed)
+    )
+  );
 
   // cohort.total_registrations is a live, actively-incremented counter —
   // decrement per affected cohort. total_selected has no trigger keeping it

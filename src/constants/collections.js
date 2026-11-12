@@ -11,4 +11,5 @@ export const COLLECTIONS = {
   FGD_CHANGE_REQUESTS: "fgd_change_requests",
   DATABASES: "databases",
   DATA_POINTS: "data_points",
+  REGISTRATION_EMAILS: "registration_emails",
 };

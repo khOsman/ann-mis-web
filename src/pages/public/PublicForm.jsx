@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { db } from "../../firebase";
 import { submitPublicRegistration } from "../../services/publicRegistrationService";
 import { useAlert } from "../../context/AlertContext";
+import RegistrationSuccess from "../../components/forms/RegistrationSuccess";
 import DynamicFormFields, {
   hasContent,
   getLocalizedValue,
@@ -19,6 +20,7 @@ export default function PublicForm() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [participantCode, setParticipantCode] = useState("");
   const [formMeta, setFormMeta] = useState(null);
   const [fields, setFields] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -122,6 +124,17 @@ export default function PublicForm() {
     handleAnswerChange(fieldId, nextValues);
   };
 
+  // The question the registrant typed their email into — mapped to the
+  // Email data point if the admin did that, otherwise an email-type question,
+  // otherwise one whose label mentions email. Used to show the "already
+  // registered" message right under it.
+  const findEmailField = () =>
+    fields.find((field) => field.mapped_participant_field === "email") ||
+    fields.find((field) => field.field_type === "email") ||
+    fields.find((field) =>
+      /e-?mail|ইমেইল|ই-মেইল/i.test(`${field.label_en || ""} ${field.label_bn || ""}`)
+    );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -145,14 +158,32 @@ export default function PublicForm() {
     setSubmitting(true);
 
     try {
-      await submitPublicRegistration({
+      const result = await submitPublicRegistration({
         formMeta,
         fields,
         answers,
       });
 
+      setParticipantCode(result?.participantCode || "");
       setSubmitted(true);
+      window.scrollTo({ top: 0 });
     } catch (error) {
+      if (error?.code === "duplicate-email") {
+        const message =
+          language === "bn"
+            ? "এই ইমেইল ঠিকানা দিয়ে ইতোমধ্যে রেজিস্ট্রেশন করা হয়েছে। অনুগ্রহ করে অন্য ইমেইল ঠিকানা ব্যবহার করুন।"
+            : "This email address has already been used to register. Please use a different email address.";
+        const emailField = findEmailField();
+
+        if (emailField) {
+          setErrors({ [emailField.id]: message });
+        }
+
+        showAlert("error", message);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       console.error("Failed to submit form:", error);
       showAlert(
         "error",
@@ -190,18 +221,13 @@ export default function PublicForm() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA] px-4">
-        <div className="bg-white border border-gray-200 rounded-3xl p-8 max-w-md text-center shadow-xl">
-          <h1 className="text-2xl font-bold text-[#2B2368]">
-            {language === "bn" ? "ধন্যবাদ!" : "Thank you!"}
-          </h1>
-          <p className="text-gray-600 mt-3">
-            {language === "bn"
-              ? "আপনার রেজিস্ট্রেশন সফলভাবে জমা হয়েছে।"
-              : "Your registration has been submitted successfully."}
-          </p>
-        </div>
-      </div>
+      <RegistrationSuccess
+        language={language}
+        formTitle={formMeta.form_title}
+        cohortName={formMeta.cohort_name}
+        cohortCode={formMeta.cohort_code}
+        participantCode={participantCode}
+      />
     );
   }
 

@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
+import { deleteAllEmailLocksForCohort } from "./emailLockService";
 
 const DELETE_CHUNK_SIZE = 450; // stay under Firestore's 500-operation batch cap
 const WHERE_IN_CHUNK_SIZE = 30; // Firestore "in" query limit
@@ -142,6 +143,8 @@ const wipeAllCohortData = async (cohortId) => {
     batchDelete(COLLECTIONS.FORMS, formIds),
     batchDelete(COLLECTIONS.FORM_FIELDS, formFieldIds),
     batchDelete(COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationIds),
+    // Their emails become free to register again.
+    deleteAllEmailLocksForCohort(cohortId),
   ]);
 
   // Runs after the FGDs are gone, not in parallel with them — it queries

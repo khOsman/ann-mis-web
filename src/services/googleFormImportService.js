@@ -17,6 +17,7 @@ import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { createCohort, createForm, createParticipant } from "../entities";
 import { REGISTRATION_STATUS } from "../constants/status";
+import { rebuildEmailLocksForCohort } from "./emailLockService";
 import { normalizeSlug, isSlugAvailable } from "./formService";
 import {
   getAnswerValueByKeywords,
@@ -700,6 +701,15 @@ export const runImport = async ({ fieldDefs, groups }) => {
       total_responses: increment(rowsToImport.length),
       updated_at: serverTimestamp(),
     });
+
+    // Imported participants bypass the public form, so register their
+    // emails for the one-registration-per-email check. Best effort: the
+    // import itself has already succeeded.
+    try {
+      await rebuildEmailLocksForCohort(cohort.id);
+    } catch (error) {
+      console.error("Failed to index imported emails:", error);
+    }
 
     summary.totalImported += rowsToImport.length;
   }

@@ -32,6 +32,7 @@ import { FIELD_TYPES } from "../../constants/fieldTypes";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { isSlugAvailable } from "../../services/formService";
 import { deduplicateCohortParticipants } from "../../services/participantService";
+import { rebuildEmailLocksForCohort } from "../../services/emailLockService";
 import { backfillMappedFieldsForForm } from "../../services/dataFieldBackfillService";
 import {
   useForm as useFormDoc,
@@ -120,6 +121,7 @@ export default function FormBuilder() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [indexingEmails, setIndexingEmails] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
 
   const { data: databases } = useDatabases();
@@ -477,6 +479,27 @@ export default function FormBuilder() {
       }
     };
 
+    const handleSyncEmailIndex = async () => {
+      if (!formMeta?.cohort_id) return;
+
+      setIndexingEmails(true);
+
+      try {
+        const result = await rebuildEmailLocksForCohort(formMeta.cohort_id);
+        showAlert(
+          result.duplicateEmails > 0 ? "warning" : "success",
+          `Email check synced: ${result.indexed} registered email(s) are now protected from being used again.` +
+            (result.duplicateEmails > 0
+              ? ` ${result.duplicateEmails} email(s) already appear on more than one registration (use Check for Duplicates).`
+              : "")
+        );
+      } catch (error) {
+        showAlert("error", error.message || "Failed to sync the email check.");
+      } finally {
+        setIndexingEmails(false);
+      }
+    };
+
     const handleBackfillMappedFields = async () => {
       setBackfilling(true);
 
@@ -531,14 +554,26 @@ export default function FormBuilder() {
         updated_at: serverTimestamp(),
         });
 
-        // Closing registration is the natural point to clean up duplicate
-        // registrations — before FGD generation or evaluation typically
-        // starts pulling from this cohort's participant list. Combined into
-        // one alert — the toast only ever shows the most recent call.
-        if (nextStatus === "Closed" && formMeta?.cohort_id) {
-          const result = await deduplicateCohortParticipants(formMeta.cohort_id);
-          const { type, text } = describeDedupResult(result);
-          showAlert(type, `Form closed. ${text}`);
+        // Duplicate emails are now refused at submit time (see
+        // emailLockService.js), so closing no longer removes anything. When
+        // publishing, bring the one-email-per-registration index up to date
+        // so registrations made before that check existed are covered too.
+        if (nextStatus === "Published" && formMeta?.cohort_id) {
+          try {
+            const result = await rebuildEmailLocksForCohort(formMeta.cohort_id);
+            showAlert(
+              result.duplicateEmails > 0 ? "warning" : "success",
+              result.duplicateEmails > 0
+                ? `Form status updated to Published. ${result.duplicateEmails} email(s) already appear on more than one existing registration — review them in Cohort Details > Check for Duplicates.`
+                : `Form status updated to Published.`
+            );
+          } catch (indexError) {
+            console.error("Failed to index registered emails:", indexError);
+            showAlert(
+              "warning",
+              "Form published, but the registered-email index could not be updated. Use \"Sync Email Check\" before sharing the link."
+            );
+          }
         } else {
           showAlert("success", `Form status updated to ${nextStatus}.`);
         }
@@ -743,9 +778,19 @@ const handleCopyLink = async () => {
             disabled={checkingDuplicates}
             onClick={handleCheckDuplicates}
             className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
-            title="Runs the same duplicate-registration cleanup that happens automatically when the form is closed."
+            title="Removes older duplicate registrations (same email or phone) that were submitted before the one-registration-per-email check existed. Anyone already in an FGD or evaluated is left alone."
             >
             {checkingDuplicates ? "Checking..." : "Check for Duplicates"}
+            </button>
+
+            <button
+            type="button"
+            disabled={indexingEmails}
+            onClick={handleSyncEmailIndex}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+            title="Registers every existing participant's email so it can't be used to register again. Runs automatically on Publish; use this after bulk imports or if Publish reported a problem."
+            >
+            {indexingEmails ? "Syncing..." : "Sync Email Check"}
             </button>
 
             <button

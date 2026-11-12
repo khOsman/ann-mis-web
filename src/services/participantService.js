@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
+import { releaseEmailLocksForRemoved } from "./emailLockService";
 
 // Unscoped — reads the whole `participants` collection across all cohorts.
 // Preserved as-is during the live-data migration (no admin capability
@@ -164,6 +165,11 @@ export const deduplicateCohortParticipants = async (cohortId) => {
 
       await batch.commit();
     }
+
+    // A removed duplicate that had a different email than the kept one
+    // (matched on phone) frees that email; a shared email stays locked
+    // because the kept registration still holds it.
+    await releaseEmailLocksForRemoved(cohortId, removed);
 
     const cohortRef = doc(db, COLLECTIONS.COHORTS, cohortId);
     const cohortSnap = await getDoc(cohortRef);

@@ -143,6 +143,22 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // One lock document per (cohort, email) — the ID is a SHA-256 hash, so
+    // no email is stored in plain text, and the document holds only the
+    // cohort and a timestamp. A registration (public form or staff manual
+    // entry) reads it and creates it inside its own transaction, which is
+    // what makes "same email can't register twice" race-safe. `get` is open
+    // because the anonymous registration transaction has to read it; `list`
+    // is not, so the set can't be browsed. Creating when one already exists
+    // is an update, which only admins may do (bulk-import indexing).
+    match /registration_emails/{lockId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(["cohort_id", "created_at"])
+        && request.resource.data.cohort_id is string;
+      allow update, delete: if isAdmin();
+    }
+
     match /form_fields/{fieldId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();

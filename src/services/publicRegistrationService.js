@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   increment,
   runTransaction,
   serverTimestamp,
@@ -10,6 +11,12 @@ import { createParticipant } from "../entities";
 import { REGISTRATION_STATUS } from "../constants/status";
 import { COLLECTIONS } from "../constants/collections";
 import { GENDERS } from "../constants/genders";
+import {
+  DuplicateEmailError,
+  buildEmailLockData,
+  emailLockId,
+  emailLockRef,
+} from "./emailLockService";
 
 const normalizeLabel = (answer) => {
   return `${answer.field_label_en || ""} ${
@@ -160,97 +167,128 @@ export const submitPublicRegistration = async ({
 
   const unixTime = Math.floor(Date.now() / 1000);
 
-  await runTransaction(db, async (transaction) => {
-    const cohortSnap = await transaction.get(cohortRef);
+  // One registration per email per cohort. The lock document is read and
+  // created inside the same transaction as the registration, so two
+  // simultaneous submissions of the same email can't both succeed.
+  let participantCode = "";
 
-    if (!cohortSnap.exists()) {
-      throw new Error("Cohort not found.");
+  const lockId = await emailLockId(formMeta.cohort_id, email);
+  const lockRef = lockId ? emailLockRef(lockId) : null;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const cohortSnap = await transaction.get(cohortRef);
+      const lockSnap = lockRef ? await transaction.get(lockRef) : null;
+
+      if (!cohortSnap.exists()) {
+        throw new Error("Cohort not found.");
+      }
+
+      if (lockSnap?.exists()) {
+        throw new DuplicateEmailError();
+      }
+
+      const cohortData = cohortSnap.data();
+      const currentSequence = Number(cohortData.current_participant_sequence || 0);
+      const nextSequence = currentSequence + 1;
+
+      participantCode = `ANN-${formMeta.cohort_code}-${String(
+        nextSequence
+      ).padStart(4, "0")}-${unixTime}`;
+
+      transaction.set(responseRef, {
+        form_id: formMeta.id,
+        form_title: formMeta.form_title,
+        public_slug: formMeta.public_slug,
+
+        cohort_id: formMeta.cohort_id,
+        cohort_name: formMeta.cohort_name,
+        cohort_code: formMeta.cohort_code,
+
+        participant_id: participantRef.id,
+        participant_code: participantCode,
+
+        search_name: name,
+        search_email: email,
+        search_phone: phone,
+
+        name,
+        email,
+        phone,
+        gender,
+        date_of_birth: dateOfBirth,
+        age,
+        institution,
+        custom_data: customData,
+
+        answers: responseAnswers,
+
+        submitted_at: serverTimestamp(),
+      });
+
+      const participantData = createParticipant({
+        id: participantRef.id,
+
+        participant_code: participantCode,
+
+        cohort_id: formMeta.cohort_id,
+        cohort_name: formMeta.cohort_name,
+        cohort_code: formMeta.cohort_code,
+
+        form_id: formMeta.id,
+        form_title: formMeta.form_title,
+        response_id: responseRef.id,
+
+        name,
+        email,
+        phone,
+        gender,
+        date_of_birth: dateOfBirth,
+        age,
+        institution,
+        custom_data: customData,
+
+        search_name: name,
+        search_email: email,
+        search_phone: phone,
+
+        registration_status: REGISTRATION_STATUS.REGISTERED,
+
+        submitted_at: serverTimestamp(),
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+
+      transaction.set(participantRef, participantData);
+
+      if (lockRef) {
+        transaction.set(lockRef, buildEmailLockData(formMeta.cohort_id));
+      }
+
+      transaction.update(formRef, {
+        total_responses: increment(1),
+        updated_at: serverTimestamp(),
+      });
+
+      transaction.update(cohortRef, {
+        total_registrations: increment(1),
+        current_participant_sequence: nextSequence,
+        updated_at: serverTimestamp(),
+      });
+    });
+  } catch (error) {
+    // Two people submitting the same email at the same instant both read
+    // "no lock yet"; the loser's commit is then rejected by the rules (the
+    // lock now exists, so creating it counts as an update). Show that as the
+    // duplicate it really is rather than a generic failure.
+    if (lockRef && error?.code === "permission-denied") {
+      const existing = await getDoc(lockRef).catch(() => null);
+
+      if (existing?.exists()) throw new DuplicateEmailError();
     }
 
-    const cohortData = cohortSnap.data();
-    const currentSequence = Number(cohortData.current_participant_sequence || 0);
-    const nextSequence = currentSequence + 1;
+    throw error;
+  }
 
-    const participantCode = `ANN-${formMeta.cohort_code}-${String(
-      nextSequence
-    ).padStart(4, "0")}-${unixTime}`;
-
-    transaction.set(responseRef, {
-      form_id: formMeta.id,
-      form_title: formMeta.form_title,
-      public_slug: formMeta.public_slug,
-
-      cohort_id: formMeta.cohort_id,
-      cohort_name: formMeta.cohort_name,
-      cohort_code: formMeta.cohort_code,
-
-      participant_id: participantRef.id,
-      participant_code: participantCode,
-
-      search_name: name,
-      search_email: email,
-      search_phone: phone,
-
-      name,
-      email,
-      phone,
-      gender,
-      date_of_birth: dateOfBirth,
-      age,
-      institution,
-      custom_data: customData,
-
-      answers: responseAnswers,
-
-      submitted_at: serverTimestamp(),
-    });
-
-    const participantData = createParticipant({
-      id: participantRef.id,
-
-      participant_code: participantCode,
-
-      cohort_id: formMeta.cohort_id,
-      cohort_name: formMeta.cohort_name,
-      cohort_code: formMeta.cohort_code,
-
-      form_id: formMeta.id,
-      form_title: formMeta.form_title,
-      response_id: responseRef.id,
-
-      name,
-      email,
-      phone,
-      gender,
-      date_of_birth: dateOfBirth,
-      age,
-      institution,
-      custom_data: customData,
-
-      search_name: name,
-      search_email: email,
-      search_phone: phone,
-
-      registration_status: REGISTRATION_STATUS.REGISTERED,
-
-      submitted_at: serverTimestamp(),
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp(),
-    });
-
-    transaction.set(participantRef, participantData);
-
-    transaction.update(formRef, {
-      total_responses: increment(1),
-      updated_at: serverTimestamp(),
-    });
-
-    transaction.update(cohortRef, {
-      total_registrations: increment(1),
-      current_participant_sequence: nextSequence,
-      updated_at: serverTimestamp(),
-    });
-  });
-
-  return responseRef.id;
+  return { responseId: responseRef.id, participantCode };
 };
