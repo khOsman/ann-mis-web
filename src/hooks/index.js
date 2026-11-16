@@ -6,3 +6,4 @@ export * from "./champions";
 export * from "./forms";
 export * from "./databases";
 export * from "./dataPoints";
+export * from "./phoneCalls";

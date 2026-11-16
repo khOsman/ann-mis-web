@@ -37,6 +37,7 @@ function buildMenuItems(roles) {
       children: [
         { label: "FGD Rosters", path: ROUTES.championFGDRosters, icon: List },
         { label: "Assigned FGDs", path: ROUTES.championFGDs, icon: List },
+        { label: "Phone Calls", path: ROUTES.championPhoneCalls, icon: List },
       ],
     });
   }

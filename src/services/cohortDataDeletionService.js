@@ -131,9 +131,10 @@ const wipeAllCohortData = async (cohortId) => {
   const { participantIds, responseIds, fgdIds, formIds } =
     await gatherDirectCohortIds(cohortId);
 
-  const [formFieldIds, evaluationIds] = await Promise.all([
+  const [formFieldIds, evaluationIds, phoneCallIds] = await Promise.all([
     getIdsWhereIn(COLLECTIONS.FORM_FIELDS, "form_id", formIds),
     getIdsWhereIn(COLLECTIONS.PARTICIPANT_EVALUATIONS, "fgd_id", fgdIds),
+    getIdsWhere(COLLECTIONS.PHONE_CALLS, "cohort_id", cohortId),
   ]);
 
   await Promise.all([
@@ -143,6 +144,7 @@ const wipeAllCohortData = async (cohortId) => {
     batchDelete(COLLECTIONS.FORMS, formIds),
     batchDelete(COLLECTIONS.FORM_FIELDS, formFieldIds),
     batchDelete(COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationIds),
+    batchDelete(COLLECTIONS.PHONE_CALLS, phoneCallIds),
     // Their emails become free to register again.
     deleteAllEmailLocksForCohort(cohortId),
   ]);

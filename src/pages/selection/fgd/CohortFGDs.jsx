@@ -144,6 +144,20 @@ function FGDListRow({
 
           <button
             type="button"
+            onClick={() =>
+              navigate(
+                ROUTES.selectionPhoneCallsFGD
+                  .replace(":cohortId", fgd.cohort_id)
+                  .replace(":fgdId", fgd.id)
+              )
+            }
+            className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+          >
+            Calls
+          </button>
+
+          <button
+            type="button"
             disabled={exportingFgdId === fgd.id}
             onClick={() => onExport(fgd)}
             className="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"

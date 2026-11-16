@@ -19,6 +19,8 @@ export const ROUTES = {
   championMyProfile: "/champions/profile",
   championFGDs: "/champions/fgds",
   championFGDDetail: "/champions/fgds/:fgdId",
+  championPhoneCalls: "/champions/phone-calls",
+  championPhoneCallsFGD: "/champions/phone-calls/:fgdId",
   championParticipantProfile: "/champions/fgds/:fgdId/participants/:participantId",
   championFGDRosters: "/champions/fgd-rosters",
   championFGDRosterDetail: "/champions/fgd-rosters/:cohortId",
@@ -36,6 +38,9 @@ export const ROUTES = {
   selectionFGDDetails: "/admin/participants/selection/fgds/details/:fgdId",
   selectionRosters: "/admin/participants/selection/rosters",
   selectionRosterDetail: "/admin/participants/selection/rosters/:cohortId",
+  selectionPhoneCalls: "/admin/participants/selection/phone-calls",
+  selectionPhoneCallsCohort: "/admin/participants/selection/phone-calls/:cohortId",
+  selectionPhoneCallsFGD: "/admin/participants/selection/phone-calls/:cohortId/:fgdId",
   selectionReassign: "/admin/participants/selection/reassign",
   selectionReassignCohort: "/admin/participants/selection/reassign/:cohortId",
 

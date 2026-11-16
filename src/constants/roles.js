@@ -29,6 +29,7 @@ export const DEFAULT_PERMISSIONS = {
   manualEntry: false,
   cohortRequest: false,
   cohortApproval: false,
+  phoneCall: false,
 };
 
 export const ROLE_PERMISSIONS = {
@@ -48,6 +49,7 @@ export const ROLE_PERMISSIONS = {
     manualEntry: true,
     cohortRequest: true,
     cohortApproval: true,
+    phoneCall: true,
   },
 
   admin: {
@@ -66,6 +68,7 @@ export const ROLE_PERMISSIONS = {
     manualEntry: true,
     cohortRequest: true,
     cohortApproval: false,
+    phoneCall: true,
   },
 
   viewer: {
@@ -84,6 +87,7 @@ export const ROLE_PERMISSIONS = {
     manualEntry: false,
     cohortRequest: false,
     cohortApproval: false,
+    phoneCall: false,
   },
 
   // Same read-only footprint as viewer, plus the ability to manually key in
@@ -105,6 +109,7 @@ export const ROLE_PERMISSIONS = {
     manualEntry: true,
     cohortRequest: true,
     cohortApproval: false,
+    phoneCall: true,
   },
 
   // Same read-only footprint as viewer, plus the authority to decide cohort
@@ -126,6 +131,7 @@ export const ROLE_PERMISSIONS = {
     manualEntry: false,
     cohortRequest: false,
     cohortApproval: true,
+    phoneCall: false,
   },
 
   pending: {
