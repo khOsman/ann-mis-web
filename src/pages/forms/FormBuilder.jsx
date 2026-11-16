@@ -33,6 +33,11 @@ import RichTextEditor from "../../components/common/RichTextEditor";
 import { isSlugAvailable } from "../../services/formService";
 import { deduplicateCohortParticipants } from "../../services/participantService";
 import { rebuildEmailLocksForCohort } from "../../services/emailLockService";
+import { getCohortById } from "../../services/cohortService";
+import {
+  getCohortApprovalStatus,
+  isCohortApproved,
+} from "../../constants/cohortApproval";
 import { backfillMappedFieldsForForm } from "../../services/dataFieldBackfillService";
 import {
   useForm as useFormDoc,
@@ -540,6 +545,21 @@ export default function FormBuilder() {
         if (!formMeta?.public_slug) {
         showAlert("warning", "Public slug is required before publishing.");
         return;
+        }
+
+        // A cohort can only open registration once the Programme Head has
+        // approved it. Cohorts from before the approval workflow count as
+        // approved (isCohortApproved), so existing forms are unaffected.
+        const parentCohort = formMeta.cohort_id
+          ? await getCohortById(formMeta.cohort_id)
+          : null;
+
+        if (parentCohort && !isCohortApproved(parentCohort)) {
+          showAlert(
+            "warning",
+            `This form's cohort is "${getCohortApprovalStatus(parentCohort)}". The form can be published only after the Programme Head approves the cohort.`
+          );
+          return;
         }
 
         if (fields.length === 0) {

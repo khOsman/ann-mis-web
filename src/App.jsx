@@ -6,6 +6,7 @@ import AddParticipant from "./pages/cohorts/AddParticipant";
 import AllCohorts from "./pages/cohorts/AllCohorts";
 import EditCohort from "./pages/cohorts/EditCohort";
 import CohortDetails from "./pages/cohorts/CohortDetails";
+import CohortApprovals from "./pages/cohorts/CohortApprovals";
 import AllForms from "./pages/forms/AllForms";
 import CreateForm from "./pages/forms/CreateForm";
 import EditForm from "./pages/forms/EditForm";
@@ -301,7 +302,7 @@ export default function App() {
           <Route
             path={ROUTES.createCohort}
             element={
-              <ProtectedRoute permission="cohorts" adminOnly>
+              <ProtectedRoute permission="cohortRequest">
                 <CreateCohort />
               </ProtectedRoute>
             }
@@ -310,8 +311,17 @@ export default function App() {
           <Route
             path={ROUTES.editCohort}
             element={
-              <ProtectedRoute permission="cohorts" adminOnly>
+              <ProtectedRoute permission="cohortRequest">
                 <EditCohort />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.cohortApprovals}
+            element={
+              <ProtectedRoute permission="cohortApproval">
+                <CohortApprovals />
               </ProtectedRoute>
             }
           />

@@ -51,6 +51,13 @@ service cloud.firestore {
         && get(currentUserDoc()).data.role == "youth_coordinator";
     }
 
+    // Programme Head: same read-only footprint as a viewer elsewhere, plus the
+    // authority to decide cohort approval requests (see the cohorts block).
+    function isProgrammeHead() {
+      return isActiveUser()
+        && get(currentUserDoc()).data.role == "programme_head";
+    }
+
     function isActiveChampion() {
       return isSignedIn()
         && exists(currentChampionDoc())
@@ -87,7 +94,101 @@ service cloud.firestore {
       // `get` (single doc by ID) rather than `read`, so the cohorts
       // collection still can't be listed/browsed anonymously.
       allow get: if true;
-      allow create, update: if isAdmin();
+      // ---- Cohort approval workflow ---------------------------------------
+      // A new cohort is created as a Draft with approval_status "Not
+      // Submitted", submitted to the Programme Head ("Pending Approval"), and
+      // decided there: Approved (which also makes it Active), Changes
+      // Requested, or Rejected. Cohorts that pre-date the workflow have no
+      // approval_status at all and count as Approved, so every existing
+      // write keeps working. The rules below make the decision itself
+      // Programme Head / super admin only: an admin or Youth Coordinator can
+      // submit and withdraw, but cannot approve their own request or
+      // activate an unapproved cohort by editing its status.
+      function approvalBefore() {
+        return resource.data.get("approval_status", "Approved");
+      }
+
+      function approvalAfter() {
+        return request.resource.data.get("approval_status", "Approved");
+      }
+
+      function approvalFields() {
+        return ["approval_status", "approval_requested_by_name",
+          "approval_requested_by_email", "approval_requested_at",
+          "approval_decided_by_name", "approval_decided_by_email",
+          "approval_decided_at", "approval_remarks", "approval_history"];
+      }
+
+      function auditFields() {
+        return ["updated_at", "updated_by_name", "updated_by_email"];
+      }
+
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      function isSubmission() {
+        return approvalBefore() in ["Not Submitted", "Changes Requested"]
+          && approvalAfter() == "Pending Approval"
+          && changedKeys().hasOnly(approvalFields().concat(auditFields()));
+      }
+
+      function isWithdrawal() {
+        return approvalBefore() == "Pending Approval"
+          && approvalAfter() == "Not Submitted"
+          && changedKeys().hasOnly(approvalFields().concat(auditFields()));
+      }
+
+      function isDecision() {
+        return approvalBefore() == "Pending Approval"
+          && approvalAfter() in ["Approved", "Changes Requested", "Rejected"]
+          && changedKeys().hasOnly(
+            approvalFields().concat(auditFields()).concat(["status"]))
+          && (approvalAfter() == "Approved"
+            ? request.resource.data.status == "Active"
+            : (request.resource.data.status == resource.data.get("status", "Draft")
+              && request.resource.data.get("approval_remarks", "").size() > 0));
+      }
+
+      // An ordinary edit never touches the approval fields and can't switch
+      // an unapproved cohort to Active.
+      function isPlainEdit() {
+        return !changedKeys().hasAny(approvalFields())
+          && (request.resource.data.get("status", "") != "Active"
+            || resource.data.get("status", "") == "Active"
+            || approvalBefore() == "Approved");
+      }
+
+      // What a Youth Coordinator may change on a draft they created.
+      function isRequesterEdit() {
+        return approvalBefore() in ["Not Submitted", "Changes Requested"]
+          && !changedKeys().hasAny(approvalFields().concat([
+            "status", "total_registrations", "total_selected", "total_enrolled",
+            "total_graduated", "total_dropouts", "total_fgds",
+            "current_participant_sequence", "created_by_email",
+            "created_by_name", "created_at", "is_deleted"]));
+      }
+
+      allow create: if isAdmin()
+        && (!("approval_status" in request.resource.data)
+          || (request.resource.data.approval_status == "Not Submitted"
+            && request.resource.data.status == "Draft"));
+
+      allow update: if isAdmin()
+        && (isPlainEdit() || isSubmission() || isWithdrawal());
+
+      allow update: if (isProgrammeHead() || isSuperAdmin()) && isDecision();
+
+      allow create: if isYouthCoordinator()
+        && request.resource.data.approval_status == "Not Submitted"
+        && request.resource.data.status == "Draft"
+        && request.resource.data.get("created_by_email", "") == request.auth.token.email
+        && request.resource.data.get("total_registrations", 0) == 0
+        && request.resource.data.get("current_participant_sequence", 0) == 0;
+
+      allow update: if isYouthCoordinator()
+        && resource.data.get("created_by_email", "") == request.auth.token.email
+        && (isSubmission() || isWithdrawal() || isRequesterEdit());
       allow delete: if isSuperAdmin();
 
       // The public registration form (publicRegistrationService.js) submits

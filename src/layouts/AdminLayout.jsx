@@ -1,14 +1,40 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useCohorts } from "../hooks";
+import {
+  COHORT_APPROVAL_STATUS,
+  getCohortApprovalStatus,
+} from "../constants/cohortApproval";
 import { Menu, X } from "lucide-react";
 import annLogo from "../assets/ann-logo.png";
 import { ADMIN_MENU_ITEMS } from "../constants/menuItems";
 import { BRAND } from "../constants/brand";
 import ImpersonationBanner from "../components/common/ImpersonationBanner";
 
+// Count of cohorts waiting for the Programme Head, shown beside the
+// "Approvals" menu entry. A tiny component of its own so the live cohorts
+// subscription is only opened for users who actually see that entry (the
+// hook is shared with the cohorts pages, so it does not add a second read).
+function PendingApprovalsBadge() {
+  const { data: cohorts } = useCohorts();
+
+  const count = cohorts.filter(
+    (cohort) =>
+      getCohortApprovalStatus(cohort) === COHORT_APPROVAL_STATUS.PENDING
+  ).length;
+
+  if (count === 0) return null;
+
+  return (
+    <span className="ml-1 min-w-5 rounded-full bg-white px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-[var(--ann-pink)]">
+      {count}
+    </span>
+  );
+}
+
 export default function AdminLayout({ children, title, subtitle }) {
-  const { appUser, logout, isSuperAdmin } = useAuth();
+  const { appUser, logout, isSuperAdmin, hasPermission } = useAuth();
   const permissions = appUser?.permissions || {};
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,7 +45,9 @@ export default function AdminLayout({ children, title, subtitle }) {
   const canShowItem = (item) => {
     if (isSuperAdmin) return true;
     if (!item.permission) return true;
-    return permissions?.[item.permission] === true;
+    // hasPermission (not the raw stored map) so a permission added after a
+    // user's doc was last saved still resolves from their role's defaults.
+    return hasPermission(item.permission);
   };
 
   const filterMenuItems = (items = []) => {
@@ -33,7 +61,7 @@ export default function AdminLayout({ children, title, subtitle }) {
 
   const visibleMenuItems = useMemo(() => {
     return filterMenuItems(ADMIN_MENU_ITEMS);
-  }, [permissions, isSuperAdmin]);
+  }, [permissions, isSuperAdmin, appUser?.role]);
 
   const isActive = (item) => {
     if (!item.path) return false;
@@ -89,6 +117,7 @@ export default function AdminLayout({ children, title, subtitle }) {
             {sidebarOpen && (
               <span className="flex items-center gap-2">
                 {item.label}
+                {item.badge === "pendingCohortApprovals" && <PendingApprovalsBadge />}
                 {item.disabled && (
                   <span className="text-[10px] uppercase tracking-wide bg-white/10 px-2 py-0.5 rounded-full">
                     Soon

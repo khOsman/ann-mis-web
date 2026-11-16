@@ -10,10 +10,7 @@ import {
   DISTRICTS_BY_DIVISION,
 } from "../../constants/locations";
 import { createCohortRecord } from "../../services/cohortService";
-import {
-  COHORT_STATUS,
-  COHORT_STATUS_OPTIONS,
-} from "../../constants/status";
+import { submitCohortForApproval } from "../../services/cohortApprovalService";
 import { validateCreateCohort } from "../../validators";
 import { buildCreateCohortPayload } from "../../builders";
 
@@ -31,7 +28,6 @@ export default function CreateCohort() {
     registration_end_date: "",
     selection_target: "",
     graduation_target: "",
-    status: COHORT_STATUS.DRAFT,
   };
 
   const [form, setForm] = useState(initialFormState);
@@ -72,9 +68,10 @@ export default function CreateCohort() {
 
  
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  // submitNow = true: create the cohort and send it straight to the
+  // Programme Head. Otherwise it is saved as a draft the requester can still
+  // edit, then submit later from the cohort's page.
+  const saveCohort = async (submitNow) => {
     if (!validateForm()) return;
 
     setSaving(true);
@@ -82,11 +79,25 @@ export default function CreateCohort() {
     try {
       const user = auth.currentUser;
 
-      await createCohortRecord(
+      const cohortId = await createCohortRecord(
         buildCreateCohortPayload(form, user)
       );
 
-      showAlert("success", "Cohort created successfully.");
+      if (submitNow) {
+        try {
+          await submitCohortForApproval({ cohortId, user });
+          showAlert("success", "Cohort created and submitted for approval.");
+        } catch (submitError) {
+          console.error("Cohort created but submission failed:", submitError);
+          showAlert(
+            "warning",
+            "Cohort saved as a draft, but it could not be submitted. Open the cohort and use Submit for Approval."
+          );
+        }
+      } else {
+        showAlert("success", "Cohort saved as a draft. Submit it for approval when ready.");
+      }
+
       resetForm();
     } catch (error) {
       console.error("Cohort creation failed:", error);
@@ -94,6 +105,11 @@ export default function CreateCohort() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveCohort(false);
   };
 
   return (
@@ -227,31 +243,28 @@ export default function CreateCohort() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
-              >
-                {COHORT_STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+            <div className="md:col-span-2 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+              A new cohort starts as a draft. It becomes Active, and its
+              registration form can be published, only after the Programme
+              Head approves it.
             </div>
 
-            <div className="md:col-span-2 flex justify-end">
+            <div className="md:col-span-2 flex flex-wrap justify-end gap-3">
               <button
                 type="submit"
                 disabled={saving}
+                className="border border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)] disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save as Draft"}
+              </button>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => saveCohort(true)}
                 className="bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Create Cohort"}
+                {saving ? "Saving..." : "Save & Submit for Approval"}
               </button>
             </div>
           </form>

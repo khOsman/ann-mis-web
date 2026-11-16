@@ -11,6 +11,7 @@ import {
   Users,
   Trophy,
   Database,
+  ClipboardCheck,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
@@ -32,7 +33,7 @@ export const ADMIN_MENU_ITEMS = [
         label: "Create Cohort",
         path: ROUTES.createCohort,
         icon: PlusCircle,
-        permission: "cohorts",
+        permission: "cohortRequest",
       },
       {
         label: "All Cohorts",
@@ -41,6 +42,14 @@ export const ADMIN_MENU_ITEMS = [
         permission: "cohorts",
       },
     ],
+  },
+
+  {
+    label: "Approvals",
+    path: ROUTES.cohortApprovals,
+    icon: ClipboardCheck,
+    permission: "cohortApproval",
+    badge: "pendingCohortApprovals",
   },
 
   {

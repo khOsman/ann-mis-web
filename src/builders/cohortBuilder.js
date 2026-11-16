@@ -1,3 +1,6 @@
+import { COHORT_STATUS } from "../constants/status";
+import { COHORT_APPROVAL_STATUS } from "../constants/cohortApproval";
+
 export const buildCreateCohortPayload = (form, user) => ({
   cohort_code: form.cohort_code.trim().toUpperCase(),
   cohort_name: form.cohort_name.trim(),
@@ -11,7 +14,11 @@ export const buildCreateCohortPayload = (form, user) => ({
   selection_target: Number(form.selection_target || 0),
   graduation_target: Number(form.graduation_target || 0),
 
-  status: form.status,
+  // A new cohort always starts as a Draft awaiting submission; it becomes
+  // Active only when the Programme Head approves it.
+  status: COHORT_STATUS.DRAFT,
+  approval_status: COHORT_APPROVAL_STATUS.NOT_SUBMITTED,
+  approval_history: [],
 
   created_by_email: user?.email || "",
   created_by_name: user?.displayName || "",

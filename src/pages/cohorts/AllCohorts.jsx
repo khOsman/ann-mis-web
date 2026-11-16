@@ -12,6 +12,8 @@ import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
+import CohortApprovalBadge from "../../components/cohorts/CohortApprovalBadge";
+import { canEditCohort } from "../../constants/cohortApproval";
 import { useCohorts } from "../../hooks";
 import {
   previewCohortDataDeletion,
@@ -23,7 +25,8 @@ const STATUS_FILTER_ALL = "All";
 export default function AllCohorts() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isSuperAdmin, isViewer } = useAuth();
+  const { isSuperAdmin, isAdmin, hasPermission } = useAuth();
+  const canRequest = hasPermission("cohortRequest");
 
   const {
     data: cohorts,
@@ -146,7 +149,7 @@ export default function AllCohorts() {
               </p>
             </div>
 
-            {!isViewer && (
+            {canRequest && (
               <button
                 onClick={() => navigate(ROUTES.createCohort)}
                 className="bg-[var(--ann-pink)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
@@ -258,9 +261,12 @@ export default function AllCohorts() {
                       </td>
 
                       <td className="p-4">
-                        <CohortStatusBadge
-                          status={cohort.status || COHORT_STATUS.DRAFT}
-                        />
+                        <div className="flex flex-col items-start gap-2">
+                          <CohortStatusBadge
+                            status={cohort.status || COHORT_STATUS.DRAFT}
+                          />
+                          <CohortApprovalBadge cohort={cohort} hideWhenApproved />
+                        </div>
                       </td>
 
                       <td className="p-4 text-gray-600">
@@ -298,7 +304,12 @@ export default function AllCohorts() {
                             View
                           </button>
 
-                          {!isViewer && (
+                          {canEditCohort({
+                            cohort,
+                            isAdmin,
+                            canRequest,
+                            userEmail: auth.currentUser?.email,
+                          }) && (
                             <button
                               onClick={() =>
                                 navigate(`/admin/cohorts/${cohort.id}/edit`)
@@ -309,7 +320,7 @@ export default function AllCohorts() {
                             </button>
                           )}
 
-                          {!isViewer && (
+                          {isAdmin && (
                             <button
                               onClick={() => setArchiveTarget(cohort)}
                               className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold"

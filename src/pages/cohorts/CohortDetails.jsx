@@ -9,6 +9,7 @@ import CohortStatusBadge from "../../components/cohorts/CohortStatusBadge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import { useCohort, useParticipants, useForms } from "../../hooks";
 import ParticipantImportBox from "../../components/cohorts/ParticipantImportBox";
+import CohortApprovalPanel from "../../components/cohorts/CohortApprovalPanel";
 import CohortJourney from "../../components/cohorts/CohortJourney";
 import {
   previewCohortDataDeletion,
@@ -345,6 +346,8 @@ export default function CohortDetails() {
             </div>
           </div>
         </div>
+
+        <CohortApprovalPanel cohort={cohort} />
 
         {hasPermission("manualEntry") &&
           cohort.status === COHORT_STATUS.ACTIVE &&

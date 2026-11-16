@@ -4,6 +4,16 @@ import { auth } from "../../firebase";
 import AdminLayout from "../../layouts/AdminLayout";
 import PageContainer from "../../layouts/PageContainer";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
+import CohortApprovalBadge from "../../components/cohorts/CohortApprovalBadge";
+import { submitCohortForApproval } from "../../services/cohortApprovalService";
+import {
+  COHORT_APPROVAL_STATUS,
+  canEditCohort,
+  getCohortApprovalStatus,
+  isCohortApproved,
+  isCohortEditableByRequester,
+} from "../../constants/cohortApproval";
 import {
   DIVISIONS,
   DISTRICTS_BY_DIVISION,
@@ -22,6 +32,7 @@ export default function EditCohort() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  const { isAdmin, hasPermission } = useAuth();
 
   const { data: cohort, loading, error } = useCohort(id);
 
@@ -107,9 +118,9 @@ export default function EditCohort() {
     return timestamp.toDate().toLocaleString("en-GB");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  // submitAfter = true (draft / changes-requested cohorts only): save the
+  // edits, then send the cohort to the Programme Head in a second write.
+  const saveCohort = async (submitAfter) => {
     if (!validateForm()) return;
 
     setSaving(true);
@@ -118,7 +129,21 @@ export default function EditCohort() {
       const user = auth.currentUser;
       await updateCohortRecord(id, buildUpdateCohortPayload(form, user));
 
-      showAlert("success", "Cohort updated successfully.");
+      if (submitAfter) {
+        try {
+          await submitCohortForApproval({ cohortId: id, user });
+          showAlert("success", "Cohort updated and submitted for approval.");
+        } catch (submitError) {
+          console.error("Cohort saved but submission failed:", submitError);
+          showAlert(
+            "warning",
+            "Changes saved, but the cohort could not be submitted. Use Submit for Approval on its page."
+          );
+        }
+      } else {
+        showAlert("success", "Cohort updated successfully.");
+      }
+
       navigate(ROUTES.cohorts);
     } catch (error) {
       console.error("Failed to update cohort:", error);
@@ -126,6 +151,11 @@ export default function EditCohort() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveCohort(false);
   };
 
   if (loading || !cohort) {
@@ -144,6 +174,18 @@ export default function EditCohort() {
     );
   }
 
+  const approvalStatus = getCohortApprovalStatus(cohort);
+  const canEdit = canEditCohort({
+    cohort,
+    isAdmin,
+    canRequest: hasPermission("cohortRequest"),
+    userEmail: auth.currentUser?.email,
+  });
+  const canSubmitAfterSave = canEdit && isCohortEditableByRequester(cohort);
+  // A cohort still in the approval process stays a Draft until approved, so
+  // its status can only be changed on an approved (or pre-approval-era) one.
+  const statusLocked = !isCohortApproved(cohort);
+
   return (
     <AdminLayout
       title="Edit Cohort"
@@ -157,7 +199,46 @@ export default function EditCohort() {
           ← Back to Cohorts
         </button>
 
+        {approvalStatus !== COHORT_APPROVAL_STATUS.APPROVED && (
+          <div className="max-w-5xl flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
+            <CohortApprovalBadge cohort={cohort} />
+            {approvalStatus === COHORT_APPROVAL_STATUS.PENDING && (
+              <span>
+                Awaiting the Programme Head&apos;s decision. This cohort can&apos;t be
+                edited meanwhile; withdraw the request from the cohort&apos;s page
+                to change it.
+              </span>
+            )}
+            {approvalStatus === COHORT_APPROVAL_STATUS.REJECTED && (
+              <span>This cohort was rejected and can no longer be edited.</span>
+            )}
+            {approvalStatus === COHORT_APPROVAL_STATUS.CHANGES_REQUESTED && (
+              <span>
+                Changes were requested. Update the cohort, then resubmit it.
+              </span>
+            )}
+            {!canEdit &&
+              approvalStatus !== COHORT_APPROVAL_STATUS.PENDING &&
+              approvalStatus !== COHORT_APPROVAL_STATUS.REJECTED && (
+                <span>You can only edit cohorts you created.</span>
+              )}
+          </div>
+        )}
+
+        {cohort.approval_remarks &&
+          approvalStatus === COHORT_APPROVAL_STATUS.CHANGES_REQUESTED && (
+            <div className="max-w-5xl rounded-2xl border border-orange-200 bg-orange-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Remarks from {cohort.approval_decided_by_name || "the Programme Head"}
+              </p>
+              <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
+                {cohort.approval_remarks}
+              </p>
+            </div>
+          )}
+
         <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">
+          <fieldset disabled={!canEdit} className="space-y-6 min-w-0 border-0 p-0 m-0">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
             <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
               Cohort Information
@@ -254,7 +335,13 @@ export default function EditCohort() {
                   name="status"
                   value={form.status}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
+                  disabled={statusLocked}
+                  title={
+                    statusLocked
+                      ? "The status changes to Active when the Programme Head approves the cohort."
+                      : undefined
+                  }
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)] disabled:bg-gray-100"
                 >
                   {COHORT_STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>
@@ -374,22 +461,47 @@ export default function EditCohort() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          </fieldset>
+
+          <div className="flex flex-wrap justify-end gap-3">
             <button
               type="button"
               onClick={() => navigate(ROUTES.cohorts)}
               className="px-5 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
             >
-              Cancel
+              {canEdit ? "Cancel" : "Back"}
             </button>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
-            >
-              {saving ? "Updating..." : "Update Cohort"}
-            </button>
+            {canEdit && (
+              <button
+                type="submit"
+                disabled={saving}
+                className={`px-6 py-3 rounded-xl font-semibold disabled:opacity-50 ${
+                  canSubmitAfterSave
+                    ? "border border-gray-300 text-gray-700 hover:border-[var(--ann-pink)] hover:text-[var(--ann-pink)]"
+                    : "bg-[var(--ann-pink)] text-white hover:opacity-90"
+                }`}
+              >
+                {saving
+                  ? "Updating..."
+                  : canSubmitAfterSave
+                  ? "Save Changes"
+                  : "Update Cohort"}
+              </button>
+            )}
+
+            {canSubmitAfterSave && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => saveCohort(true)}
+                className="bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                {approvalStatus === COHORT_APPROVAL_STATUS.CHANGES_REQUESTED
+                  ? "Save & Resubmit for Approval"
+                  : "Save & Submit for Approval"}
+              </button>
+            )}
           </div>
         </form>
       </PageContainer>
