@@ -22,6 +22,12 @@ import { releaseEmailLocksForRemoved } from "./emailLockService";
 export const participantsQuery = () =>
   query(collection(db, "participants"), orderBy("submitted_at", "desc"));
 
+// Every participant in one cohort — scoped (unlike participantsQuery above),
+// so pages that only care about a single cohort don't read the whole
+// collection.
+export const participantsByCohortQuery = (cohortId) =>
+  query(collection(db, "participants"), where("cohort_id", "==", cohortId));
+
 export const participantDocRef = (participantId) => doc(db, "participants", participantId);
 
 export const getParticipants = async () => {

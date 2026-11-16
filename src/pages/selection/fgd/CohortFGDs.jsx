@@ -14,11 +14,11 @@ import {
   useParticipantsByFGD,
 } from "../../../hooks";
 import {
-  generateFGDsForCohort,
   getParticipantsByFGD,
-  regenerateFGDsForCohort,
+  resetFGDsForCohort,
   syncFGDStatusIfEnded,
 } from "../../../services/fgdService";
+import FGDGenerationPanel from "../../../components/fgd/FGDGenerationPanel";
 import {
   assignChampionToFGD,
   unassignChampionFromFGD,
@@ -160,7 +160,10 @@ export default function CohortFGDs() {
   const { cohortId } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const { isViewer } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
+  // Generating and resetting FGDs are admin actions (the database rules
+  // refuse anyone else), so everyone who is not an admin gets the read view.
+  const isViewer = !isAdmin;
 
   const { data: cohort, loading: cohortLoading } = useCohort(cohortId);
   const { data: fgds, loading: loadingFgds } = useFGDsByCohort(cohortId);
@@ -175,11 +178,8 @@ export default function CohortFGDs() {
     });
   }, [fgds]);
 
-  const [participantLimit, setParticipantLimit] = useState(25);
-  const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [showRegeneratePanel, setShowRegeneratePanel] = useState(false);
-  const [regenerateLimit, setRegenerateLimit] = useState(25);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const { data: allChampions, loading: loadingCommittee } = useChampions();
@@ -340,42 +340,6 @@ export default function CohortFGDs() {
     }
   };
 
-  const handleGenerateFGDs = async () => {
-    if (!cohort) return;
-
-    if (!cohort.total_registrations || cohort.total_registrations === 0) {
-      showAlert(
-        "error",
-        "This cohort has no registered participants yet. FGDs cannot be generated until participants have registered."
-      );
-      return;
-    }
-
-    setGenerating(true);
-
-    try {
-      const user = auth.currentUser;
-
-      const result = await generateFGDsForCohort({
-        cohort,
-        participantLimit,
-        createdByEmail: user?.email || "",
-        createdByName: user?.displayName || "",
-      });
-
-      showAlert(
-        "success",
-        `${result.totalFGDs} FGDs generated for ${result.totalParticipants} participants.`
-      );
-      // No manual refetch needed — the live listener picks up the new FGDs.
-    } catch (error) {
-      console.error("FGD generation failed:", error);
-      showAlert("error", error.message || "Failed to generate FGDs.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   const handleRegenerateFGDs = async () => {
     if (!cohort) return;
 
@@ -389,23 +353,22 @@ export default function CohortFGDs() {
     try {
       const user = auth.currentUser;
 
-      const result = await regenerateFGDsForCohort({
-        cohort,
-        participantLimit: regenerateLimit,
+      await resetFGDsForCohort({
+        cohortId: cohort.id,
         updatedByEmail: user?.email || "",
         updatedByName: user?.displayName || "",
       });
 
       showAlert(
         "success",
-        `FGDs regenerated: ${result.totalFGDs} groups for ${result.totalParticipants} participants.`
+        "FGDs reset. Use Generate FGDs to create them again, first come first served."
       );
 
       setShowRegeneratePanel(false);
-      // No manual refetch needed — the live listener picks up the regenerated FGDs.
+      // No manual refetch needed — the live listener picks up the change.
     } catch (error) {
-      console.error("FGD regeneration failed:", error);
-      showAlert("error", error.message || "Failed to regenerate FGDs.");
+      console.error("FGD reset failed:", error);
+      showAlert("error", error.message || "Failed to reset FGDs.");
     } finally {
       setRegenerating(false);
     }
@@ -442,52 +405,20 @@ export default function CohortFGDs() {
             Loading FGDs...
           </div>
         ) : fgds.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-[var(--ann-text-dark)]">
-              Generate FGDs
-            </h3>
-
-            {!cohort?.total_registrations ? (
-              <p className="text-sm text-gray-500 mt-2">
-                No participants have registered for this cohort yet. FGDs can be
-                generated once participants have registered.
-              </p>
-            ) : isViewer ? (
-              <p className="text-sm text-gray-500 mt-2">
-                No FGDs have been generated for this cohort yet.
-              </p>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500 mt-2">
-                  No FGDs have been generated for this cohort yet.
-                </p>
-
-                <div className="mt-5 max-w-sm">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Participants per FGD
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    value={participantLimit}
-                    onChange={(e) => setParticipantLimit(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  disabled={generating}
-                  onClick={handleGenerateFGDs}
-                  className="mt-5 bg-[var(--ann-pink)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
-                >
-                  {generating ? "Generating..." : "Generate FGDs"}
-                </button>
-              </>
-            )}
-          </div>
+          isViewer ? (
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-sm text-gray-500">
+              No FGDs have been generated for this cohort yet.
+            </div>
+          ) : !cohort?.total_registrations ? (
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-sm text-gray-500">
+              No participants have registered for this cohort yet. FGDs can be
+              generated once participants have registered.
+            </div>
+          ) : (
+            <FGDGenerationPanel cohort={cohort} fgds={fgds} />
+          )
         ) : (
+          <>
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -500,39 +431,26 @@ export default function CohortFGDs() {
                 </p>
               </div>
 
-              {!isViewer && (
+              {isSuperAdmin && (
                 <button
                   type="button"
                   onClick={() => setShowRegeneratePanel((prev) => !prev)}
                   className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold"
                 >
-                  {showRegeneratePanel ? "Cancel" : "Regenerate FGDs"}
+                  {showRegeneratePanel ? "Cancel" : "Reset FGDs"}
                 </button>
               )}
             </div>
 
-            {showRegeneratePanel && !isViewer && (
+            {showRegeneratePanel && isSuperAdmin && (
               <div className="px-6 py-5 border-b border-gray-200 bg-red-50/50">
                 <p className="text-sm text-red-700 font-semibold">
-                  Warning: regenerating permanently deletes all {fgds.length} existing
-                  FGD group(s) and resets every affected participant's attendance,
-                  scores, feedback, and selection decision (Selected/Waitlisted/
-                  Rejected) back to Pending. This cannot be undone.
+                  Warning: this permanently deletes all {fgds.length} FGD group(s)
+                  of this cohort and puts every participant back in the queue.
+                  It is only allowed while no attendance has been marked and no
+                  evaluation has been submitted; once an FGD has progressed,
+                  generate further FGDs instead.
                 </p>
-
-                <div className="mt-4 max-w-sm">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Participants per FGD
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    value={regenerateLimit}
-                    onChange={(e) => setRegenerateLimit(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--ann-pink)]"
-                  />
-                </div>
 
                 <button
                   type="button"
@@ -540,7 +458,7 @@ export default function CohortFGDs() {
                   onClick={handleRegenerateFGDs}
                   className="mt-4 bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
                 >
-                  {regenerating ? "Regenerating..." : "Confirm Regenerate"}
+                  {regenerating ? "Resetting..." : "Confirm Reset"}
                 </button>
               </div>
             )}
@@ -580,6 +498,9 @@ export default function CohortFGDs() {
               </table>
             </div>
           </div>
+
+          {!isViewer && <FGDGenerationPanel cohort={cohort} fgds={fgds} />}
+          </>
         )}
       </PageContainer>
 
@@ -709,9 +630,9 @@ export default function CohortFGDs() {
 
       <ConfirmDialog
         open={showConfirmDialog}
-        title="Regenerate FGD Groups?"
-        message={`This will permanently delete all ${fgds.length} existing FGD group(s) for this cohort and reset every affected participant's attendance, scores, feedback, and selection decision (Selected/Waitlisted/Rejected) back to Pending. This cannot be undone.`}
-        confirmText="Regenerate"
+        title="Reset FGD Groups?"
+        message={`This will permanently delete all ${fgds.length} FGD group(s) for this cohort and put every participant back in the queue. This cannot be undone.`}
+        confirmText="Reset"
         cancelText="Cancel"
         variant="danger"
         onConfirm={performRegenerateFGDs}

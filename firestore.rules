@@ -295,6 +295,7 @@ service cloud.firestore {
             "fgd_id", "fgd_code", "fgd_name", "fgd_attendance_status",
             "fgd_feedback", "fgd_score", "selection_committee_feedback",
             "evaluation_count", "average_evaluation_score", "selection_status",
+            "fgd_held", "fgd_history",
             "updated_at"
           ]);
 
@@ -372,6 +373,14 @@ service cloud.firestore {
       // handful (<= REQUIRED_EVALUATIONS) of evaluation docs tied to one
       // participant being moved — not a bulk-purge vector.
       allow delete: if isAdmin();
+    }
+
+    // Evaluations set aside when someone is re-placed in a new FGD (an absent
+    // or waitlisted participant starting again). Written by an admin running a
+    // generation round; never edited or deleted from the client.
+    match /participant_evaluation_history/{evaluationId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
     }
 
     match /fgd_change_requests/{requestId} {

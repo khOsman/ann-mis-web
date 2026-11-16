@@ -59,7 +59,7 @@ const batchDelete = async (collectionName, ids) => {
 // mirrors the same filter logic ann-mis-server's POST /champions/:id/
 // unassign-fgd uses for a single champion/FGD, just fanned out across
 // every champion touched by this cohort wipe.
-const cleanupChampionFgdAssignments = async (fgdIds) => {
+export const cleanupChampionFgdAssignments = async (fgdIds) => {
   if (fgdIds.length === 0) return 0;
 
   const fgdIdSet = new Set(fgdIds);

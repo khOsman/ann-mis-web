@@ -12,49 +12,9 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
-import { REGISTRATION_STATUS, SELECTION_STATUS } from "../constants/status";
+import { SELECTION_STATUS } from "../constants/status";
 import { FGD_ATTENDANCE_STATUS, FGD_STATUS } from "../constants/fgd";
-import { createFGD } from "../entities";
-
-// An FGD group smaller than this isn't worth running on its own — if the
-// leftover after filling full-size groups is below this, those leftover
-// participants get spread one-by-one across the existing groups instead of
-// forming an undersized final group.
-const MIN_PARTICIPANTS_PER_FGD = 10;
-
-export const distributeParticipantsIntoFGDGroups = (participants, limit) => {
-  const total = participants.length;
-
-  if (total <= limit) {
-    return [participants];
-  }
-
-  const baseGroupCount = Math.floor(total / limit);
-  const remainder = total % limit;
-
-  const groups = [];
-
-  for (let index = 0; index < baseGroupCount; index += 1) {
-    groups.push(participants.slice(index * limit, (index + 1) * limit));
-  }
-
-  if (remainder === 0) {
-    return groups;
-  }
-
-  const leftover = participants.slice(baseGroupCount * limit);
-
-  if (remainder < MIN_PARTICIPANTS_PER_FGD) {
-    // Top-to-bottom: give group 1 an extra participant, then group 2, etc.
-    leftover.forEach((participant, index) => {
-      groups[index % groups.length].push(participant);
-    });
-  } else {
-    groups.push(leftover);
-  }
-
-  return groups;
-};
+import { cleanupChampionFgdAssignments } from "./cohortDataDeletionService";
 
 export const fgdsByCohortQuery = (cohortId) =>
   query(
@@ -84,132 +44,6 @@ export const getFGDById = async (fgdId) => {
   return {
     ...snapshot.data(),
     id: snapshot.id,
-  };
-};
-
-export const generateFGDsForCohort = async ({
-  cohort,
-  participantLimit,
-  createdByEmail = "",
-  createdByName = "",
-}) => {
-  if (!cohort?.id) {
-    throw new Error("Cohort is required.");
-  }
-
-  const limit = Number(participantLimit);
-
-  if (!limit || limit <= 0) {
-    throw new Error("Participant limit must be greater than 0.");
-  }
-
-  // Sorting is done client-side rather than via Firestore's orderBy("name"):
-  // combining orderBy(field) with where() filters makes Firestore silently
-  // drop any document missing that field entirely, which would exclude
-  // otherwise-eligible participants (e.g. bulk-imported records with a
-  // blank name) from FGD generation with no error.
-  const participantsQuery = query(
-    collection(db, COLLECTIONS.PARTICIPANTS),
-    where("cohort_id", "==", cohort.id),
-    where("registration_status", "==", REGISTRATION_STATUS.REGISTERED),
-    where("selection_status", "==", SELECTION_STATUS.PENDING)
-  );
-
-  const participantSnap = await getDocs(participantsQuery);
-
-  const participants = participantSnap.docs
-    .map((item) => ({
-      ...item.data(),
-      id: item.id,
-    }))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-
-  if (participants.length === 0) {
-    throw new Error("No eligible registered participants found.");
-  }
-
-  const existingFgdSnap = await getDocs(
-    query(collection(db, COLLECTIONS.FGDS), where("cohort_id", "==", cohort.id))
-  );
-
-  if (!existingFgdSnap.empty) {
-    throw new Error("FGDs have already been generated for this cohort.");
-  }
-
-  const batch = writeBatch(db);
-  const groups = distributeParticipantsIntoFGDGroups(participants, limit);
-  const totalFGDs = groups.length;
-
-  groups.forEach((groupParticipants, index) => {
-    const sequenceNo = index + 1;
-
-    const fgdRef = doc(collection(db, COLLECTIONS.FGDS));
-
-    const fgdCode = `${cohort.cohort_code}-FGD-${String(sequenceNo).padStart(
-      3,
-      "0"
-    )}`;
-
-    const fgdName = `FGD ${String(sequenceNo).padStart(2, "0")}`;
-
-    const fgd = createFGD({
-      id: fgdRef.id,
-
-      cohort_id: cohort.id,
-      cohort_name: cohort.cohort_name,
-      cohort_code: cohort.cohort_code,
-
-      sequence_no: sequenceNo,
-      fgd_code: fgdCode,
-      fgd_name: fgdName,
-
-      participant_limit: limit,
-      total_participants: groupParticipants.length,
-      total_pending_feedback: groupParticipants.length,
-
-      status: FGD_STATUS.DRAFT,
-
-      created_at: serverTimestamp(),
-      created_by_email: createdByEmail,
-      created_by_name: createdByName,
-
-      updated_at: serverTimestamp(),
-      updated_by_email: createdByEmail,
-      updated_by_name: createdByName,
-    });
-
-    batch.set(fgdRef, fgd);
-
-    groupParticipants.forEach((participant) => {
-      const participantRef = doc(db, COLLECTIONS.PARTICIPANTS, participant.id);
-
-      batch.update(participantRef, {
-        fgd_id: fgdRef.id,
-        fgd_code: fgdCode,
-        fgd_name: fgdName,
-        fgd_attendance_status: FGD_ATTENDANCE_STATUS.PENDING,
-        fgd_feedback: "",
-        fgd_score: "",
-        selection_committee_feedback: "",
-        updated_at: serverTimestamp(),
-      });
-    });
-  });
-
-  const cohortRef = doc(db, COLLECTIONS.COHORTS, cohort.id);
-
-  batch.update(cohortRef, {
-    total_fgds: totalFGDs,
-    updated_at: serverTimestamp(),
-    updated_by_email: createdByEmail,
-    updated_by_name: createdByName,
-  });
-
-  await batch.commit();
-
-  return {
-    totalFGDs,
-    totalParticipants: participants.length,
   };
 };
 
@@ -278,29 +112,93 @@ export const deleteFGDsForCohort = async ({
   await batch.commit();
 };
 
-export const regenerateFGDsForCohort = async ({
-  cohort,
-  participantLimit,
+// Deletes every FGD of a cohort and puts everyone back in the queue — only
+// while nothing has happened in any of them. Once attendance has been marked,
+// a result recorded or an evaluation (even a draft) saved, deleting would
+// destroy real work, so it is refused: further FGDs are generated as new
+// rounds instead (see fgdRoundService.js). Committee assignments on the
+// deleted FGDs are removed from the committee members too.
+export const resetFGDsForCohort = async ({
+  cohortId,
   updatedByEmail = "",
   updatedByName = "",
 }) => {
-  await deleteFGDsForCohort({
-    cohortId: cohort.id,
-    updatedByEmail,
-    updatedByName,
+  if (!cohortId) {
+    throw new Error("Cohort is required.");
+  }
+
+  const [fgdSnap, participantSnap] = await Promise.all([
+    getDocs(query(collection(db, COLLECTIONS.FGDS), where("cohort_id", "==", cohortId))),
+    getDocs(
+      query(collection(db, COLLECTIONS.PARTICIPANTS), where("cohort_id", "==", cohortId))
+    ),
+  ]);
+
+  if (fgdSnap.empty) return;
+
+  const progressed = participantSnap.docs.filter((item) => {
+    const data = item.data();
+
+    return (
+      (data.fgd_id && data.fgd_attendance_status &&
+        data.fgd_attendance_status !== FGD_ATTENDANCE_STATUS.PENDING) ||
+      Number(data.evaluation_count) > 0 ||
+      (data.selection_status && data.selection_status !== SELECTION_STATUS.PENDING)
+    );
   });
 
-  return generateFGDsForCohort({
-    cohort,
-    participantLimit,
-    createdByEmail: updatedByEmail,
-    createdByName: updatedByName,
+  if (progressed.length > 0) {
+    throw new Error(
+      `${progressed.length} participant(s) already have attendance or results recorded, so these FGDs cannot be reset. Generate new FGDs instead.`
+    );
+  }
+
+  const fgdIds = fgdSnap.docs.map((item) => item.id);
+
+  for (let i = 0; i < fgdIds.length; i += 30) {
+    const evaluationSnap = await getDocs(
+      query(
+        collection(db, COLLECTIONS.PARTICIPANT_EVALUATIONS),
+        where("fgd_id", "in", fgdIds.slice(i, i + 30))
+      )
+    );
+
+    if (!evaluationSnap.empty) {
+      throw new Error(
+        "Evaluations (including drafts) already exist for these FGDs, so they cannot be reset."
+      );
+    }
+  }
+
+  await deleteFGDsForCohort({ cohortId, updatedByEmail, updatedByName });
+
+  await cleanupChampionFgdAssignments(fgdIds);
+
+  // Held participants are ordinary new registrations again, and numbering
+  // starts over, since no FGD is left.
+  const heldIds = participantSnap.docs
+    .filter((item) => item.data().fgd_held)
+    .map((item) => item.id);
+
+  for (let i = 0; i < heldIds.length; i += 400) {
+    const batch = writeBatch(db);
+
+    heldIds.slice(i, i + 400).forEach((id) => {
+      batch.update(doc(db, COLLECTIONS.PARTICIPANTS, id), {
+        fgd_held: false,
+        updated_at: serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+  }
+
+  await updateDoc(doc(db, COLLECTIONS.COHORTS, cohortId), {
+    fgd_sequence_counter: 0,
+    updated_at: serverTimestamp(),
   });
 };
 
-// No orderBy here — combining orderBy(field) with where() filters makes
-// Firestore silently drop any document missing that field entirely. Sorted
-// client-side instead (see generateFGDsForCohort for the same reasoning).
 export const participantsByFGDQuery = (fgdId) =>
   query(collection(db, COLLECTIONS.PARTICIPANTS), where("fgd_id", "==", fgdId));
 

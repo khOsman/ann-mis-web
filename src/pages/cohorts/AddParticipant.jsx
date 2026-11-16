@@ -148,7 +148,9 @@ export default function AddParticipant() {
                 >
                   Reassign / Assign Participants → Unassigned
                 </button>{" "}
-                to place them into a non-completed FGD.
+                to place them into a non-completed FGD, or generate new FGDs
+                from the cohort's FGD page, where they join the queue in
+                registration order.
               </p>
             )}
           </div>
