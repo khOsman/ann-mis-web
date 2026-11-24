@@ -14,22 +14,40 @@ export const RECOMMENDATION_OPTIONS = {
 
 export const REQUIRED_EVALUATIONS = 3;
 
+// Result cut-offs on the participant's average score (0-100): 65 and above is
+// Selected, 40 to below 65 is Waitlisted, below 40 is Rejected. Mirrors
+// ann-mis-server/constants/evaluation.js.
+export const SELECTED_MIN_SCORE = 65;
+export const WAITLISTED_MIN_SCORE = 40;
+
 // Mirrors ann-mis-server/constants/evaluation.js's deriveSelectionStatus
 // exactly — used client-side only when a super admin removes an evaluation
 // and the participant's aggregate needs recomputing without a round trip
 // to the backend (Firestore rules already allow this write directly).
 export const deriveSelectionStatus = (averageScore) => {
-  if (averageScore >= 70) return "Selected";
-  if (averageScore >= 40) return "Waitlisted";
+  if (averageScore >= SELECTED_MIN_SCORE) return "Selected";
+  if (averageScore >= WAITLISTED_MIN_SCORE) return "Waitlisted";
   return "Rejected";
 };
 
 export const ATTENDANCE_OPTIONS = ["Pending", "Present", "Absent"];
 
-// BRAC's official Participant Selection rubric — 7 weighted criteria summing
-// to 100, replacing the old manual 0-10 "FGD Score" field. Mirrors
-// ann-mis-server/constants/evaluation.js exactly.
-export const RUBRIC_CRITERIA = [
+// Two versions of BRAC's Participant Selection rubric exist side by side.
+//   v1 (legacy): 7 weighted criteria, used by every FGD that already had
+//     evaluations when v2 was introduced; an evaluation saved without a
+//     rubric_version is v1.
+//   v2 (current): 4 criteria of 25 points each (the "Updated Rubric" form).
+// Each FGD is locked to one version the first time anyone evaluates in it, so
+// all three committee members score on the same rubric and the participant's
+// average is always like for like. Both are out of 100.
+export const RUBRIC_VERSION = {
+  V1: "v1",
+  V2: "v2",
+};
+
+export const CURRENT_RUBRIC_VERSION = RUBRIC_VERSION.V2;
+
+const RUBRIC_V1_CRITERIA = [
   {
     key: "values_empathy",
     label: "Values & Empathy",
@@ -81,7 +99,53 @@ export const RUBRIC_CRITERIA = [
   },
 ];
 
-export const RUBRIC_MAX_TOTAL = RUBRIC_CRITERIA.reduce(
-  (sum, criterion) => sum + criterion.maxScore,
-  0
-); // 100
+const RUBRIC_V2_CRITERIA = [
+  {
+    key: "social_consciousness",
+    label: "Social Consciousness",
+    description:
+      "Demonstrates respect, empathy, inclusivity, and a non-judgmental attitude; understands social issues and local realities; shows sensitivity toward diverse perspectives and a genuine willingness to contribute to positive social change.",
+    maxScore: 25,
+  },
+  {
+    key: "learning_problem_solving",
+    label: "Learning & Problem-Solving",
+    description:
+      "Demonstrates self-awareness and willingness to learn from experiences and feedback; reflects on actions and mistakes; analyses problems logically, considers multiple perspectives, questions assumptions, and develops practical, solution-oriented approaches.",
+    maxScore: 25,
+  },
+  {
+    key: "leadership_teamwork",
+    label: "Leadership & Teamwork",
+    description:
+      "Takes ownership and demonstrates initiative in addressing problems; is proactive and solution-oriented; encourages participation, values others' contributions, works effectively in teams, and demonstrates the ability to lead or contribute constructively toward a shared goal.",
+    maxScore: 25,
+  },
+  {
+    key: "communication_expression",
+    label: "Communication & Expression",
+    description:
+      "Expresses thoughts and ideas clearly and transparently; listens actively; communicates respectfully with others; can articulate observations and perspectives using relevant facts, examples, or data; and responds constructively to differing opinions.",
+    maxScore: 25,
+  },
+];
+
+const sumMax = (criteria) => criteria.reduce((sum, criterion) => sum + criterion.maxScore, 0);
+
+export const RUBRICS = {
+  [RUBRIC_VERSION.V1]: {
+    version: RUBRIC_VERSION.V1,
+    label: "Previous rubric (7 criteria)",
+    criteria: RUBRIC_V1_CRITERIA,
+    maxTotal: sumMax(RUBRIC_V1_CRITERIA), // 100
+  },
+  [RUBRIC_VERSION.V2]: {
+    version: RUBRIC_VERSION.V2,
+    label: "Updated rubric (4 criteria)",
+    criteria: RUBRIC_V2_CRITERIA,
+    maxTotal: sumMax(RUBRIC_V2_CRITERIA), // 100
+  },
+};
+
+// A missing or unknown version is a pre-existing evaluation: v1.
+export const getRubric = (version) => RUBRICS[version] || RUBRICS[RUBRIC_VERSION.V1];

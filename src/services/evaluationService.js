@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   updateDoc,
@@ -12,6 +13,15 @@ import { db } from "../firebase";
 import { COLLECTIONS } from "../constants/collections";
 import { REQUIRED_EVALUATIONS, deriveSelectionStatus } from "../constants/evaluation";
 import { SELECTION_STATUS } from "../constants/status";
+
+// At most one evaluation of an FGD — enough to tell whether anyone has
+// started evaluating in it (see useFgdRubricVersion).
+export const anyEvaluationInFgdQuery = (fgdId) =>
+  query(
+    collection(db, COLLECTIONS.PARTICIPANT_EVALUATIONS),
+    where("fgd_id", "==", fgdId),
+    limit(1)
+  );
 
 export const participantEvaluationsQuery = (participantId) =>
   query(

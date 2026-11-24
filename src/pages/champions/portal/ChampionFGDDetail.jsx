@@ -4,7 +4,13 @@ import ChampionLayout from "../../../layouts/ChampionLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAuth } from "../../../context/AuthContext";
 import { useAlert } from "../../../context/AlertContext";
-import { useChampions, useParticipantsByFGD, useMyFgdEvaluations } from "../../../hooks";
+import {
+  useChampions,
+  useFGD,
+  useFgdRubricVersion,
+  useParticipantsByFGD,
+  useMyFgdEvaluations,
+} from "../../../hooks";
 import {
   requestFGDChange,
   markAttendance,
@@ -14,17 +20,16 @@ import {
   FEEDBACK_OPTIONS,
   RECOMMENDATION_OPTIONS,
   ATTENDANCE_OPTIONS,
-  RUBRIC_CRITERIA,
-  RUBRIC_MAX_TOTAL,
+  RUBRIC_VERSION,
+  getRubric,
 } from "../../../constants/evaluation";
 import { ensureHttpUrl } from "../../../utils/url";
 import { formatTimeRangeBDT } from "../../../utils/time";
 import { formatBDPhone } from "../../../utils/phone";
 import { ROUTES } from "../../../constants/routes";
 
-const EMPTY_RUBRIC_SCORES = Object.fromEntries(
-  RUBRIC_CRITERIA.map((criterion) => [criterion.key, ""])
-);
+const emptyRubricScores = (rubric) =>
+  Object.fromEntries(rubric.criteria.map((criterion) => [criterion.key, ""]));
 
 const ATTENDANCE_SELECT_CLASSES = {
   Present: "border-green-300 text-green-700 font-semibold bg-green-50",
@@ -32,16 +37,23 @@ const ATTENDANCE_SELECT_CLASSES = {
   Pending: "border-amber-300 text-amber-700 font-semibold bg-amber-50",
 };
 
-const BLANK_EVALUATION_FORM = {
-  rubric_scores: EMPTY_RUBRIC_SCORES,
+const blankEvaluationForm = (rubric) => ({
+  rubric_scores: emptyRubricScores(rubric),
   feedback_option: "",
   recommendation_option: "",
   notes: "",
-};
+});
 
-function EvaluationModal({ target, onClose, onSaved }) {
+// fgdRubricVersion is the version the FGD is scored on (null while still being
+// worked out). An evaluation the committee member already saved keeps the
+// rubric it was started on, even if the FGD has since been locked differently.
+function EvaluationModal({ target, fgdRubricVersion, onClose, onSaved }) {
   const { showAlert } = useAlert();
-  const [form, setForm] = useState(BLANK_EVALUATION_FORM);
+  const rubricVersion = target?.evaluation
+    ? target.evaluation.rubric_version || RUBRIC_VERSION.V1
+    : fgdRubricVersion;
+  const rubric = getRubric(rubricVersion);
+  const [form, setForm] = useState(() => blankEvaluationForm(rubric));
   const [savingDraft, setSavingDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,16 +69,27 @@ function EvaluationModal({ target, onClose, onSaved }) {
     setForm(
       existing
         ? {
-            rubric_scores: { ...EMPTY_RUBRIC_SCORES, ...(existing.rubric_scores || {}) },
+            rubric_scores: { ...emptyRubricScores(rubric), ...(existing.rubric_scores || {}) },
             feedback_option: existing.feedback_option || "",
             recommendation_option: existing.recommendation_option || "",
             notes: existing.notes || "",
           }
-        : BLANK_EVALUATION_FORM
+        : blankEvaluationForm(rubric)
     );
-  }, [target]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, rubricVersion]);
 
   if (!target) return null;
+
+  if (!rubricVersion) {
+    return (
+      <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 px-4">
+        <div className="rounded-2xl bg-white p-6 text-sm text-gray-600 shadow-2xl">
+          Loading the scoring form...
+        </div>
+      </div>
+    );
+  }
 
   const { participant, evaluation } = target;
   const isSubmitted = evaluation?.status === "Submitted";
@@ -83,7 +106,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
     }));
   };
 
-  const rubricTotal = RUBRIC_CRITERIA.reduce(
+  const rubricTotal = rubric.criteria.reduce(
     (sum, criterion) => sum + (Number(form.rubric_scores[criterion.key]) || 0),
     0
   );
@@ -119,7 +142,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
       return;
     }
 
-    for (const criterion of RUBRIC_CRITERIA) {
+    for (const criterion of rubric.criteria) {
       const raw = form.rubric_scores[criterion.key];
       const value = Number(raw);
 
@@ -186,7 +209,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
           <div>
             <label className="block text-sm font-semibold mb-3">Selection Rubric</label>
             <div className="space-y-3">
-              {RUBRIC_CRITERIA.map((criterion) => (
+              {rubric.criteria.map((criterion) => (
                 <div
                   key={criterion.key}
                   className="flex items-start justify-between gap-3 border border-gray-200 rounded-xl px-4 py-3"
@@ -214,7 +237,7 @@ function EvaluationModal({ target, onClose, onSaved }) {
             <div className="flex items-center justify-end gap-1 mt-3 text-sm font-semibold">
               <span>Total:</span>
               <span className="text-[var(--ann-pink)]">{rubricTotal}</span>
-              <span className="text-gray-500">/ {RUBRIC_MAX_TOTAL}</span>
+              <span className="text-gray-500">/ {rubric.maxTotal}</span>
             </div>
           </div>
 
@@ -315,6 +338,11 @@ export default function ChampionFGDDetail() {
     useMyFgdEvaluations(appUser?.id, fgdId);
 
   const fgd = (champion?.assigned_fgds || []).find((item) => item.fgd_id === fgdId);
+
+  // The FGD document itself carries the rubric version (the entry above is
+  // only the committee member's denormalized copy of its schedule).
+  const { fgd: fgdDoc } = useFGD(fgdId);
+  const fgdRubric = useFgdRubricVersion(fgdDoc);
 
   useEffect(() => {
     if (!loadingChampion && champion && !fgd) {
@@ -601,6 +629,7 @@ export default function ChampionFGDDetail() {
 
       <EvaluationModal
         target={evaluationTarget}
+        fgdRubricVersion={fgdRubric.version}
         onClose={() => setEvaluationTarget(null)}
       />
     </ChampionLayout>
