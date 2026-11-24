@@ -13,4 +13,5 @@ export const COLLECTIONS = {
   DATA_POINTS: "data_points",
   REGISTRATION_EMAILS: "registration_emails",
   PARTICIPANT_EVALUATION_HISTORY: "participant_evaluation_history",
+  PHONE_CALLS: "phone_calls",
 };

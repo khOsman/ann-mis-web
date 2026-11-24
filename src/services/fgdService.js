@@ -170,6 +170,16 @@ export const resetFGDsForCohort = async ({
     }
   }
 
+  const callSnap = await getDocs(
+    query(collection(db, COLLECTIONS.PHONE_CALLS), where("cohort_id", "==", cohortId))
+  );
+
+  if (!callSnap.empty) {
+    throw new Error(
+      "Phone calls have already been logged for these FGDs, so they cannot be reset."
+    );
+  }
+
   await deleteFGDsForCohort({ cohortId, updatedByEmail, updatedByName });
 
   await cleanupChampionFgdAssignments(fgdIds);

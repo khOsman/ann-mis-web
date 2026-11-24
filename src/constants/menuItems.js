@@ -104,6 +104,12 @@ export const ADMIN_MENU_ITEMS = [
             permission: "selection",
           },
           {
+            label: "Phone Calls",
+            path: ROUTES.selectionPhoneCalls,
+            icon: List,
+            permission: "selection",
+          },
+          {
             label: "Reassign / Assign Participants",
             path: ROUTES.selectionReassign,
             icon: List,

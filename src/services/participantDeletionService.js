@@ -50,6 +50,22 @@ const batchDelete = async (collectionName, ids) => {
   }
 };
 
+const getPhoneCallIdsForParticipants = async (participantIds) => {
+  const ids = [];
+
+  for (const group of chunk(participantIds, WHERE_IN_CHUNK_SIZE)) {
+    const snapshot = await getDocs(
+      query(
+        collection(db, COLLECTIONS.PHONE_CALLS),
+        where("participant_id", "in", group)
+      )
+    );
+    snapshot.docs.forEach((item) => ids.push(item.id));
+  }
+
+  return ids;
+};
+
 const fetchParticipants = async (participantIds) => {
   const snapshots = await Promise.all(
     participantIds.map((id) => getDoc(doc(db, COLLECTIONS.PARTICIPANTS, id)))
@@ -91,11 +107,13 @@ export const hardDeleteParticipants = async (participantIds) => {
   const participants = await fetchParticipants(participantIds);
   const responseIds = participants.map((p) => p.response_id).filter(Boolean);
   const evaluationIds = await getEvaluationIdsForParticipants(participantIds);
+  const phoneCallIds = await getPhoneCallIdsForParticipants(participantIds);
 
   await Promise.all([
     batchDelete(COLLECTIONS.PARTICIPANTS, participantIds),
     batchDelete(COLLECTIONS.FORM_RESPONSES, responseIds),
     batchDelete(COLLECTIONS.PARTICIPANT_EVALUATIONS, evaluationIds),
+    batchDelete(COLLECTIONS.PHONE_CALLS, phoneCallIds),
   ]);
 
   // Free each deleted participant's email for re-registration — unless

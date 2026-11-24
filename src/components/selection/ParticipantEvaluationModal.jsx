@@ -3,16 +3,11 @@ import { auth } from "../../firebase";
 import { useAlert } from "../../context/AlertContext";
 import { updateFGDParticipant } from "../../services/fgdService";
 import { FGD_ATTENDANCE_STATUS } from "../../constants/fgd";
-import {
-  RUBRIC_CRITERIA,
-  RUBRIC_MAX_TOTAL,
-  RECOMMENDATION_OPTIONS,
-} from "../../constants/evaluation";
+import { getRubric, RECOMMENDATION_OPTIONS } from "../../constants/evaluation";
 import { formatBDPhone } from "../../utils/phone";
 
-const EMPTY_RUBRIC_SCORES = Object.fromEntries(
-  RUBRIC_CRITERIA.map((criterion) => [criterion.key, ""])
-);
+const emptyRubricScores = (rubric) =>
+  Object.fromEntries(rubric.criteria.map((criterion) => [criterion.key, ""]));
 
 // selection_status drives cohort "Selected" counts and status badges
 // app-wide, so it can only ever be Selected/Waitlisted/Rejected — the
@@ -24,19 +19,23 @@ const RECOMMENDATION_TO_STATUS = {
   do_not_recommend: "Rejected",
 };
 
+// rubricVersion: the rubric the participant's FGD is scored on (see
+// useFgdRubricVersion); a missing version is the previous 7-criteria rubric.
 export default function ParticipantEvaluationModal({
   open,
   participant,
+  rubricVersion,
   onClose,
   onSaved,
 }) {
   const { showAlert } = useAlert();
+  const rubric = getRubric(rubricVersion);
 
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     fgd_attendance_status: FGD_ATTENDANCE_STATUS.PENDING,
-    rubric_scores: EMPTY_RUBRIC_SCORES,
+    rubric_scores: emptyRubricScores(rubric),
     selection_recommendation: "",
     fgd_feedback: "",
     selection_committee_notes: "",
@@ -50,7 +49,7 @@ export default function ParticipantEvaluationModal({
         participant.fgd_attendance_status ||
         FGD_ATTENDANCE_STATUS.PENDING,
 
-      rubric_scores: RUBRIC_CRITERIA.reduce((acc, criterion) => {
+      rubric_scores: rubric.criteria.reduce((acc, criterion) => {
         acc[criterion.key] = participant.rubric_scores?.[criterion.key] ?? "";
         return acc;
       }, {}),
@@ -63,7 +62,8 @@ export default function ParticipantEvaluationModal({
       selection_committee_notes:
         participant.selection_committee_notes || "",
     });
-  }, [participant]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participant, rubricVersion]);
 
   if (!open || !participant) return null;
 
@@ -83,13 +83,13 @@ export default function ParticipantEvaluationModal({
     }));
   };
 
-  const rubricTotal = RUBRIC_CRITERIA.reduce(
+  const rubricTotal = rubric.criteria.reduce(
     (sum, criterion) => sum + (Number(form.rubric_scores[criterion.key]) || 0),
     0
   );
 
   const handleSave = async () => {
-    for (const criterion of RUBRIC_CRITERIA) {
+    for (const criterion of rubric.criteria) {
       const raw = form.rubric_scores[criterion.key];
       const value = Number(raw);
 
@@ -238,7 +238,7 @@ export default function ParticipantEvaluationModal({
             </label>
 
             <div className="space-y-3">
-              {RUBRIC_CRITERIA.map((criterion) => (
+              {rubric.criteria.map((criterion) => (
                 <div
                   key={criterion.key}
                   className="flex items-start justify-between gap-3 border border-gray-200 rounded-xl px-4 py-3"
@@ -267,7 +267,7 @@ export default function ParticipantEvaluationModal({
             <div className="flex items-center justify-end gap-1 mt-3 text-sm font-semibold">
               <span>Total:</span>
               <span className="text-[var(--ann-pink)]">{rubricTotal}</span>
-              <span className="text-gray-500">/ {RUBRIC_MAX_TOTAL}</span>
+              <span className="text-gray-500">/ {rubric.maxTotal}</span>
             </div>
           </div>
 

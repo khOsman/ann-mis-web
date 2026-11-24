@@ -44,6 +44,11 @@ import ChampionProjectDetail from "./pages/champions/portal/ChampionProjectDetai
 import AllFGDs from "./pages/selection/fgd/AllFGDs";
 import AllRosters from "./pages/selection/fgd/AllRosters";
 import RosterDetail from "./pages/selection/fgd/RosterDetail";
+import AllPhoneCalls from "./pages/selection/phoneCalls/AllPhoneCalls";
+import CohortPhoneCalls from "./pages/selection/phoneCalls/CohortPhoneCalls";
+import FGDPhoneCalls from "./pages/selection/phoneCalls/FGDPhoneCalls";
+import ChampionPhoneCalls from "./pages/champions/portal/ChampionPhoneCalls";
+import ChampionFGDPhoneCalls from "./pages/champions/portal/ChampionFGDPhoneCalls";
 import AllReassign from "./pages/selection/fgd/AllReassign";
 import ReassignParticipants from "./pages/selection/fgd/ReassignParticipants";
 import CohortFGDs from "./pages/selection/fgd/CohortFGDs";
@@ -105,6 +110,24 @@ export default function App() {
             element={
               <ProtectedRoute championOnly>
                 <ChampionFGDDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.championPhoneCalls}
+            element={
+              <ProtectedRoute championOnly>
+                <ChampionPhoneCalls />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.championPhoneCallsFGD}
+            element={
+              <ProtectedRoute championOnly>
+                <ChampionFGDPhoneCalls />
               </ProtectedRoute>
             }
           />
@@ -214,6 +237,33 @@ export default function App() {
             element={
               <ProtectedRoute permission="selection">
                 <RosterDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionPhoneCalls}
+            element={
+              <ProtectedRoute permission="selection">
+                <AllPhoneCalls />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionPhoneCallsCohort}
+            element={
+              <ProtectedRoute permission="selection">
+                <CohortPhoneCalls />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.selectionPhoneCallsFGD}
+            element={
+              <ProtectedRoute permission="selection">
+                <FGDPhoneCalls />
               </ProtectedRoute>
             }
           />

@@ -4,7 +4,12 @@ import AdminLayout from "../../../layouts/AdminLayout";
 import PageContainer from "../../../layouts/PageContainer";
 import { useAlert } from "../../../context/AlertContext";
 import { useAuth } from "../../../context/AuthContext";
-import { useChampions, useFGD, useParticipantEvaluations } from "../../../hooks";
+import {
+  useChampions,
+  useFGD,
+  useFgdRubricVersion,
+  useParticipantEvaluations,
+} from "../../../hooks";
 import {
   updateFGDSchedule,
   updateFGDStatus,
@@ -169,6 +174,7 @@ export default function FGDDetails() {
   const [savingStatus, setSavingStatus] = useState(false);
 
   const { fgd, participants, loading, error } = useFGD(fgdId);
+  const fgdRubric = useFgdRubricVersion(fgd);
 
   // Present/Absent/Pending Feedback were previously read from fgd.total_present
   // etc. — fields nothing in the app ever actually writes, so they always
@@ -810,6 +816,7 @@ export default function FGDDetails() {
       <ParticipantEvaluationModal
         open={!!evaluationTarget}
         participant={evaluationTarget}
+        rubricVersion={fgdRubric.version}
         onClose={() => setEvaluationTarget(null)}
       />
     </AdminLayout>

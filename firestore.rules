@@ -383,6 +383,62 @@ service cloud.firestore {
       allow create: if isAdmin();
     }
 
+    // Phone Call Interview: an append-only log of every call attempt made to
+    // confirm a participant's attendance at their FGD. An attempt can be
+    // logged by an admin, by a Youth Coordinator (for an FGD that names no
+    // callers, or names them), or by an active Selection Committee champion
+    // named as a caller on that FGD (fgds.phone_caller_ids). It must be the
+    // caller's own entry, about someone actually in that FGD, while the FGD is
+    // not yet Completed. Nothing is edited after the fact. Every active staff
+    // user can read (read-only roles included); a champion can read only the
+    // calls of an FGD they are named on.
+    match /phone_calls/{callId} {
+      function callFgd() {
+        return get(/databases/$(database)/documents/fgds/$(request.resource.data.fgd_id)).data;
+      }
+
+      function callerIdsOf(fgdData) {
+        return fgdData.get("phone_caller_ids", []);
+      }
+
+      function validCall() {
+        return request.resource.data.keys().hasOnly([
+            "participant_id", "participant_code", "fgd_id", "fgd_code",
+            "cohort_id", "status", "note", "called_by_uid", "called_by_name",
+            "called_by_email", "called_by_type", "created_at"])
+          && request.resource.data.keys().hasAll([
+            "participant_id", "fgd_id", "status", "note", "called_by_uid",
+            "created_at"])
+          && request.resource.data.status in
+            ["Confirmed", "Declined", "Not reachable", "Reschedule requested"]
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 1000
+          && (request.resource.data.status in ["Confirmed", "Not reachable"]
+            || request.resource.data.note.size() > 0)
+          && request.resource.data.called_by_uid == request.auth.uid
+          && request.resource.data.created_at == request.time
+          && get(/databases/$(database)/documents/participants/$(request.resource.data.participant_id))
+            .data.get("fgd_id", "") == request.resource.data.fgd_id;
+      }
+
+      allow read: if isActiveUser()
+        || (isActiveChampion()
+          && request.auth.uid in get(/databases/$(database)/documents/fgds/$(resource.data.fgd_id))
+            .data.get("phone_caller_ids", []));
+
+      allow create: if validCall()
+        && callFgd().get("status", "Draft") != "Completed"
+        && (isAdmin()
+          || (isActiveUser()
+            && get(currentUserDoc()).data.role == "youth_coordinator"
+            && (callerIdsOf(callFgd()).size() == 0
+              || request.auth.uid in callerIdsOf(callFgd())))
+          || (isActiveChampion() && request.auth.uid in callerIdsOf(callFgd())));
+
+      // Only the cleanup done when a participant or a whole cohort is removed.
+      allow delete: if isAdmin();
+    }
+
     match /fgd_change_requests/{requestId} {
       allow read: if isAdmin() || isActiveChampion();
       // Writes only happen via the backend's Admin SDK, same reasoning.
